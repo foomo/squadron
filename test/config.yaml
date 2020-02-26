@@ -1,0 +1,20 @@
+name: test
+revision: 1
+services:
+  - name: "service1"
+    docker: 
+      file: "test/Dockerfile"
+      context: "."
+      options:
+    helm: 
+      type: ClusterIP
+      pullPolicy: Never
+      port: 80
+      targetPort: 3000
+      ingress:
+        path: /
+        host: ""
+        schema: "http"
+      env:
+        - name: "TEST"
+          value: "test"
