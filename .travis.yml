@@ -23,7 +23,7 @@ before_script:
 
 script:
   # Run all the tests with the race detector enabled
-  - overalls -project=github.com/globusdigital/feature-toggles -covermode=atomic -debug -- -race -v -coverpkg=./...
+  - overalls -project=github.com/foomo/configurd -covermode=atomic -debug -- -race -v -coverpkg=./...
   - $HOME/gopath/bin/goveralls -coverprofile=overalls.coverprofile -service=travis-ci -repotoken=$COVERALLS_TOKEN
 
 after_success:
