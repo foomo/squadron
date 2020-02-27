@@ -1,0 +1,7 @@
+service:
+  name: hello-service
+  docker:
+    image: foomo/configurd-hello
+    file: Dockerfile
+    context: application
+    # options:
