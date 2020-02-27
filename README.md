@@ -15,6 +15,7 @@ Application for managing kubernetes microservice environment
 
 ## Structure
 
+```text
 /configurd
     /templates (Helm Templates)
         /services (Charts)
@@ -28,5 +29,13 @@ Application for managing kubernetes microservice environment
             servicegroup-a.yaml
         /node-a (remote)
             global.yaml
-            servicegroup-a.yaml
-            
+            servicegroup-a.yaml         
+```
+## Commands
+
+```text
+# Builds service from the /services dir
+$ configurd build hello-service
+# Shows the diff from ${NAMESPACE} ${SERVICE}? 
+$ configurd deploy ${NAMESPACE} ${SERVICE} --diff
+```
