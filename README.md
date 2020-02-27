@@ -1,9 +1,6 @@
 <a href="https://travis-ci.org/foomo/configurd">
     <img src="https://travis-ci.org/foomo/configurd.svg?branch=master" alt="Travis CI: build status">
 </a>
-<a href='https://coveralls.io/github/foomo/configurd'>
-    <img src='https://coveralls.io/repos/github/foomo/configurd/badge.svg' alt='Coverage Status' />
-</a>
 <a href="https://goreportcard.com/report/github.com/foomo/configurd">
     <img src="https://goreportcard.com/badge/github.com/foomo/configurd" alt="GoReportCard">
 </a>
