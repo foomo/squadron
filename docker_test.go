@@ -17,7 +17,7 @@ func TestLoadService(t *testing.T) {
 		Name: "hello-service",
 		Docker: Docker{
 			File:    "Dockerfile",
-			Context: "../application",
+			Context: "application",
 			Options: "",
 			Image:   "foomo/configurd-hello",
 		},
