@@ -21,6 +21,7 @@ func TestLoadService(t *testing.T) {
 			Options: "",
 			Image:   "foomo/configurd-hello",
 		},
+		Chart: "example",
 	}
 
 	actual, err := LoadService(file)
@@ -37,6 +38,7 @@ func TestService_Build(t *testing.T) {
 			Options: "",
 			Image:   "configurd-hello",
 		},
+		Chart: "example",
 	}
 
 	output, err := svc.Build(context.Background(), "latest")

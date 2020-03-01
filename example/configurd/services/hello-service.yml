@@ -5,3 +5,4 @@ service:
     file: Dockerfile
     context: application
     # options:
+  chart: example

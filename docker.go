@@ -13,6 +13,7 @@ import (
 type Service struct {
 	Name   string `yaml:"name"`
 	Docker Docker `yaml:"docker"`
+	Chart  string `yaml:"chart"`
 }
 
 type Docker struct {
