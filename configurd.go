@@ -9,7 +9,10 @@ import (
 )
 
 const (
-	defaultServiceDir = "configurd/services"
+	defaultConfigFileExt      = ".yml"
+	defaultServiceDir         = "configurd/services"
+	defaultTemplateServiceDir = "configurd/templates/services"
+	defaultNamespaceDir       = "configurd/namespaces"
 )
 
 var (
@@ -31,7 +34,7 @@ func New(dir string) (Configurd, error) {
 
 	serviceDir := path.Join(dir, defaultServiceDir)
 	err := filepath.Walk(serviceDir, func(path string, info os.FileInfo, err error) error {
-		if !info.IsDir() && strings.HasSuffix(path, ".yml") {
+		if !info.IsDir() && (strings.HasSuffix(path, defaultConfigFileExt)) {
 			file, err := os.Open(path)
 			if err != nil {
 				return err
@@ -46,16 +49,29 @@ func New(dir string) (Configurd, error) {
 		return nil
 	})
 
+	// Load Templates
+	err = filepath.Walk(path.Join(defaultTemplateServiceDir), func(path string, info os.FileInfo, err error) error {
+		if !info.IsDir() && (strings.HasSuffix(path, defaultConfigFileExt)) {
+			c.Templates = append(c.Templates, strings.TrimSuffix(info.Name(), defaultConfigFileExt))
+		}
+		return nil
+	})
+
+	// Load Namespaces
+	namespaceDir := path.Join(dir, defaultNamespaceDir)
+	err = filepath.Walk(namespaceDir, func(path string, info os.FileInfo, err error) error {
+		if info.IsDir() && path != namespaceDir {
+			c.Namespaces = append(c.Namespaces, Namespace{Name: info.Name()})
+		}
+		return nil
+	})
+
 	if err != nil {
 		return Configurd{}, err
 	}
 
-	// Load Templates
-	// Load Namespaces
-
 	// Validate Connections
-	// - Services to templates
-	// - Namespaces to services
+
 	return c, nil
 }
 
@@ -66,4 +82,12 @@ func (c Configurd) Service(name string) (Service, error) {
 		}
 	}
 	return Service{}, ErrServiceNotFound
+}
+
+func (c Configurd) NamespaceHasService(basePath string, namespaceName string, serviceName string) bool {
+	p := path.Join(basePath, defaultNamespaceDir, namespaceName, serviceName+defaultConfigFileExt)
+	if _, err := os.Stat(p); err != nil && os.IsNotExist(err) {
+		return false
+	}
+	return true
 }

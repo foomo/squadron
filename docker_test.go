@@ -17,7 +17,7 @@ func TestLoadService(t *testing.T) {
 		Name: "hello-service",
 		Docker: Docker{
 			File:    "Dockerfile",
-			Context: "../application",
+			Context: "application",
 			Options: "",
 			Image:   "foomo/configurd-hello",
 		},
@@ -32,7 +32,7 @@ func TestService_Build(t *testing.T) {
 	svc := Service{
 		Name: "hello-service",
 		Docker: Docker{
-			File:    "example/application/Dockerfile",
+			File:    "Dockerfile",
 			Context: "example/application/",
 			Options: "",
 			Image:   "configurd-hello",
