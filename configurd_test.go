@@ -24,7 +24,7 @@ func TestConfigurd_Service(t *testing.T) {
 			name:   "empty",
 			fields: fields{[]Service{}},
 			args:   args{name: "empty"},
-			want:   Service{}, wantErr: ErrResourceNotFound("service", "empty"),
+			want:   Service{}, wantErr: ErrServiceNotFound,
 		},
 		{
 			name:   "found",
@@ -36,7 +36,7 @@ func TestConfigurd_Service(t *testing.T) {
 			name:   "not found",
 			fields: fields{[]Service{{Name: "found"}}},
 			args:   args{name: "not found"},
-			want:   Service{}, wantErr: ErrResourceNotFound("service", "not found"),
+			want:   Service{}, wantErr: ErrServiceNotFound,
 		},
 	}
 	for _, tt := range tests {

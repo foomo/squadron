@@ -15,9 +15,9 @@ const (
 	defaultNamespaceDir       = "configurd/namespaces"
 )
 
-func ErrResourceNotFound(resourceType string, resourceName string) error {
-	return errors.New(resourceType + " resource named " + resourceName + " not found")
-}
+var (
+	ErrServiceNotFound = errors.New("service not found")
+)
 
 type Namespace struct {
 	Name string
@@ -71,21 +71,6 @@ func New(dir string) (Configurd, error) {
 	}
 
 	// Validate Connections
-	// - Services to templates
-	for _, service := range c.Services {
-		if !c.ServiceHasTemplate(service.Name) {
-			return Configurd{}, ErrResourceNotFound("service template", service.Name)
-		}
-	}
-
-	// - Namespaces to services
-	for _, namespace := range c.Namespaces {
-		for _, service := range c.Services {
-			if !c.NamespaceHasService(dir, namespace.Name, service.Name) {
-				return Configurd{}, ErrResourceNotFound("namespace service", service.Name)
-			}
-		}
-	}
 
 	return c, nil
 }
@@ -96,22 +81,12 @@ func (c Configurd) Service(name string) (Service, error) {
 			return svc, nil
 		}
 	}
-	return Service{}, ErrResourceNotFound("service", name)
-}
-
-func (c Configurd) ServiceHasTemplate(serviceName string) bool {
-	for _, t := range c.Templates {
-		if t == serviceName {
-			return true
-		}
-	}
-	return false
+	return Service{}, ErrServiceNotFound
 }
 
 func (c Configurd) NamespaceHasService(basePath string, namespaceName string, serviceName string) bool {
-	path := path.Join(basePath, defaultNamespaceDir, namespaceName, serviceName+defaultConfigFileExt)
-	_, err := os.Stat(path)
-	if err != nil && os.IsNotExist(err) {
+	p := path.Join(basePath, defaultNamespaceDir, namespaceName, serviceName+defaultConfigFileExt)
+	if _, err := os.Stat(p); err != nil && os.IsNotExist(err) {
 		return false
 	}
 	return true
