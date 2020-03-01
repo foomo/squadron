@@ -32,7 +32,7 @@ func TestService_Build(t *testing.T) {
 	svc := Service{
 		Name: "hello-service",
 		Docker: Docker{
-			File:    "example/application/Dockerfile",
+			File:    "Dockerfile",
 			Context: "example/application/",
 			Options: "",
 			Image:   "configurd-hello",
