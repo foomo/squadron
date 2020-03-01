@@ -17,8 +17,8 @@ Application for managing kubernetes microservice environment
 
 ```text
 /configurd
-    /templates (Helm Templates)
-        /services (Charts)
+    /charts (Helm Charts)
+        /services 
         /applications        
     /services
         service-a.yaml

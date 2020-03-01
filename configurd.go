@@ -9,10 +9,9 @@ import (
 )
 
 const (
-	defaultConfigFileExt      = ".yml"
-	defaultServiceDir         = "configurd/services"
-	defaultTemplateServiceDir = "configurd/templates/services"
-	defaultNamespaceDir       = "configurd/namespaces"
+	defaultConfigFileExt = ".yml"
+	defaultServiceDir    = "configurd/services"
+	defaultNamespaceDir  = "configurd/namespaces"
 )
 
 var (
@@ -49,28 +48,9 @@ func New(dir string) (Configurd, error) {
 		return nil
 	})
 
-	// Load Templates
-	err = filepath.Walk(path.Join(defaultTemplateServiceDir), func(path string, info os.FileInfo, err error) error {
-		if !info.IsDir() && (strings.HasSuffix(path, defaultConfigFileExt)) {
-			c.Templates = append(c.Templates, strings.TrimSuffix(info.Name(), defaultConfigFileExt))
-		}
-		return nil
-	})
-
-	// Load Namespaces
-	namespaceDir := path.Join(dir, defaultNamespaceDir)
-	err = filepath.Walk(namespaceDir, func(path string, info os.FileInfo, err error) error {
-		if info.IsDir() && path != namespaceDir {
-			c.Namespaces = append(c.Namespaces, Namespace{Name: info.Name()})
-		}
-		return nil
-	})
-
 	if err != nil {
 		return Configurd{}, err
 	}
-
-	// Validate Connections
 
 	return c, nil
 }
