@@ -3,9 +3,7 @@ package actions
 import (
 	"context"
 	"log"
-	"os"
 
-	"github.com/foomo/configurd"
 	"github.com/spf13/cobra"
 )
 
@@ -14,11 +12,7 @@ var cmdBuild = &cobra.Command{
 	Short: "Add a service group",
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		dir, err := os.Getwd()
-		if err != nil {
-			log.Fatal(err)
-		}
-		Build(dir, args[0], "latest")
+		Build(args[0], cmd.Flag("tag").Value.String())
 	},
 }
 
@@ -26,11 +20,7 @@ func init() {
 	rootCmd.AddCommand(cmdBuild)
 }
 
-func Build(dir, service, tag string) {
-	cnf, err := configurd.New(dir)
-	if err != nil {
-		log.Fatal(err)
-	}
+func Build(service, tag string) {
 
 	svc, err := cnf.Service(service)
 	if err != nil {

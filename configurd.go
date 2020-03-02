@@ -33,6 +33,9 @@ func New(dir string) (Configurd, error) {
 
 	serviceDir := path.Join(dir, defaultServiceDir)
 	err := filepath.Walk(serviceDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
 		if !info.IsDir() && (strings.HasSuffix(path, defaultConfigFileExt)) {
 			file, err := os.Open(path)
 			if err != nil {
@@ -62,12 +65,4 @@ func (c Configurd) Service(name string) (Service, error) {
 		}
 	}
 	return Service{}, ErrServiceNotFound
-}
-
-func (c Configurd) NamespaceHasService(basePath string, namespaceName string, serviceName string) bool {
-	p := path.Join(basePath, defaultNamespaceDir, namespaceName, serviceName+defaultConfigFileExt)
-	if _, err := os.Stat(p); err != nil && os.IsNotExist(err) {
-		return false
-	}
-	return true
 }
