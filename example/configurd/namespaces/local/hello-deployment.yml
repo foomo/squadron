@@ -1,2 +1,6 @@
-deployments:
+services:
   - service: "hello-service"
+    overrides:
+      image:
+        repository: foomo/configurd-hello
+        tag: hehe 
