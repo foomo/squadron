@@ -16,8 +16,9 @@ import (
 type ServiceDeployment struct {
 	ServiceName string `yaml:"service"`
 	Overrides   interface{}
-	chart       string
 	namespace   string
+	deployment  string
+	chart       string
 }
 
 func generateYaml(path string, data interface{}) error {
@@ -37,7 +38,7 @@ func generateYaml(path string, data interface{}) error {
 	return nil
 }
 
-func generate(sd ServiceDeployment, outputDir, chartPath, tag string) error {
+func generate(sd ServiceDeployment, outputDir, chartPath string) error {
 	dir := path.Join(outputDir, sd.ServiceName)
 	if err := os.MkdirAll(dir, 0744); err != nil {
 		return fmt.Errorf("could not create output dir: %w", err)
@@ -69,7 +70,27 @@ func generate(sd ServiceDeployment, outputDir, chartPath, tag string) error {
 	return nil
 }
 
-func (c Configurd) Deploy(sds []ServiceDeployment, basePath, tag string) (string, error) {
+func helmInstall(serviceName, namespace, basePath string) error {
+	chartPath := path.Join(basePath, defaultDeploymentDir, serviceName)
+	cmdArgs := []string{
+		"install", serviceName, chartPath,
+		"-f", path.Join(chartPath, defaultOverridesFile),
+		"-n", namespace,
+		"--set", "fullnameOverride=" + serviceName,
+	}
+	cmd := exec.Command("helm", cmdArgs...)
+
+	out, err := cmd.CombinedOutput()
+	output := strings.Replace(string(out), "\n", "\n\t", -1)
+
+	log.Print(string(out))
+	if err != nil {
+		return fmt.Errorf("could not install a helm chart for service %v output: \n%v", serviceName, output)
+	}
+	return nil
+}
+
+func (c Configurd) Deploy(sds []ServiceDeployment, basePath string) (string, error) {
 	if err := os.RemoveAll(defaultDeploymentDir); err != nil {
 		return "", fmt.Errorf("could not clean deployment directory: %w", err)
 	}
@@ -78,54 +99,15 @@ func (c Configurd) Deploy(sds []ServiceDeployment, basePath, tag string) (string
 		return "", fmt.Errorf("could not create a deployments directory: %w", err)
 	}
 	for _, sd := range sds {
-		err := generate(sd, defaultDeploymentDir, path.Join(defaultChartDir, sd.chart), tag)
+		err := generate(sd, defaultDeploymentDir, path.Join(defaultChartDir, sd.chart))
 		if err != nil {
 			return "", err
 		}
-
-		// helm install
-		chartPath := path.Join(basePath, defaultDeploymentDir, sd.ServiceName)
-		cmdArgs := []string{
-			"install", sd.ServiceName, chartPath,
-			"-f", path.Join(chartPath, defaultOverridesFile),
-			"-n", sd.namespace,
-			"--set", "fullnameOverride=" + sd.ServiceName,
-		}
-		cmd := exec.Command("helm", cmdArgs...)
-
-		out, err := cmd.CombinedOutput()
-		output := strings.Replace(string(out), "\n", "\n\t", -1)
-
-		log.Print(string(out))
+		err = helmInstall(sd.ServiceName, sd.namespace, basePath)
 		if err != nil {
-			return "", fmt.Errorf("could not install a helm chart for service %v output: \n%v", sd.ServiceName, output)
+			return "", err
 		}
 	}
 
 	return "", nil
-}
-
-func (c Configurd) ServiceDeployments(baseDir, namespace, deployment string) ([]ServiceDeployment, error) {
-	file, err := os.Open(path.Join(baseDir, defaultNamespaceDir, namespace, deployment+defaultConfigFileExt))
-	defer file.Close()
-	if err != nil {
-		return []ServiceDeployment{}, err
-	}
-
-	var wrapper struct {
-		ServiceDeployments []ServiceDeployment `yaml:"services"`
-	}
-	if err := yaml.NewDecoder(file).Decode(&wrapper); err != nil {
-		return []ServiceDeployment{}, fmt.Errorf("could not decode service: %w", err)
-	}
-
-	for i, sd := range wrapper.ServiceDeployments {
-		svc, err := c.Service(sd.ServiceName)
-		if err != nil {
-			log.Fatal(err)
-		}
-		wrapper.ServiceDeployments[i].chart = svc.Chart
-		wrapper.ServiceDeployments[i].namespace = namespace
-	}
-	return wrapper.ServiceDeployments, nil
 }

@@ -28,14 +28,14 @@ var (
 )
 
 func Deploy(namespace, deployment, tag string) {
-	sds, err := cnf.ServiceDeployments(cwdir, namespace, deployment)
-	if err != nil {
-		log.Fatalf("could not deploy: %v  output:\n%v", deployment, err)
+	sds := cnf.GetServiceDeployments(namespace, deployment)
+	if len(sds) == 0 {
+		log.Fatalf("could not find any service deployments for namespace: %v and deployment: %v", namespace, deployment)
 	}
 	if flagBuild {
 		for _, serviceDeployment := range sds {
-			Build(serviceDeployment.ServiceName, FlagTag)
+			Build(serviceDeployment.ServiceName, tag)
 		}
 	}
-	cnf.Deploy(sds, cwdir, tag)
+	cnf.Deploy(sds, cwdir)
 }

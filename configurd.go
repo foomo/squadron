@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -25,10 +26,20 @@ var (
 	ErrServiceNotFound = errors.New("service not found")
 )
 
+type Deployment struct {
+	name               string
+	serviceDeployments []ServiceDeployment
+}
+
+type Namespace struct {
+	name        string
+	deployments []Deployment
+}
+
 type Configurd struct {
 	Services   []Service
 	Templates  []string
-	Namespaces []string
+	Namespaces []Namespace
 }
 
 func New(dir string) (Configurd, error) {
@@ -59,7 +70,86 @@ func New(dir string) (Configurd, error) {
 		return Configurd{}, err
 	}
 
+	c.Namespaces, err = loadNamespaces(c, dir)
+
+	if err != nil {
+		return Configurd{}, err
+	}
+
 	return c, nil
+}
+
+func loadNamespaces(c Configurd, basePath string) ([]Namespace, error) {
+	var nss []Namespace
+	namespaceDir := path.Join(basePath, defaultNamespaceDir)
+	err := filepath.Walk(namespaceDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() && path != namespaceDir {
+			ds, err := loadDeployments(c, info.Name())
+			if err != nil {
+				return err
+			}
+			ns := Namespace{
+				name:        info.Name(),
+				deployments: ds,
+			}
+			nss = append(nss, ns)
+		}
+		return nil
+	})
+	return nss, err
+}
+
+func loadDeployments(c Configurd, namespace string) ([]Deployment, error) {
+	var ds []Deployment
+	err := filepath.Walk(path.Join(defaultNamespaceDir, namespace), func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() && (strings.HasSuffix(path, defaultConfigFileExt)) {
+			var name = info.Name()[0 : len(info.Name())-len(filepath.Ext(info.Name()))]
+			sds, err := loadServiceDeployments(c, namespace, name)
+			if err != nil {
+				return err
+			}
+			d := Deployment{
+				name:               name,
+				serviceDeployments: sds,
+			}
+			ds = append(ds, d)
+		}
+		return nil
+	})
+	return ds, err
+}
+
+func loadServiceDeployments(c Configurd, namespace, deployment string) ([]ServiceDeployment, error) {
+	path := path.Join(defaultNamespaceDir, namespace, deployment+defaultConfigFileExt)
+	file, err := os.Open(path)
+	defer file.Close()
+	if err != nil {
+		return []ServiceDeployment{}, err
+	}
+
+	var wrapper struct {
+		ServiceDeployments []ServiceDeployment `yaml:"services"`
+	}
+	if err := yaml.NewDecoder(file).Decode(&wrapper); err != nil {
+		return []ServiceDeployment{}, fmt.Errorf("could not decode service deployment: %w", err)
+	}
+
+	for i, sd := range wrapper.ServiceDeployments {
+		svc, err := c.Service(sd.ServiceName)
+		if err != nil {
+			log.Fatal(err)
+		}
+		wrapper.ServiceDeployments[i].chart = svc.Chart
+		wrapper.ServiceDeployments[i].namespace = namespace
+		wrapper.ServiceDeployments[i].deployment = deployment
+	}
+	return wrapper.ServiceDeployments, nil
 }
 
 func (c Configurd) Service(name string) (Service, error) {
@@ -69,6 +159,26 @@ func (c Configurd) Service(name string) (Service, error) {
 		}
 	}
 	return Service{}, ErrServiceNotFound
+}
+
+func (c Configurd) GetServiceDeployments(namespace, deployment string) []ServiceDeployment {
+	var sds []ServiceDeployment
+	for _, sd := range c.serviceDeployments() {
+		if sd.namespace == namespace && sd.deployment == deployment {
+			sds = append(sds, sd)
+		}
+	}
+	return sds
+}
+
+func (c Configurd) serviceDeployments() []ServiceDeployment {
+	var sds []ServiceDeployment
+	for _, ns := range c.Namespaces {
+		for _, d := range ns.deployments {
+			sds = append(sds, d.serviceDeployments...)
+		}
+	}
+	return sds
 }
 
 func loadService(reader io.Reader) (Service, error) {
