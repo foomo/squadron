@@ -2,6 +2,7 @@ package configurd
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -13,6 +14,7 @@ import (
 type ServiceDeployment struct {
 	ServiceName string `yaml:"service"`
 	Overrides   interface{}
+	chart       string
 }
 
 func generateYaml(path string, data interface{}) error {
@@ -64,19 +66,19 @@ func generate(sd ServiceDeployment, outputDir, chartPath, tag string) error {
 	return nil
 }
 
-func (c Configurd) Deploy(sd ServiceDeployment, namespace, tag string) (string, error) {
-	output := "deployments"
-	if err := os.RemoveAll(output); err != nil {
+func (c Configurd) Deploy(sds []ServiceDeployment, tag string) (string, error) {
+	if err := os.RemoveAll(defaultDeploymentDir); err != nil {
 		return "", fmt.Errorf("could not clean deployment directory: %w", err)
 	}
 
-	if err := os.MkdirAll(output, 0744); err != nil {
+	if err := os.MkdirAll(defaultDeploymentDir, 0744); err != nil {
 		return "", fmt.Errorf("could not create a deployments directory: %w", err)
 	}
-
-	err := generate(sd, output, "configurd/charts/example", tag)
-	if err != nil {
-		return "", err
+	for _, sd := range sds {
+		err := generate(sd, defaultDeploymentDir, path.Join(defaultChartDir, sd.chart), tag)
+		if err != nil {
+			return "", err
+		}
 	}
 
 	return "", nil
@@ -94,6 +96,14 @@ func (c Configurd) ServiceDeployments(baseDir, namespace, deployment string) ([]
 	}
 	if err := yaml.NewDecoder(file).Decode(&wrapper); err != nil {
 		return []ServiceDeployment{}, fmt.Errorf("could not decode service: %w", err)
+	}
+
+	for i, sd := range wrapper.ServiceDeployments {
+		svc, err := c.Service(sd.ServiceName)
+		if err != nil {
+			log.Fatal(err)
+		}
+		wrapper.ServiceDeployments[i].chart = svc.Chart
 	}
 	return wrapper.ServiceDeployments, nil
 }

@@ -28,7 +28,8 @@ func init() {
 }
 
 func Execute() {
-	cwdir, err := os.Getwd()
+	var err error = nil
+	cwdir, err = os.Getwd()
 	if err != nil {
 		log.Fatal(err)
 	}

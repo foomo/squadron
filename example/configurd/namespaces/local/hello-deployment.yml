@@ -4,3 +4,8 @@ services:
       image:
         repository: foomo/configurd-hello
         tag: hehe 
+  - service: "hi-service"
+    overrides:
+      image:
+        repository: foomo/configurd-hello
+        tag: asd 

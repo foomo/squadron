@@ -16,6 +16,8 @@ const (
 	defaultConfigFileExt = ".yml"
 	defaultServiceDir    = "configurd/services"
 	defaultNamespaceDir  = "configurd/namespaces"
+	defaultChartDir      = "configurd/charts"
+	defaultDeploymentDir = "configurd/deployments"
 )
 
 var (

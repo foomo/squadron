@@ -37,7 +37,5 @@ func Deploy(namespace, deployment, tag string) {
 			Build(serviceDeployment.ServiceName, FlagTag)
 		}
 	}
-	for _, serviceDeployment := range sds {
-		cnf.Deploy(serviceDeployment, namespace, tag)
-	}
+	cnf.Deploy(sds, tag)
 }
