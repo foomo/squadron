@@ -1,6 +1,8 @@
 package actions
 
 import (
+	"log"
+
 	"github.com/spf13/cobra"
 )
 
@@ -20,14 +22,22 @@ var (
 		Long:  `Deploys the specified deployment with given tag version`,
 		Args:  cobra.MinimumNArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
-			if flagBuild {
-				//TODO: Get All Services From Deployment and build them
-			}
 			Deploy(args[0], args[1], FlagTag)
 		},
 	}
 )
 
 func Deploy(namespace, deployment, tag string) {
-	cnf.Deploy(namespace, deployment, tag)
+	sds, err := cnf.ServiceDeployments(cwdir, namespace, deployment)
+	if err != nil {
+		log.Fatalf("could not deploy: %v  output:\n%v", deployment, err)
+	}
+	if flagBuild {
+		for _, serviceDeployment := range sds {
+			Build(serviceDeployment.ServiceName, FlagTag)
+		}
+	}
+	for _, serviceDeployment := range sds {
+		cnf.Deploy(serviceDeployment, namespace, tag)
+	}
 }

@@ -3,18 +3,9 @@ package configurd
 import (
 	"context"
 	"fmt"
-	"io"
 	"os/exec"
 	"strings"
-
-	"gopkg.in/yaml.v2"
 )
-
-type Service struct {
-	Name   string `yaml:"name"`
-	Docker Docker `yaml:"docker"`
-	Chart  string `yaml:"chart"`
-}
 
 type Docker struct {
 	File    string `yaml:"file"`
@@ -23,14 +14,10 @@ type Docker struct {
 	Image   string `yaml:"image"`
 }
 
-func LoadService(reader io.Reader) (Service, error) {
-	var wrapper struct {
-		Service Service `yaml:"service"`
-	}
-	if err := yaml.NewDecoder(reader).Decode(&wrapper); err != nil {
-		return Service{}, fmt.Errorf("could not decode service: %w", err)
-	}
-	return wrapper.Service, nil
+type Service struct {
+	Name   string `yaml:"name"`
+	Docker Docker `yaml:"docker"`
+	Chart  string `yaml:"chart"`
 }
 
 func (s Service) Build(ctx context.Context, tag string) (string, error) {

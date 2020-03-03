@@ -11,6 +11,7 @@ import (
 
 var (
 	cnf     configurd.Configurd
+	cwdir   string
 	rootCmd = &cobra.Command{
 		Use:   "cobra",
 		Short: "A generator for Cobra based Applications",
@@ -27,12 +28,12 @@ func init() {
 }
 
 func Execute() {
-	dir, err := os.Getwd()
+	cwdir, err := os.Getwd()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	cnf, err = configurd.New(dir)
+	cnf, err = configurd.New(cwdir)
 	if err != nil {
 		log.Fatal(err)
 	}

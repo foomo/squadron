@@ -2,10 +2,14 @@ package configurd
 
 import (
 	"errors"
+	"fmt"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -18,19 +22,16 @@ var (
 	ErrServiceNotFound = errors.New("service not found")
 )
 
-type Namespace struct {
-	Name string
-}
-
 type Configurd struct {
 	Services   []Service
 	Templates  []string
-	Namespaces []Namespace
+	Namespaces []string
 }
 
 func New(dir string) (Configurd, error) {
 	c := Configurd{}
 
+	//load services
 	serviceDir := path.Join(dir, defaultServiceDir)
 	err := filepath.Walk(serviceDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -42,7 +43,7 @@ func New(dir string) (Configurd, error) {
 				return err
 			}
 			defer file.Close()
-			svc, err := LoadService(file)
+			svc, err := loadService(file)
 			if err != nil {
 				return err
 			}
@@ -65,4 +66,14 @@ func (c Configurd) Service(name string) (Service, error) {
 		}
 	}
 	return Service{}, ErrServiceNotFound
+}
+
+func loadService(reader io.Reader) (Service, error) {
+	var wrapper struct {
+		Service Service `yaml:"service"`
+	}
+	if err := yaml.NewDecoder(reader).Decode(&wrapper); err != nil {
+		return Service{}, fmt.Errorf("could not decode service: %w", err)
+	}
+	return wrapper.Service, nil
 }
