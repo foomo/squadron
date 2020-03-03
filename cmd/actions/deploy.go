@@ -37,5 +37,8 @@ func Deploy(namespace, deployment, tag string) {
 			Build(serviceDeployment.ServiceName, tag)
 		}
 	}
-	cnf.Deploy(sds, cwdir)
+	err := cnf.Deploy(sds, cwdir)
+	if err != nil {
+		log.Fatal(err)
+	}
 }

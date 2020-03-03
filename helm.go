@@ -86,29 +86,45 @@ func helmInstall(serviceName, namespace, basePath string) error {
 	if err != nil {
 		return fmt.Errorf("could not install a helm chart for service %v output: \n%v", serviceName, output)
 	}
+	log.Print(string(out))
 	return nil
 }
 
-func (c Configurd) Deploy(sds []ServiceDeployment, basePath string) (string, error) {
+func helmUninstall(sd ServiceDeployment) error {
+	cmdArgs := []string{
+		"uninstall", "-n", sd.namespace, sd.ServiceName,
+	}
+	cmd := exec.Command("helm", cmdArgs...)
+
+	out, err := cmd.CombinedOutput()
+	output := strings.Replace(string(out), "\n", "\n\t", -1)
+
+	if err != nil {
+		return fmt.Errorf("could not uninstall a helm chart for namespace: %v, deployment: %v, output: \n%v", sd.namespace, sd.deployment, output)
+	}
+	log.Print(string(out))
+	return nil
+}
+
+func (c Configurd) Deploy(sds []ServiceDeployment, basePath string) error {
 	if err := os.RemoveAll(defaultDeploymentDir); err != nil {
-		return "", fmt.Errorf("could not clean deployment directory: %w", err)
+		return fmt.Errorf("could not clean deployment directory: %w", err)
 	}
 
 	if err := os.MkdirAll(defaultDeploymentDir, 0744); err != nil {
-		return "", fmt.Errorf("could not create a deployments directory: %w", err)
+		return fmt.Errorf("could not create a deployments directory: %w", err)
 	}
 	for _, sd := range sds {
 		err := generate(sd, defaultDeploymentDir, path.Join(defaultChartDir, sd.chart))
 		if err != nil {
-			return "", err
+			return err
 		}
 		err = helmInstall(sd.ServiceName, sd.namespace, basePath)
 		if err != nil {
-			return "", err
+			return err
 		}
 	}
-
-	return "", nil
+	return nil
 }
 
 func (c Configurd) Undeploy(sds []ServiceDeployment) error {
