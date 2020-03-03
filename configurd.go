@@ -164,7 +164,7 @@ func (c Configurd) Service(name string) (Service, error) {
 func (c Configurd) GetServiceDeployments(namespace, deployment string) []ServiceDeployment {
 	var sds []ServiceDeployment
 	for _, sd := range c.serviceDeployments() {
-		if sd.namespace == namespace && sd.deployment == deployment {
+		if sd.namespace == namespace && (sd.deployment == deployment || deployment == "") {
 			sds = append(sds, sd)
 		}
 	}

@@ -83,7 +83,6 @@ func helmInstall(serviceName, namespace, basePath string) error {
 	out, err := cmd.CombinedOutput()
 	output := strings.Replace(string(out), "\n", "\n\t", -1)
 
-	log.Print(string(out))
 	if err != nil {
 		return fmt.Errorf("could not install a helm chart for service %v output: \n%v", serviceName, output)
 	}
@@ -110,4 +109,22 @@ func (c Configurd) Deploy(sds []ServiceDeployment, basePath string) (string, err
 	}
 
 	return "", nil
+}
+
+func (c Configurd) Undeploy(sds []ServiceDeployment) error {
+	for _, sd := range sds {
+		cmdArgs := []string{
+			"uninstall", "-n", sd.namespace, sd.ServiceName,
+		}
+		cmd := exec.Command("helm", cmdArgs...)
+
+		out, err := cmd.CombinedOutput()
+		output := strings.Replace(string(out), "\n", "\n\t", -1)
+
+		if err != nil {
+			return fmt.Errorf("could not uninstall a helm chart for namespace: %v, deployment: %v, output: \n%v", sd.namespace, sd.deployment, output)
+		}
+		log.Print(string(out))
+	}
+	return nil
 }

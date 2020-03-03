@@ -3,3 +3,6 @@ build:
 
 deploy:
 	go run ../cmd/main.go deploy local hello-deployment -t master
+
+undeploy:
+	go run ../cmd/main.go undeploy local -d hello-deployment
