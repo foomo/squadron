@@ -18,6 +18,7 @@ const (
 	defaultNamespaceDir  = "configurd/namespaces"
 	defaultChartDir      = "configurd/charts"
 	defaultDeploymentDir = "configurd/deployments"
+	defaultOverridesFile = "overrides.yaml"
 )
 
 var (

@@ -37,5 +37,5 @@ func Deploy(namespace, deployment, tag string) {
 			Build(serviceDeployment.ServiceName, FlagTag)
 		}
 	}
-	cnf.Deploy(sds, tag)
+	cnf.Deploy(sds, cwdir, tag)
 }

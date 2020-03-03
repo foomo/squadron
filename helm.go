@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/otiai10/copy"
 	"gopkg.in/yaml.v2"
@@ -15,6 +17,7 @@ type ServiceDeployment struct {
 	ServiceName string `yaml:"service"`
 	Overrides   interface{}
 	chart       string
+	namespace   string
 }
 
 func generateYaml(path string, data interface{}) error {
@@ -59,14 +62,14 @@ func generate(sd ServiceDeployment, outputDir, chartPath, tag string) error {
 		return fmt.Errorf("could not copy template files: %w", err)
 	}
 
-	err = generateYaml(path.Join(dir, "overrides.yaml"), sd.Overrides)
+	err = generateYaml(path.Join(dir, defaultOverridesFile), sd.Overrides)
 	if err != nil {
-		return fmt.Errorf("could not generate overrides.yaml: %w", err)
+		return fmt.Errorf("could not generate %v: %w", defaultOverridesFile, err)
 	}
 	return nil
 }
 
-func (c Configurd) Deploy(sds []ServiceDeployment, tag string) (string, error) {
+func (c Configurd) Deploy(sds []ServiceDeployment, basePath, tag string) (string, error) {
 	if err := os.RemoveAll(defaultDeploymentDir); err != nil {
 		return "", fmt.Errorf("could not clean deployment directory: %w", err)
 	}
@@ -78,6 +81,24 @@ func (c Configurd) Deploy(sds []ServiceDeployment, tag string) (string, error) {
 		err := generate(sd, defaultDeploymentDir, path.Join(defaultChartDir, sd.chart), tag)
 		if err != nil {
 			return "", err
+		}
+
+		// helm install
+		chartPath := path.Join(basePath, defaultDeploymentDir, sd.ServiceName)
+		cmdArgs := []string{
+			"install", sd.ServiceName, chartPath,
+			"-f", path.Join(chartPath, defaultOverridesFile),
+			"-n", sd.namespace,
+			"--set", "fullnameOverride=" + sd.ServiceName,
+		}
+		cmd := exec.Command("helm", cmdArgs...)
+
+		out, err := cmd.CombinedOutput()
+		output := strings.Replace(string(out), "\n", "\n\t", -1)
+
+		log.Print(string(out))
+		if err != nil {
+			return "", fmt.Errorf("could not install a helm chart for service %v output: \n%v", sd.ServiceName, output)
 		}
 	}
 
@@ -104,6 +125,7 @@ func (c Configurd) ServiceDeployments(baseDir, namespace, deployment string) ([]
 			log.Fatal(err)
 		}
 		wrapper.ServiceDeployments[i].chart = svc.Chart
+		wrapper.ServiceDeployments[i].namespace = namespace
 	}
 	return wrapper.ServiceDeployments, nil
 }
