@@ -8,18 +8,20 @@ import (
 
 func init() {
 	rootCmd.AddCommand(deployCmd)
-	deployCmd.Flags().BoolVarP(&flagBuild, "build", "", false, "Build deployment before publishing")
+	deployCmd.Flags().BoolVarP(&flagBuild, "build", "", false, "Build service group before publishing")
+	deployCmd.Flags().StringVarP(&flagOutputDir, "output", "o", "default", "Specifies output directory")
 }
 
 var (
-	flagBuild bool
+	flagBuild     bool
+	flagOutputDir string
 )
 
 var (
 	deployCmd = &cobra.Command{
-		Use:   "deploy [NAMESPACE] [DEPLOYMENT] -t {TAG}",
-		Short: "Deploys the specified deployment with given tag version",
-		Long:  `Deploys the specified deployment with given tag version`,
+		Use:   "deploy [NAMESPACE] [SERVICE GROUP] -t {TAG}",
+		Short: "Deploys the specified service group with given tag version",
+		Long:  `Deploys the specified service group with given tag version`,
 		Args:  cobra.MinimumNArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			Deploy(args[0], args[1], FlagTag)
@@ -27,17 +29,17 @@ var (
 	}
 )
 
-func Deploy(namespace, deployment, tag string) {
-	sds := cnf.GetServiceDeployments(namespace, deployment)
-	if len(sds) == 0 {
-		log.Fatalf("could not find any service deployments for namespace: %v and deployment: %v", namespace, deployment)
+func Deploy(namespace, serviceGroup, tag string) {
+	sgis := cnf.GetServiceGroupItems(namespace, serviceGroup)
+	if len(sgis) == 0 {
+		log.Fatalf("could not find any service for namespace: %v and service group: %v", namespace, serviceGroup)
 	}
 	if flagBuild {
-		for _, serviceDeployment := range sds {
-			Build(serviceDeployment.ServiceName, tag)
+		for _, sgi := range sgis {
+			Build(sgi.ServiceName, tag)
 		}
 	}
-	err := cnf.Deploy(sds, cwdir)
+	err := cnf.Deploy(sgis, flagOutputDir, tag)
 	if err != nil {
 		log.Fatal(err)
 	}

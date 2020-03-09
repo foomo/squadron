@@ -18,7 +18,7 @@ const (
 	defaultServiceDir    = "configurd/services"
 	defaultNamespaceDir  = "configurd/namespaces"
 	defaultChartDir      = "configurd/charts"
-	defaultDeploymentDir = "configurd/deployments"
+	defaultOutputDir     = "configurd/.workdir"
 	defaultOverridesFile = "overrides.yaml"
 )
 
@@ -26,14 +26,14 @@ var (
 	ErrServiceNotFound = errors.New("service not found")
 )
 
-type Deployment struct {
-	name               string
-	serviceDeployments []ServiceDeployment
+type ServiceGroup struct {
+	name  string
+	items []ServiceGroupItem
 }
 
 type Namespace struct {
-	name        string
-	deployments []Deployment
+	name          string
+	serviceGroups []ServiceGroup
 }
 
 type Configurd struct {
@@ -43,9 +43,9 @@ type Configurd struct {
 }
 
 func New(dir string) (Configurd, error) {
-	c := Configurd{}
+	log.Printf("Parsing configuration files")
 
-	//load services
+	c := Configurd{}
 	serviceDir := path.Join(dir, defaultServiceDir)
 	err := filepath.Walk(serviceDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -57,7 +57,10 @@ func New(dir string) (Configurd, error) {
 				return err
 			}
 			defer file.Close()
-			svc, err := loadService(file)
+
+			var name = info.Name()[0 : len(info.Name())-len(filepath.Ext(info.Name()))]
+			log.Printf("Loading service: %v, from: %v", name, path)
+			svc, err := loadService(file, name)
 			if err != nil {
 				return err
 			}
@@ -87,13 +90,14 @@ func loadNamespaces(c Configurd, basePath string) ([]Namespace, error) {
 			return err
 		}
 		if info.IsDir() && path != namespaceDir {
-			ds, err := loadDeployments(c, info.Name())
+			log.Printf("Loading namespace: %v, from: %v", info.Name(), path)
+			sgs, err := loadServiceGroups(c, info.Name())
 			if err != nil {
 				return err
 			}
 			ns := Namespace{
-				name:        info.Name(),
-				deployments: ds,
+				name:          info.Name(),
+				serviceGroups: sgs,
 			}
 			nss = append(nss, ns)
 		}
@@ -102,54 +106,58 @@ func loadNamespaces(c Configurd, basePath string) ([]Namespace, error) {
 	return nss, err
 }
 
-func loadDeployments(c Configurd, namespace string) ([]Deployment, error) {
-	var ds []Deployment
-	err := filepath.Walk(path.Join(defaultNamespaceDir, namespace), func(path string, info os.FileInfo, err error) error {
+func loadServiceGroups(c Configurd, namespace string) ([]ServiceGroup, error) {
+	var sgs []ServiceGroup
+
+	sgDir := path.Join(defaultNamespaceDir, namespace)
+	err := filepath.Walk(sgDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 		if !info.IsDir() && (strings.HasSuffix(path, defaultConfigFileExt)) {
 			var name = info.Name()[0 : len(info.Name())-len(filepath.Ext(info.Name()))]
-			sds, err := loadServiceDeployments(c, namespace, name)
+			log.Printf("Loading service group: %v, from: %v", name, path)
+			sgis, err := loadServiceGroupItems(c, namespace, name)
 			if err != nil {
 				return err
 			}
-			d := Deployment{
-				name:               name,
-				serviceDeployments: sds,
+			sg := ServiceGroup{
+				name:  name,
+				items: sgis,
 			}
-			ds = append(ds, d)
+			sgs = append(sgs, sg)
 		}
 		return nil
 	})
-	return ds, err
+	return sgs, err
 }
 
-func loadServiceDeployments(c Configurd, namespace, deployment string) ([]ServiceDeployment, error) {
-	path := path.Join(defaultNamespaceDir, namespace, deployment+defaultConfigFileExt)
+func loadServiceGroupItems(c Configurd, namespace, serviceGroup string) ([]ServiceGroupItem, error) {
+	path := path.Join(defaultNamespaceDir, namespace, serviceGroup+defaultConfigFileExt)
 	file, err := os.Open(path)
 	defer file.Close()
 	if err != nil {
-		return []ServiceDeployment{}, err
+		return []ServiceGroupItem{}, err
 	}
 
 	var wrapper struct {
-		ServiceDeployments []ServiceDeployment `yaml:"services"`
+		Items []ServiceGroupItem `yaml:"serviceGroup"`
 	}
 	if err := yaml.NewDecoder(file).Decode(&wrapper); err != nil {
-		return []ServiceDeployment{}, fmt.Errorf("could not decode service deployment: %w", err)
+		return []ServiceGroupItem{}, fmt.Errorf("could not decode service group items: %w", err)
 	}
 
-	for i, sd := range wrapper.ServiceDeployments {
-		svc, err := c.Service(sd.ServiceName)
+	for i, sgi := range wrapper.Items {
+		log.Printf("Loading service group item: %v", sgi.ServiceName)
+		svc, err := c.Service(sgi.ServiceName)
 		if err != nil {
 			log.Fatal(err)
 		}
-		wrapper.ServiceDeployments[i].chart = svc.Chart
-		wrapper.ServiceDeployments[i].namespace = namespace
-		wrapper.ServiceDeployments[i].deployment = deployment
+		wrapper.Items[i].chart = svc.Chart
+		wrapper.Items[i].namespace = namespace
+		wrapper.Items[i].serviceGroup = serviceGroup
 	}
-	return wrapper.ServiceDeployments, nil
+	return wrapper.Items, nil
 }
 
 func (c Configurd) Service(name string) (Service, error) {
@@ -161,32 +169,33 @@ func (c Configurd) Service(name string) (Service, error) {
 	return Service{}, ErrServiceNotFound
 }
 
-func (c Configurd) GetServiceDeployments(namespace, deployment string) []ServiceDeployment {
-	var sds []ServiceDeployment
-	for _, sd := range c.serviceDeployments() {
-		if sd.namespace == namespace && (sd.deployment == deployment || deployment == "") {
-			sds = append(sds, sd)
+func (c Configurd) GetServiceGroupItems(namespace, serviceGroup string) []ServiceGroupItem {
+	var sgis []ServiceGroupItem
+	for _, sgi := range c.serviceGroupItems() {
+		if sgi.namespace == namespace && (sgi.serviceGroup == serviceGroup || serviceGroup == "") {
+			sgis = append(sgis, sgi)
 		}
 	}
-	return sds
+	return sgis
 }
 
-func (c Configurd) serviceDeployments() []ServiceDeployment {
-	var sds []ServiceDeployment
+func (c Configurd) serviceGroupItems() []ServiceGroupItem {
+	var sgis []ServiceGroupItem
 	for _, ns := range c.Namespaces {
-		for _, d := range ns.deployments {
-			sds = append(sds, d.serviceDeployments...)
+		for _, sg := range ns.serviceGroups {
+			sgis = append(sgis, sg.items...)
 		}
 	}
-	return sds
+	return sgis
 }
 
-func loadService(reader io.Reader) (Service, error) {
+func loadService(reader io.Reader, name string) (Service, error) {
 	var wrapper struct {
 		Service Service `yaml:"service"`
 	}
 	if err := yaml.NewDecoder(reader).Decode(&wrapper); err != nil {
 		return Service{}, fmt.Errorf("could not decode service: %w", err)
 	}
+	wrapper.Service.Name = name
 	return wrapper.Service, nil
 }

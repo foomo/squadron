@@ -1,35 +1,28 @@
 package configurd
 
 import (
-	"context"
-	"fmt"
+	"log"
 	"os/exec"
 	"strings"
 )
 
-type Docker struct {
-	File    string `yaml:"file"`
-	Context string `yaml:"context"`
-	Options string `yaml:"options"`
+type Build struct {
+	Command string `yaml:"command"`
 	Image   string `yaml:"image"`
 }
 
 type Service struct {
-	Name   string `yaml:"name"`
-	Docker Docker `yaml:"docker"`
-	Chart  string `yaml:"chart"`
+	Name  string
+	Build Build  `yaml:"build"`
+	Chart string `yaml:"chart"`
 }
 
-func (s Service) Build(ctx context.Context, tag string) (string, error) {
-	args := []string{
-		"build",
-		"-f", s.Docker.File,
-		"-t", fmt.Sprintf("%s:%s", s.Docker.Image, tag),
-		".",
-	}
+func (s Service) RunBuild(tag string) (string, error) {
+	args := append(strings.Split(s.Build.Command, " "), "-t", s.Build.Image+":"+tag)
+	log.Printf("Running command: %v", strings.Join(args, " "))
 
-	cmd := exec.Command("docker", args...)
-	cmd.Dir = s.Docker.Context
+	cmd := exec.Command(args[0], args[1:]...)
+	cmd.Dir = defaultServiceDir
 
 	out, err := cmd.CombinedOutput()
 	output := strings.Replace(string(out), "\n", "\n\t", -1)

@@ -1,8 +1,5 @@
 service:
-  name: hi-service
-  docker:
-    image: foomo/configurd-hello
-    file: Dockerfile
-    context: application
-    # options:
+  build:
+    command: "docker build ../../application/"
+    image: foomo/configurd-hi
   chart: example
