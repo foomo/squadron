@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -42,7 +41,14 @@ type Configurd struct {
 	Namespaces []Namespace
 }
 
-func New(dir string) (Configurd, error) {
+type serviceLoader func(string) (Service, error)
+
+type Logger interface {
+	Printf(format string, args ...interface{})
+	Fatalf(format string, args ...interface{})
+}
+
+func New(log Logger, dir string) (Configurd, error) {
 	log.Printf("Parsing configuration files")
 
 	c := Configurd{}
@@ -73,7 +79,7 @@ func New(dir string) (Configurd, error) {
 		return Configurd{}, err
 	}
 
-	c.Namespaces, err = loadNamespaces(c, dir)
+	c.Namespaces, err = loadNamespaces(log, c.Service, dir)
 
 	if err != nil {
 		return Configurd{}, err
@@ -82,7 +88,7 @@ func New(dir string) (Configurd, error) {
 	return c, nil
 }
 
-func loadNamespaces(c Configurd, basePath string) ([]Namespace, error) {
+func loadNamespaces(log Logger, sl serviceLoader, basePath string) ([]Namespace, error) {
 	var nss []Namespace
 	namespaceDir := path.Join(basePath, defaultNamespaceDir)
 	err := filepath.Walk(namespaceDir, func(path string, info os.FileInfo, err error) error {
@@ -91,7 +97,7 @@ func loadNamespaces(c Configurd, basePath string) ([]Namespace, error) {
 		}
 		if info.IsDir() && path != namespaceDir {
 			log.Printf("Loading namespace: %v, from: %v", info.Name(), path)
-			sgs, err := loadServiceGroups(c, info.Name())
+			sgs, err := loadServiceGroups(log, sl, info.Name())
 			if err != nil {
 				return err
 			}
@@ -106,7 +112,7 @@ func loadNamespaces(c Configurd, basePath string) ([]Namespace, error) {
 	return nss, err
 }
 
-func loadServiceGroups(c Configurd, namespace string) ([]ServiceGroup, error) {
+func loadServiceGroups(log Logger, sl serviceLoader, namespace string) ([]ServiceGroup, error) {
 	var sgs []ServiceGroup
 
 	sgDir := path.Join(defaultNamespaceDir, namespace)
@@ -117,7 +123,7 @@ func loadServiceGroups(c Configurd, namespace string) ([]ServiceGroup, error) {
 		if !info.IsDir() && (strings.HasSuffix(path, defaultConfigFileExt)) {
 			var name = info.Name()[0 : len(info.Name())-len(filepath.Ext(info.Name()))]
 			log.Printf("Loading service group: %v, from: %v", name, path)
-			sgis, err := loadServiceGroupItems(c, namespace, name)
+			sgis, err := loadServiceGroupItems(log, sl, namespace, name)
 			if err != nil {
 				return err
 			}
@@ -132,26 +138,26 @@ func loadServiceGroups(c Configurd, namespace string) ([]ServiceGroup, error) {
 	return sgs, err
 }
 
-func loadServiceGroupItems(c Configurd, namespace, serviceGroup string) ([]ServiceGroupItem, error) {
+func loadServiceGroupItems(log Logger, sl serviceLoader, namespace, serviceGroup string) ([]ServiceGroupItem, error) {
 	path := path.Join(defaultNamespaceDir, namespace, serviceGroup+defaultConfigFileExt)
 	file, err := os.Open(path)
-	defer file.Close()
 	if err != nil {
-		return []ServiceGroupItem{}, err
+		return nil, err
 	}
+	defer file.Close()
 
 	var wrapper struct {
 		Items []ServiceGroupItem `yaml:"serviceGroup"`
 	}
 	if err := yaml.NewDecoder(file).Decode(&wrapper); err != nil {
-		return []ServiceGroupItem{}, fmt.Errorf("could not decode service group items: %w", err)
+		return nil, fmt.Errorf("could not decode service group items: %w", err)
 	}
 
 	for i, sgi := range wrapper.Items {
 		log.Printf("Loading service group item: %v", sgi.ServiceName)
-		svc, err := c.Service(sgi.ServiceName)
+		svc, err := sl(sgi.ServiceName)
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 		wrapper.Items[i].chart = svc.Chart
 		wrapper.Items[i].namespace = namespace

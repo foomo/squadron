@@ -2,7 +2,6 @@ package configurd
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -21,7 +20,7 @@ type ServiceGroupItem struct {
 	chart        string
 }
 
-func generateYaml(path string, data interface{}) error {
+func generateYaml(log Logger, path string, data interface{}) error {
 	log.Printf("Generating yaml file: %v", path)
 	out, marshalErr := yaml.Marshal(data)
 	if marshalErr != nil {
@@ -39,7 +38,7 @@ func generateYaml(path string, data interface{}) error {
 	return nil
 }
 
-func generate(sgi ServiceGroupItem, outputDir, chartPath string) error {
+func generate(log Logger, sgi ServiceGroupItem, outputDir, chartPath string) error {
 	dir := path.Join(outputDir, sgi.ServiceName)
 	log.Printf("Creating dir: %v", dir)
 	if err := os.MkdirAll(dir, 0744); err != nil {
@@ -68,24 +67,24 @@ func generate(sgi ServiceGroupItem, outputDir, chartPath string) error {
 		return fmt.Errorf("could not copy template files: %w", err)
 	}
 
-	err = generateYaml(path.Join(dir, defaultOverridesFile), sgi.Overrides)
+	err = generateYaml(log, path.Join(dir, defaultOverridesFile), sgi.Overrides)
 	if err != nil {
 		return fmt.Errorf("could not generate %v: %w", defaultOverridesFile, err)
 	}
 	return nil
 }
 
-func helmInstall(s Service, namespace, outputDir, tag string) error {
+func helmInstall(log Logger, s Service, namespace, outputDir, tag string) (string, error) {
 	log.Printf("Running helm install for service: %v", s.Name)
 	chartPath := path.Join(outputDir, s.Name)
 	cmdArgs := []string{
 		"install", s.Name, chartPath,
 		"-f", path.Join(chartPath, defaultOverridesFile),
 		"-n", namespace,
-		"--set", "nameOverride=" + s.Name,
-		"--set", "fullnameOverride=" + s.Name,
-		"--set", "image.repository=" + s.Build.Image,
-		"--set", "image.tag=" + tag,
+		"--set", fmt.Sprintf("nameOverride=%v", s.Name),
+		"--set", fmt.Sprintf("fullnameOverride=%v", s.Name),
+		"--set", fmt.Sprintf("image.repository=%v", s.Build.Image),
+		"--set", fmt.Sprintf("image.tag=%v", tag),
 	}
 	cmd := exec.Command("helm", cmdArgs...)
 
@@ -93,13 +92,12 @@ func helmInstall(s Service, namespace, outputDir, tag string) error {
 	output := strings.Replace(string(out), "\n", "\n\t", -1)
 
 	if err != nil {
-		return fmt.Errorf("could not install a helm chart for service %v output: \n%v", s.Name, output)
+		return "", fmt.Errorf("could not install a helm chart for service %v output: \n%v", s.Name, output)
 	}
-	log.Print(string(out))
-	return nil
+	return output, nil
 }
 
-func helmUninstall(sgi ServiceGroupItem) error {
+func helmUninstall(log Logger, sgi ServiceGroupItem) (string, error) {
 	log.Printf("Running helm uninstall for service: %v", sgi.ServiceName)
 	cmdArgs := []string{
 		"uninstall", "-n", sgi.namespace, sgi.ServiceName,
@@ -110,51 +108,54 @@ func helmUninstall(sgi ServiceGroupItem) error {
 	output := strings.Replace(string(out), "\n", "\n\t", -1)
 
 	if err != nil {
-		return fmt.Errorf("could not uninstall a helm chart for namespace: %v, service group: %v, output: \n%v", sgi.namespace, sgi.serviceGroup, output)
+		return "", fmt.Errorf("could not uninstall a helm chart for namespace: %v, service group: %v, output: \n%v", sgi.namespace, sgi.serviceGroup, output)
 	}
-	log.Print(string(out))
-	return nil
+	return output, nil
 }
 
-func (c Configurd) Deploy(sgis []ServiceGroupItem, deploymentDir, tag string) error {
+func (c Configurd) Install(log Logger, sgis []ServiceGroupItem, deploymentDir, tag string) (string, error) {
 	outputDir := path.Join(defaultOutputDir, deploymentDir)
 
 	log.Printf("Removing dir: %v", outputDir)
 	if err := os.RemoveAll(outputDir); err != nil {
-		return fmt.Errorf("could not clean workdir directory: %w", err)
+		return "", fmt.Errorf("could not clean workdir directory: %w", err)
 	}
 
 	log.Printf("Creating dir: %v", outputDir)
 	if err := os.MkdirAll(outputDir, 0744); err != nil {
-		return fmt.Errorf("could not create a workdir directory: %w", err)
+		return "", fmt.Errorf("could not create a workdir directory: %w", err)
 	}
 	for _, sgi := range sgis {
-		err := generate(sgi, outputDir, path.Join(defaultChartDir, sgi.chart))
+		err := generate(log, sgi, outputDir, path.Join(defaultChartDir, sgi.chart))
 		if err != nil {
-			return err
+			return "", err
 		}
-
 	}
+
+	var output []string
 	for _, sgi := range sgis {
 		s, err := c.Service(sgi.ServiceName)
 		if err != nil {
-			return err
+			return "", err
 		}
-		err = helmInstall(s, sgi.namespace, outputDir, tag)
+		out, err := helmInstall(log, s, sgi.namespace, outputDir, tag)
 		if err != nil {
-			return err
+			return "", err
 		}
+		output = append(output, out)
 	}
 
-	return nil
+	return strings.Join(output, "\n"), nil
 }
 
-func (c Configurd) Undeploy(sgis []ServiceGroupItem) error {
+func (c Configurd) Uninstall(log Logger, sgis []ServiceGroupItem) (string, error) {
+	var output []string
 	for _, sgi := range sgis {
-		err := helmUninstall(sgi)
+		out, err := helmUninstall(log, sgi)
 		if err != nil {
-			return err
+			return "", err
 		}
+		output = append(output, out)
 	}
-	return nil
+	return strings.Join(output, "\n"), nil
 }

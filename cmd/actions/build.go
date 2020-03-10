@@ -1,7 +1,7 @@
 package actions
 
 import (
-	"log"
+	"fmt"
 
 	"github.com/spf13/cobra"
 )
@@ -11,7 +11,10 @@ var cmdBuild = &cobra.Command{
 	Short: "Build a service",
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		Build(args[0], cmd.Flag("tag").Value.String())
+		_, err := Build(args[0], FlagTag, FlagDir)
+		if err != nil {
+			log.Fatal(err)
+		}
 	},
 }
 
@@ -19,14 +22,14 @@ func init() {
 	rootCmd.AddCommand(cmdBuild)
 }
 
-func Build(service, tag string) {
+func Build(service, tag, dir string) (string, error) {
 	svc, err := cnf.Service(service)
 	if err != nil {
-		log.Fatalf("service not found: %v", err)
+		return "", fmt.Errorf("service not found: %v", err)
 	}
-	output, err := svc.RunBuild(tag)
+	output, err := svc.RunBuild(log, dir, tag)
 	if err != nil {
-		log.Fatalf("could not build: %v  output:\n%v", output, err)
+		return "", fmt.Errorf("could not build service: %v output:\n%v", svc.Name, output)
 	}
-	log.Print(output)
+	return output, nil
 }

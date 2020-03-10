@@ -1,17 +1,16 @@
 package actions
 
 import (
-	"fmt"
-	"log"
 	"os"
 
 	"github.com/foomo/configurd"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
 var (
+	log     = logrus.New()
 	cnf     configurd.Configurd
-	cwdir   string
 	rootCmd = &cobra.Command{
 		Use:   "cobra",
 		Short: "A generator for Cobra based Applications",
@@ -21,26 +20,26 @@ to quickly create a Cobra application.`,
 	}
 
 	FlagTag string
+	FlagDir string
 )
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&FlagTag, "tag", "t", "latest", "Specifies the image tag")
-}
-
-func Execute() {
-	var err error = nil
-	cwdir, err = os.Getwd()
+	baseDir, err := os.Getwd()
 	if err != nil {
 		log.Fatal(err)
 	}
+	rootCmd.PersistentFlags().StringVarP(&FlagTag, "tag", "t", "latest", "Specifies the image tag")
+	rootCmd.PersistentFlags().StringVarP(&FlagDir, "dir", "d", baseDir, "Specifies working directory")
+}
 
-	cnf, err = configurd.New(cwdir)
+func Execute() {
+	var err error
+	cnf, err = configurd.New(log, FlagDir)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 }
