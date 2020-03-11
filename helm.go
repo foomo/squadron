@@ -12,16 +12,23 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type ServiceGroupItem struct {
-	ServiceName  string `yaml:"service"`
-	Overrides    interface{}
-	namespace    string
-	serviceGroup string
-	chart        string
+type ServiceItem struct {
+	ServiceName string `yaml:"service"`
+	Overrides   interface{}
+	namespace   string
+	group       string
+	chart       string
+}
+
+type JobItem struct {
+	ServiceName string `yaml:"service"`
+	Overrides   interface{}
+	namespace   string
+	group       string
+	chart       string
 }
 
 func generateYaml(log Logger, path string, data interface{}) error {
-	log.Printf("Generating yaml file: %v", path)
 	out, marshalErr := yaml.Marshal(data)
 	if marshalErr != nil {
 		return marshalErr
@@ -38,14 +45,17 @@ func generateYaml(log Logger, path string, data interface{}) error {
 	return nil
 }
 
-func generate(log Logger, sgi ServiceGroupItem, outputDir, chartPath string) error {
-	dir := path.Join(outputDir, sgi.ServiceName)
-	log.Printf("Creating dir: %v", dir)
-	if err := os.MkdirAll(dir, 0744); err != nil {
+func generate(log Logger, si ServiceItem, basePath, outputDir, chart string) error {
+	outputPath := path.Join(basePath, defaultOutputDir, outputDir, si.ServiceName)
+	chartPath := path.Join(basePath, defaultChartDir, chart)
+
+	log.Printf("Entering dir: %v", path.Join(basePath, defaultOutputDir, outputDir))
+	log.Printf("Creating dir: %q", si.ServiceName)
+	if err := os.MkdirAll(outputPath, 0744); err != nil {
 		return fmt.Errorf("could not create output dir: %w", err)
 	}
 
-	log.Printf("Copying %v to %v", chartPath, dir)
+	log.Printf("Copying chart: %v to dir: %q", chart, si.ServiceName)
 	err := filepath.Walk(chartPath, func(source string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -54,7 +64,7 @@ func generate(log Logger, sgi ServiceGroupItem, outputDir, chartPath string) err
 			return nil
 		}
 
-		destination := path.Join(dir, info.Name())
+		destination := path.Join(outputPath, info.Name())
 		if err := copy.Copy(source, destination); err != nil {
 			return err
 		}
@@ -67,7 +77,8 @@ func generate(log Logger, sgi ServiceGroupItem, outputDir, chartPath string) err
 		return fmt.Errorf("could not copy template files: %w", err)
 	}
 
-	err = generateYaml(log, path.Join(dir, defaultOverridesFile), sgi.Overrides)
+	log.Printf("Generating yaml file: %q", path.Join(si.ServiceName, defaultOverridesFile))
+	err = generateYaml(log, path.Join(outputPath, defaultOverridesFile), si.Overrides)
 	if err != nil {
 		return fmt.Errorf("could not generate %v: %w", defaultOverridesFile, err)
 	}
@@ -97,10 +108,10 @@ func helmInstall(log Logger, s Service, namespace, outputDir, tag string) (strin
 	return output, nil
 }
 
-func helmUninstall(log Logger, sgi ServiceGroupItem) (string, error) {
-	log.Printf("Running helm uninstall for service: %v", sgi.ServiceName)
+func helmUninstall(log Logger, si ServiceItem) (string, error) {
+	log.Printf("Running helm uninstall for service: %v", si.ServiceName)
 	cmdArgs := []string{
-		"uninstall", "-n", sgi.namespace, sgi.ServiceName,
+		"uninstall", "-n", si.namespace, si.ServiceName,
 	}
 	cmd := exec.Command("helm", cmdArgs...)
 
@@ -108,54 +119,59 @@ func helmUninstall(log Logger, sgi ServiceGroupItem) (string, error) {
 	output := strings.Replace(string(out), "\n", "\n\t", -1)
 
 	if err != nil {
-		return "", fmt.Errorf("could not uninstall a helm chart for namespace: %v, service group: %v, output: \n%v", sgi.namespace, sgi.serviceGroup, output)
+		return "", fmt.Errorf("could not uninstall a helm chart for namespace: %v, service group: %v, output: \n%v", si.namespace, si.group, output)
 	}
 	return output, nil
 }
 
-func (c Configurd) Install(log Logger, sgis []ServiceGroupItem, deploymentDir, tag string) (string, error) {
-	outputDir := path.Join(defaultOutputDir, deploymentDir)
+func (c Configurd) Install(log Logger, sis []ServiceItem, basePath, outputDir, tag string, verbose bool) (string, error) {
+	log.Printf("Installing services")
+	wordkDir := path.Join(basePath, defaultOutputDir)
+	outputPath := path.Join(basePath, defaultOutputDir, outputDir)
 
-	log.Printf("Removing dir: %v", outputDir)
-	if err := os.RemoveAll(outputDir); err != nil {
+	log.Printf("Entering dir: %q", wordkDir)
+	log.Printf("Removing dir: %q", outputDir)
+	if err := os.RemoveAll(outputPath); err != nil {
 		return "", fmt.Errorf("could not clean workdir directory: %w", err)
 	}
 
-	log.Printf("Creating dir: %v", outputDir)
-	if err := os.MkdirAll(outputDir, 0744); err != nil {
+	log.Printf("Creating dir: %q", outputDir)
+	if err := os.MkdirAll(outputPath, 0744); err != nil {
 		return "", fmt.Errorf("could not create a workdir directory: %w", err)
 	}
-	for _, sgi := range sgis {
-		err := generate(log, sgi, outputDir, path.Join(defaultChartDir, sgi.chart))
+	for _, si := range sis {
+		err := generate(log, si, basePath, outputDir, si.chart)
 		if err != nil {
 			return "", err
 		}
 	}
 
 	var output []string
-	for _, sgi := range sgis {
-		s, err := c.Service(sgi.ServiceName)
+	for _, si := range sis {
+		s, err := c.Service(si.ServiceName)
 		if err != nil {
 			return "", err
 		}
-		out, err := helmInstall(log, s, sgi.namespace, outputDir, tag)
+		out, err := helmInstall(log, s, si.namespace, outputPath, tag)
 		if err != nil {
 			return "", err
 		}
+		logOutput(log, verbose, out)
 		output = append(output, out)
 	}
 
 	return strings.Join(output, "\n"), nil
 }
 
-func (c Configurd) Uninstall(log Logger, sgis []ServiceGroupItem) (string, error) {
-	var output []string
-	for _, sgi := range sgis {
-		out, err := helmUninstall(log, sgi)
+func (c Configurd) Uninstall(log Logger, sis []ServiceItem, verbose bool) (string, error) {
+	var outputs []string
+	for _, si := range sis {
+		out, err := helmUninstall(log, si)
 		if err != nil {
 			return "", err
 		}
-		output = append(output, out)
+		outputs = append(outputs, out)
+		logOutput(log, verbose, out)
 	}
-	return strings.Join(output, "\n"), nil
+	return strings.Join(outputs, "\n"), nil
 }

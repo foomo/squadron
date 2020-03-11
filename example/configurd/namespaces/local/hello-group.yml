@@ -1,4 +1,4 @@
-serviceGroup:
+group:
   - service: "hello-service"
     overrides:
       args:

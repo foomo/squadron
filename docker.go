@@ -17,9 +17,9 @@ type Service struct {
 	Chart string `yaml:"chart"`
 }
 
-func (s Service) RunBuild(log Logger, dir, tag string) (string, error) {
+func (s Service) RunBuild(log Logger, dir, tag string, verbose bool) (string, error) {
 	args := append(strings.Split(s.Build.Command, " "), "-t", fmt.Sprintf("%v:%v", s.Build.Image, tag))
-	log.Printf("Running command: %v", strings.Join(args, " "))
+	log.Printf("Building service: %v", s.Name)
 
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Dir = dir
@@ -29,5 +29,6 @@ func (s Service) RunBuild(log Logger, dir, tag string) (string, error) {
 	if err != nil {
 		return output, err
 	}
+	logOutput(log, verbose, output)
 	return output, nil
 }

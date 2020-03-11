@@ -19,8 +19,11 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	}
 
-	FlagTag string
-	FlagDir string
+	FlagTag       string
+	FlagDir       string
+	FlagVerbose   bool
+	FlagNamespace string
+	// FlagGroup     string
 )
 
 func init() {
@@ -30,6 +33,7 @@ func init() {
 	}
 	rootCmd.PersistentFlags().StringVarP(&FlagTag, "tag", "t", "latest", "Specifies the image tag")
 	rootCmd.PersistentFlags().StringVarP(&FlagDir, "dir", "d", baseDir, "Specifies working directory")
+	rootCmd.PersistentFlags().BoolVarP(&FlagVerbose, "verbose", "v", false, "Specifies should command output be displayed")
 }
 
 func Execute() {
