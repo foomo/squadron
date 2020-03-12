@@ -13,7 +13,7 @@ import (
 )
 
 type ServiceItem struct {
-	ServiceName string `yaml:"service"`
+	ServiceName string
 	Overrides   interface{}
 	namespace   string
 	group       string
@@ -47,15 +47,13 @@ func generateYaml(log Logger, path string, data interface{}) error {
 
 func generate(log Logger, si ServiceItem, basePath, outputDir, chart string) error {
 	outputPath := path.Join(basePath, defaultOutputDir, outputDir, si.ServiceName)
-	chartPath := path.Join(basePath, defaultChartDir, chart)
-
-	log.Printf("Entering dir: %v", path.Join(basePath, defaultOutputDir, outputDir))
-	log.Printf("Creating dir: %q", si.ServiceName)
+	log.Printf("Creating dir: %q", path.Join(outputDir, si.ServiceName))
 	if err := os.MkdirAll(outputPath, 0744); err != nil {
 		return fmt.Errorf("could not create output dir: %w", err)
 	}
 
-	log.Printf("Copying chart: %v to dir: %q", chart, si.ServiceName)
+	log.Printf("Copying chart: %v to dir: %q", chart, path.Join(outputDir, si.ServiceName))
+	chartPath := path.Join(basePath, defaultChartDir, chart)
 	err := filepath.Walk(chartPath, func(source string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -77,7 +75,7 @@ func generate(log Logger, si ServiceItem, basePath, outputDir, chart string) err
 		return fmt.Errorf("could not copy template files: %w", err)
 	}
 
-	log.Printf("Generating yaml file: %q", path.Join(si.ServiceName, defaultOverridesFile))
+	log.Printf("Generating yaml file: %q", path.Join(outputDir, si.ServiceName, defaultOverridesFile))
 	err = generateYaml(log, path.Join(outputPath, defaultOverridesFile), si.Overrides)
 	if err != nil {
 		return fmt.Errorf("could not generate %v: %w", defaultOverridesFile, err)
@@ -126,10 +124,9 @@ func helmUninstall(log Logger, si ServiceItem) (string, error) {
 
 func (c Configurd) Install(log Logger, sis []ServiceItem, basePath, outputDir, tag string, verbose bool) (string, error) {
 	log.Printf("Installing services")
-	wordkDir := path.Join(basePath, defaultOutputDir)
 	outputPath := path.Join(basePath, defaultOutputDir, outputDir)
 
-	log.Printf("Entering dir: %q", wordkDir)
+	log.Printf("Entering dir: %q", path.Join(basePath, defaultOutputDir))
 	log.Printf("Removing dir: %q", outputDir)
 	if err := os.RemoveAll(outputPath); err != nil {
 		return "", fmt.Errorf("could not clean workdir directory: %w", err)

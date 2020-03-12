@@ -1,9 +1,11 @@
 group:
-  - service: "hello-service"
-    overrides:
-      args:
-        - "--greeting=hehe"
-  - service: "hi-service"
-    overrides:
-      args:
-        - "--greeting=hai"
+  services:
+    hello-service:
+      overrides:
+        args:
+          - "--greeting=hehe"
+    hi-service:
+      overrides:
+        args:
+          - "--greeting=hai"
+  jobs:

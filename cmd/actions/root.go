@@ -2,6 +2,7 @@ package actions
 
 import (
 	"os"
+	"path"
 
 	"github.com/foomo/configurd"
 	"github.com/sirupsen/logrus"
@@ -12,38 +13,35 @@ var (
 	log     = logrus.New()
 	cnf     configurd.Configurd
 	rootCmd = &cobra.Command{
-		Use:   "cobra",
-		Short: "A generator for Cobra based Applications",
-		Long: `Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+		Use: "configurd",
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			wdir, err := os.Getwd()
+			if err != nil {
+				log.Fatal(err)
+			}
+			if flagDir != "" {
+				flagDir = path.Join(wdir, flagDir)
+			}
+			cnf, err = configurd.New(log, flagDir)
+			if err != nil {
+				log.Fatal(err)
+			}
+		},
 	}
 
-	FlagTag       string
-	FlagDir       string
-	FlagVerbose   bool
-	FlagNamespace string
-	// FlagGroup     string
+	flagTag       string
+	flagDir       string
+	flagVerbose   bool
+	flagNamespace string
 )
 
 func init() {
-	baseDir, err := os.Getwd()
-	if err != nil {
-		log.Fatal(err)
-	}
-	rootCmd.PersistentFlags().StringVarP(&FlagTag, "tag", "t", "latest", "Specifies the image tag")
-	rootCmd.PersistentFlags().StringVarP(&FlagDir, "dir", "d", baseDir, "Specifies working directory")
-	rootCmd.PersistentFlags().BoolVarP(&FlagVerbose, "verbose", "v", false, "Specifies should command output be displayed")
+	rootCmd.PersistentFlags().StringVarP(&flagTag, "tag", "t", "latest", "Specifies the image tag")
+	rootCmd.PersistentFlags().StringVarP(&flagDir, "dir", "d", "", "Specifies working directory")
+	rootCmd.PersistentFlags().BoolVarP(&flagVerbose, "verbose", "v", false, "Specifies should command output be displayed")
+	rootCmd.AddCommand(buildCmd, installCmd, uninstallCmd)
 }
 
 func Execute() {
-	var err error
-	cnf, err = configurd.New(log, FlagDir)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if err := rootCmd.Execute(); err != nil {
-		log.Fatal(err)
-	}
+	rootCmd.Execute()
 }

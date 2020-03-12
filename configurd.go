@@ -27,8 +27,8 @@ var (
 
 type Group struct {
 	name     string
-	Services []ServiceItem
-	Jobs     []JobItem
+	Services map[string]ServiceItem
+	Jobs     map[string]JobItem
 }
 
 type Namespace struct {
@@ -53,12 +53,12 @@ func relativePath(absoltePath, basePath string) string {
 	return strings.Replace(absoltePath, basePath+"/", "", -1)
 }
 
-func New(log Logger, dir string) (Configurd, error) {
+func New(log Logger, basePath string) (Configurd, error) {
 	log.Printf("Parsing configuration files")
+	log.Printf("Entering dir: %q", basePath)
 
 	c := Configurd{}
-	serviceDir := path.Join(dir, defaultServiceDir)
-	log.Printf("Entering dir: %q", serviceDir)
+	serviceDir := path.Join(basePath, defaultServiceDir)
 	err := filepath.Walk(serviceDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -71,7 +71,7 @@ func New(log Logger, dir string) (Configurd, error) {
 			defer file.Close()
 
 			var name = info.Name()[0 : len(info.Name())-len(filepath.Ext(info.Name()))]
-			log.Printf("Loading service: %v, from file: %q", name, relativePath(path, serviceDir))
+			log.Printf("Loading service: %v, from: %q", name, relativePath(path, basePath))
 			svc, err := loadService(file, name)
 			if err != nil {
 				return err
@@ -85,7 +85,7 @@ func New(log Logger, dir string) (Configurd, error) {
 		return Configurd{}, err
 	}
 
-	c.Namespaces, err = loadNamespaces(log, c.Service, dir)
+	c.Namespaces, err = loadNamespaces(log, c.Service, basePath)
 
 	if err != nil {
 		return Configurd{}, err
@@ -97,20 +97,19 @@ func New(log Logger, dir string) (Configurd, error) {
 func loadNamespaces(log Logger, sl serviceLoader, basePath string) ([]Namespace, error) {
 	var nss []Namespace
 	namespaceDir := path.Join(basePath, defaultNamespaceDir)
-	log.Printf("Entering dir: %q", namespaceDir)
 	err := filepath.Walk(namespaceDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 		if info.IsDir() && path != namespaceDir {
-			log.Printf("Loading namespace: %v, from dir: %q", info.Name(), relativePath(path, namespaceDir))
-			sgs, err := loadGroups(log, sl, basePath, info.Name())
+			log.Printf("Loading namespace: %v, from: %q", info.Name(), relativePath(path, basePath))
+			gs, err := loadGroups(log, sl, basePath, info.Name())
 			if err != nil {
 				return err
 			}
 			ns := Namespace{
 				name:   info.Name(),
-				groups: sgs,
+				groups: gs,
 			}
 			nss = append(nss, ns)
 		}
@@ -120,58 +119,58 @@ func loadNamespaces(log Logger, sl serviceLoader, basePath string) ([]Namespace,
 }
 
 func loadGroups(log Logger, sl serviceLoader, basePath, namespace string) ([]Group, error) {
-	var sgs []Group
-
-	groupDir := path.Join(basePath, defaultNamespaceDir, namespace)
-	log.Printf("Entering dir: %q", groupDir)
-	err := filepath.Walk(groupDir, func(path string, info os.FileInfo, err error) error {
+	var gs []Group
+	groupPath := path.Join(basePath, defaultNamespaceDir, namespace)
+	err := filepath.Walk(groupPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 		if !info.IsDir() && (strings.HasSuffix(path, defaultConfigFileExt)) {
 			var name = info.Name()[0 : len(info.Name())-len(filepath.Ext(info.Name()))]
-			log.Printf("Loading service group: %v, from file: %q", name, relativePath(path, groupDir))
-			sis, err := loadServiceItems(log, sl, namespace, name)
+			log.Printf("Loading group: %v, from: %q", name, relativePath(path, basePath))
+			g, err := loadGroup(log, sl, path, namespace, name)
 			if err != nil {
 				return err
 			}
-			sg := Group{
-				name:     name,
-				Services: sis,
-			}
-			sgs = append(sgs, sg)
+			g.name = name
+			gs = append(gs, g)
 		}
 		return nil
 	})
-	return sgs, err
+	return gs, err
 }
 
-func loadServiceItems(log Logger, sl serviceLoader, namespace, group string) ([]ServiceItem, error) {
-	path := path.Join(defaultNamespaceDir, namespace, group+defaultConfigFileExt)
+func loadGroup(log Logger, sl serviceLoader, path, namespace, group string) (Group, error) {
 	file, err := os.Open(path)
 	if err != nil {
-		return nil, err
+		return Group{}, err
 	}
 	defer file.Close()
 
 	var wrapper struct {
-		Items []ServiceItem `yaml:"group"`
+		Group Group `yaml:"group"`
 	}
 	if err := yaml.NewDecoder(file).Decode(&wrapper); err != nil {
-		return nil, fmt.Errorf("could not decode service group items: %w", err)
+		return Group{}, fmt.Errorf("could not decode group: %w", err)
 	}
 
-	for i, si := range wrapper.Items {
-		log.Printf("Loading service group item: %v", si.ServiceName)
-		svc, err := sl(si.ServiceName)
+	for name := range wrapper.Group.Services {
+		log.Printf("Loading service group item: %v", name)
+		svc, err := sl(name)
 		if err != nil {
-			return nil, err
+			return Group{}, err
 		}
-		wrapper.Items[i].chart = svc.Chart
-		wrapper.Items[i].namespace = namespace
-		wrapper.Items[i].group = group
+		wrapper.Group.Services[name] = loadServiceItem(wrapper.Group.Services[name], svc.Name, svc.Chart, namespace, group)
 	}
-	return wrapper.Items, nil
+	return wrapper.Group, nil
+}
+
+func loadServiceItem(item ServiceItem, service, chart, namespace, group string) ServiceItem {
+	item.ServiceName = service
+	item.chart = chart
+	item.namespace = namespace
+	item.group = group
+	return item
 }
 
 func (c Configurd) Service(name string) (Service, error) {
@@ -196,8 +195,10 @@ func (c Configurd) GetServiceItems(namespace, group string) []ServiceItem {
 func (c Configurd) serviceItems() []ServiceItem {
 	var sis []ServiceItem
 	for _, ns := range c.Namespaces {
-		for _, sg := range ns.groups {
-			sis = append(sis, sg.Services...)
+		for _, g := range ns.groups {
+			for _, si := range g.Services {
+				sis = append(sis, si)
+			}
 		}
 	}
 	return sis

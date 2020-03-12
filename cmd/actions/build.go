@@ -6,26 +6,22 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var cmdBuild = &cobra.Command{
+var buildCmd = &cobra.Command{
 	Use:   "build [SERVICE] -t {TAG}",
 	Short: "Build a service with a given tag",
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		_, err := Build(args[0], FlagTag, FlagDir, FlagVerbose)
+		_, err := Build(args[0], flagTag, flagDir, flagVerbose)
 		if err != nil {
 			log.Fatal(err)
 		}
 	},
 }
 
-func init() {
-	rootCmd.AddCommand(cmdBuild)
-}
-
 func Build(service, tag, dir string, flagVerbose bool) (string, error) {
 	svc, err := cnf.Service(service)
 	if err != nil {
-		return "", fmt.Errorf("service not found: %v", err)
+		return "", fmt.Errorf("service not found: %v", service)
 	}
 	output, err := svc.RunBuild(log, dir, tag, flagVerbose)
 	if err != nil {

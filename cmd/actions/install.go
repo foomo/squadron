@@ -7,11 +7,9 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(installCmd)
-	installCmd.Flags().BoolVarP(&flagBuild, "build", "", false, "Build service group before publishing")
+	installCmd.Flags().BoolVarP(&flagBuild, "build", "b", false, "Build service group before publishing")
 	installCmd.Flags().StringVarP(&flagOutputDir, "output", "o", "default", "Specifies output directory")
-	installCmd.Flags().StringVarP(&FlagNamespace, "namespace", "n", "default", "Specifies the namespace")
-	// installCmd.Flags().StringVarP(&FlagGroup, "group", "g", "", "Specifies the group")
+	installCmd.Flags().StringVarP(&flagNamespace, "namespace", "n", "default", "Specifies the namespace")
 }
 
 var (
@@ -26,7 +24,7 @@ var (
 		Long:  "installs the specified group with given namespace and tag version",
 		Args:  cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			_, err := install(args[0], FlagNamespace, FlagTag, FlagDir, flagOutputDir, flagBuild, FlagVerbose)
+			_, err := install(args[0], flagNamespace, flagTag, flagDir, flagOutputDir, flagBuild, flagVerbose)
 			if err != nil {
 				log.Fatal(err)
 			}
