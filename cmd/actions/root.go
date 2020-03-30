@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"fmt"
 	"os"
 	"path"
 
@@ -21,6 +22,11 @@ var (
 			}
 			if flagDir != "" {
 				flagDir = path.Join(wdir, flagDir)
+			} else {
+				flagDir = wdir
+			}
+			if cmd.Name() == "help" || cmd.Name() == "init" {
+				return
 			}
 			cnf, err = configurd.New(log, flagDir)
 			if err != nil {
@@ -39,9 +45,13 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&flagTag, "tag", "t", "latest", "Specifies the image tag")
 	rootCmd.PersistentFlags().StringVarP(&flagDir, "dir", "d", "", "Specifies working directory")
 	rootCmd.PersistentFlags().BoolVarP(&flagVerbose, "verbose", "v", false, "Specifies should command output be displayed")
-	rootCmd.AddCommand(buildCmd, installCmd, uninstallCmd)
+	rootCmd.AddCommand(buildCmd, installCmd, uninstallCmd, initCmd)
 }
 
 func Execute() {
 	rootCmd.Execute()
+}
+
+func outputErrorf(output string, err error, format string, args ...interface{}) error {
+	return fmt.Errorf("%v, error: %v", fmt.Sprintf(format, args...), err)
 }

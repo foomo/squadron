@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -19,6 +20,7 @@ const (
 	defaultChartDir      = "configurd/charts"
 	defaultOutputDir     = "configurd/.workdir"
 	defaultOverridesFile = "overrides.yaml"
+	defaultInitUrl       = "https://github.com/foomo/configurd.git/branches/feature/helm-charts-deployments/example"
 )
 
 var (
@@ -49,8 +51,8 @@ type Logger interface {
 	Fatalf(format string, args ...interface{})
 }
 
-func relativePath(absoltePath, basePath string) string {
-	return strings.Replace(absoltePath, basePath+"/", "", -1)
+func relativePath(path, basePath string) string {
+	return strings.Replace(path, basePath+"/", "", -1)
 }
 
 func New(log Logger, basePath string) (Configurd, error) {
@@ -185,7 +187,7 @@ func (c Configurd) Service(name string) (Service, error) {
 func (c Configurd) GetServiceItems(namespace, group string) []ServiceItem {
 	var sis []ServiceItem
 	for _, si := range c.serviceItems() {
-		if si.namespace == namespace && (si.group == group || group == "") {
+		if si.namespace == namespace && si.group == group {
 			sis = append(sis, si)
 		}
 	}
@@ -219,4 +221,22 @@ func logOutput(log Logger, verbose bool, format string, args ...interface{}) {
 	if verbose {
 		log.Printf(format, args...)
 	}
+}
+
+func Init(log Logger, dir string, flagVerbose bool) (string, error) {
+	// log.Printf("Creating dir: %q", dir)
+
+	// if err := os.MkdirAll(dir, 0744); err != nil {
+	// 	return "", fmt.Errorf("could not create a directory: %w", err)
+	// }
+
+	log.Printf("Downloading example configuration into dir: %q", dir)
+	cmd := exec.Command("svn", "export", defaultInitUrl, dir)
+
+	out, err := cmd.CombinedOutput()
+	output := strings.Replace(string(out), "\n", "\n\t", -1)
+	if err != nil {
+		return "", fmt.Errorf("could not download a configurd example, output: \n%v", output)
+	}
+	return output, nil
 }

@@ -48,12 +48,7 @@ func install(group, namespace, tag, workDir, outputDir string, build, verbose bo
 	}
 	output, err := cnf.Install(log, sis, workDir, outputDir, tag, verbose)
 	if err != nil {
-		// return "", fmt.Errorf("could not install group: %v output:\n%v \nerror: \n%v", group, output, err)
-		return "", errorf(output, err, "could not install group: %v", group)
+		return "", outputErrorf(output, err, "could not install group: %v", group)
 	}
 	return output, nil
-}
-
-func errorf(output string, err error, format string, args ...interface{}) error {
-	return fmt.Errorf("%v, error: %v", fmt.Sprintf(format, args...), err)
 }
