@@ -8,34 +8,41 @@
     <img src="https://godoc.org/github.com/foomo/configurd?status.svg" alt="GoDoc">
 </a>
 
-# Configurd 
+# Configurd
 
 Application for managing kubernetes microservice environment
 
+## Quickstart
+
+```text
+# Create a new folder with an example application with configurd:
+$ configurd init [NAME]
+
+$ cd [NAME]/
+
+# Run install for predefined group and namespace:
+$ configurd install [GROUP] -n [NAMESPACE]
+```
 
 ## Structure
 
 ```text
 /configurd
     /charts (Helm Charts)
-        /services 
-        /applications        
+        /<chart name>
     /services
         service-a.yaml
         service-b.yaml
     /namespaces
         /local (reserved, local)
-            service-a.yaml
-            servicegroup-a.yaml
+            group-a.yaml
+            group-b.yaml
         /node-a (remote)
-            global.yaml
-            servicegroup-a.yaml         
+            groub-c.yaml
 ```
 ## Commands
 
 ```text
-# Builds service from the /services dir
-$ configurd build hello-service
-# Shows the diff from ${NAMESPACE} ${SERVICE}? 
-$ configurd deploy ${NAMESPACE} ${SERVICE} --diff
+# See:
+$ configurd help
 ```
