@@ -30,7 +30,7 @@ func uninstall(group, namespace string, flagVerbose bool) (string, error) {
 	if len(sis) == 0 {
 		return "", fmt.Errorf("could not find any service for namespace: %v and service group: %v", namespace, group)
 	}
-	output, err := cnf.Uninstall(log, sis, flagVerbose)
+	output, err := cnf.Uninstall(log, sis, namespace, flagVerbose)
 	if err != nil {
 		return "", outputErrorf(output, err, "could not uninstall service group: %v", group)
 	}

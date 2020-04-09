@@ -157,21 +157,21 @@ func loadGroup(log Logger, sl serviceLoader, path, namespace, group string) (Gro
 	}
 
 	for name := range wrapper.Group.Services {
-		log.Printf("Loading service group item: %v", name)
+		log.Printf("Loading group item: %v", name)
 		svc, err := sl(name)
 		if err != nil {
 			return Group{}, err
 		}
-		wrapper.Group.Services[name] = loadServiceItem(wrapper.Group.Services[name], svc.Name, svc.Chart, namespace, group)
+		wrapper.Group.Services[name] = loadServiceItem(wrapper.Group.Services[name], svc.Name, namespace, group, svc.Chart)
 	}
 	return wrapper.Group, nil
 }
 
-func loadServiceItem(item ServiceItem, service, chart, namespace, group string) ServiceItem {
-	item.ServiceName = service
-	item.chart = chart
+func loadServiceItem(item ServiceItem, service, namespace, group, chart string) ServiceItem {
+	item.Name = service
 	item.namespace = namespace
 	item.group = group
+	item.chart = chart
 	return item
 }
 
@@ -186,20 +186,12 @@ func (c Configurd) Service(name string) (Service, error) {
 
 func (c Configurd) GetServiceItems(namespace, group string) []ServiceItem {
 	var sis []ServiceItem
-	for _, si := range c.serviceItems() {
-		if si.namespace == namespace && si.group == group {
-			sis = append(sis, si)
-		}
-	}
-	return sis
-}
-
-func (c Configurd) serviceItems() []ServiceItem {
-	var sis []ServiceItem
 	for _, ns := range c.Namespaces {
 		for _, g := range ns.groups {
 			for _, si := range g.Services {
-				sis = append(sis, si)
+				if (namespace == "" || namespace == ns.name) && (group == "" || group == g.name) {
+					sis = append(sis, si)
+				}
 			}
 		}
 	}
@@ -224,12 +216,6 @@ func logOutput(log Logger, verbose bool, format string, args ...interface{}) {
 }
 
 func Init(log Logger, dir string, flagVerbose bool) (string, error) {
-	// log.Printf("Creating dir: %q", dir)
-
-	// if err := os.MkdirAll(dir, 0744); err != nil {
-	// 	return "", fmt.Errorf("could not create a directory: %w", err)
-	// }
-
 	log.Printf("Downloading example configuration into dir: %q", dir)
 	cmd := exec.Command("svn", "export", defaultInitUrl, dir)
 

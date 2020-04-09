@@ -40,7 +40,7 @@ func install(group, namespace, tag, workDir, outputDir string, build, verbose bo
 	if build {
 		log.Printf("Building services")
 		for _, si := range sis {
-			_, err := Build(si.ServiceName, tag, workDir, verbose)
+			_, err := Build(si.Name, tag, workDir, verbose)
 			if err != nil {
 				return "", err
 			}

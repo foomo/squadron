@@ -5,9 +5,11 @@ group:
         args:
           - "--greeting=hehe"
         service:
-          targetPort: 80
+          containerPort: 80
           port: 80
         ingress:
+          path: /services/hello
+          host: localhost
           enabled: true
           paths:
             - /services/hello
@@ -18,9 +20,11 @@ group:
         args:
           - "--greeting=hai"
         service:
-          targetPort: 80
+          containerPort: 80
           port: 80
         ingress:
+          path: /services/hi
+          host: localhost
           enabled: true
           paths:
             - /services/hi

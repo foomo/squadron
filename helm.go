@@ -13,19 +13,19 @@ import (
 )
 
 type ServiceItem struct {
-	ServiceName string
-	Overrides   interface{}
-	namespace   string
-	group       string
-	chart       string
+	Name      string
+	Overrides interface{}
+	namespace string
+	group     string
+	chart     string
 }
 
 type JobItem struct {
-	ServiceName string `yaml:"service"`
-	Overrides   interface{}
-	namespace   string
-	group       string
-	chart       string
+	Name      string
+	Overrides interface{}
+	namespace string
+	group     string
+	chart     string
 }
 
 func generateYaml(log Logger, path string, data interface{}) error {
@@ -45,15 +45,15 @@ func generateYaml(log Logger, path string, data interface{}) error {
 	return nil
 }
 
-func generate(log Logger, si ServiceItem, basePath, outputDir, chart string) error {
-	outputPath := path.Join(basePath, defaultOutputDir, outputDir, si.ServiceName)
-	log.Printf("Creating dir: %q", path.Join(outputDir, si.ServiceName))
+func generate(log Logger, si ServiceItem, basePath, outputDir string) error {
+	outputPath := path.Join(basePath, defaultOutputDir, outputDir, si.Name)
+	log.Printf("Creating dir: %q", path.Join(outputDir, si.Name))
 	if err := os.MkdirAll(outputPath, 0744); err != nil {
 		return fmt.Errorf("could not create output dir: %w", err)
 	}
 
-	log.Printf("Copying chart: %v to dir: %q", chart, path.Join(outputDir, si.ServiceName))
-	chartPath := path.Join(basePath, defaultChartDir, chart)
+	log.Printf("Copying chart: %v to dir: %q", si.chart, path.Join(outputDir, si.Name))
+	chartPath := path.Join(basePath, defaultChartDir, si.chart)
 	err := filepath.Walk(chartPath, func(source string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -75,7 +75,7 @@ func generate(log Logger, si ServiceItem, basePath, outputDir, chart string) err
 		return fmt.Errorf("could not copy template files: %w", err)
 	}
 
-	log.Printf("Generating yaml file: %q", path.Join(outputDir, si.ServiceName, defaultOverridesFile))
+	log.Printf("Generating yaml file: %q", path.Join(outputDir, si.Name, defaultOverridesFile))
 	err = generateYaml(log, path.Join(outputPath, defaultOverridesFile), si.Overrides)
 	if err != nil {
 		return fmt.Errorf("could not generate %v: %w", defaultOverridesFile, err)
@@ -83,17 +83,15 @@ func generate(log Logger, si ServiceItem, basePath, outputDir, chart string) err
 	return nil
 }
 
-func helmInstall(log Logger, s Service, namespace, outputDir, tag string) (string, error) {
-	log.Printf("Running helm install for service: %v", s.Name)
-	chartPath := path.Join(outputDir, s.Name)
+func helmInstall(log Logger, si ServiceItem, image, tag, outputDir string) (string, error) {
+	log.Printf("Running helm install for service: %v", si.Name)
+	chartPath := path.Join(outputDir, si.Name)
 	cmdArgs := []string{
-		"install", s.Name, chartPath,
+		"install", si.Name, chartPath,
 		"-f", path.Join(chartPath, defaultOverridesFile),
-		"-n", namespace,
-		"--set", fmt.Sprintf("nameOverride=%v", s.Name),
-		"--set", fmt.Sprintf("fullnameOverride=%v", s.Name),
-		"--set", fmt.Sprintf("image.repository=%v", s.Build.Image),
-		"--set", fmt.Sprintf("image.tag=%v", tag),
+		"-n", si.namespace,
+		"--set", fmt.Sprintf("group=%v", si.group),
+		"--set", fmt.Sprintf("image.repository=%v:%v", image, tag),
 	}
 	cmd := exec.Command("helm", cmdArgs...)
 
@@ -101,15 +99,15 @@ func helmInstall(log Logger, s Service, namespace, outputDir, tag string) (strin
 	output := strings.Replace(string(out), "\n", "\n\t", -1)
 
 	if err != nil {
-		return "", fmt.Errorf("could not install a helm chart for service %v output: \n%v", s.Name, output)
+		return "", fmt.Errorf("could not install a helm chart for service %v output: \n%v", si.Name, output)
 	}
 	return output, nil
 }
 
 func helmUninstall(log Logger, si ServiceItem) (string, error) {
-	log.Printf("Running helm uninstall for service: %v", si.ServiceName)
+	log.Printf("Running helm uninstall for service: %v", si.Name)
 	cmdArgs := []string{
-		"uninstall", "-n", si.namespace, si.ServiceName,
+		"uninstall", "-n", si.namespace, si.Name,
 	}
 	cmd := exec.Command("helm", cmdArgs...)
 
@@ -117,7 +115,7 @@ func helmUninstall(log Logger, si ServiceItem) (string, error) {
 	output := strings.Replace(string(out), "\n", "\n\t", -1)
 
 	if err != nil {
-		return "", fmt.Errorf("could not uninstall a helm chart for namespace: %v, service group: %v, output: \n%v", si.namespace, si.group, output)
+		return "", fmt.Errorf("could not uninstall a helm chart for service: %v, namespace: %v, output: \n%v", si.Name, si.namespace, output)
 	}
 	return output, nil
 }
@@ -137,7 +135,7 @@ func (c Configurd) Install(log Logger, sis []ServiceItem, basePath, outputDir, t
 		return "", fmt.Errorf("could not create a workdir directory: %w", err)
 	}
 	for _, si := range sis {
-		err := generate(log, si, basePath, outputDir, si.chart)
+		err := generate(log, si, basePath, outputDir)
 		if err != nil {
 			return "", err
 		}
@@ -145,11 +143,11 @@ func (c Configurd) Install(log Logger, sis []ServiceItem, basePath, outputDir, t
 
 	var output []string
 	for _, si := range sis {
-		s, err := c.Service(si.ServiceName)
+		s, err := c.Service(si.Name)
 		if err != nil {
 			return "", err
 		}
-		out, err := helmInstall(log, s, si.namespace, outputPath, tag)
+		out, err := helmInstall(log, si, s.Build.Image, tag, outputPath)
 		if err != nil {
 			return "", err
 		}
@@ -160,7 +158,7 @@ func (c Configurd) Install(log Logger, sis []ServiceItem, basePath, outputDir, t
 	return strings.Join(output, "\n"), nil
 }
 
-func (c Configurd) Uninstall(log Logger, sis []ServiceItem, verbose bool) (string, error) {
+func (c Configurd) Uninstall(log Logger, sis []ServiceItem, namespace string, verbose bool) (string, error) {
 	var outputs []string
 	for _, si := range sis {
 		out, err := helmUninstall(log, si)

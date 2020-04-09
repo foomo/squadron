@@ -1,27 +1,27 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "example.fullname" . }}
+  name: "{{ .Release.Name }}-deployment"
   labels:
-    app.kubernetes.io/name: {{ include "example.name" . }}
-    helm.sh/chart: {{ include "example.chart" . }}
-    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/name: {{ .Release.Name }}
+    app.kubernetes.io/part-of: {{ .Values.group }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
+    helm.sh/chart: "{{ .Release.Name }}-{{ .Release.Revision }}"
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app.kubernetes.io/name: {{ include "example.name" . }}
-      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/name: {{ .Release.Name }}
+      app.kubernetes.io/part-of: {{ .Values.group }}
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: {{ include "example.name" . }}
-        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/name: {{ .Release.Name }}
+        app.kubernetes.io/part-of: {{ .Values.group }}
     spec:
       containers:
-        - name: {{ .Values.nameOverride }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        - name: {{ .Release.Name }}
+          image: {{ .Values.image.repository }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           {{- with .Values.args }}
           args:
@@ -33,7 +33,7 @@ spec:
           {{- end }}
           ports:
             - name: container-port
-              containerPort: {{ .Values.service.targetPort }}
+              containerPort: {{ .Values.service.containerPort }}
               protocol: TCP
           livenessProbe:
             tcpSocket:
