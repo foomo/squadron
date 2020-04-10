@@ -13,8 +13,8 @@ func init() {
 var (
 	uninstallCmd = &cobra.Command{
 		Use:   "uninstall [GROUP] -n {NAMESPACE} -t {TAG}",
-		Short: "uninstalls the specified group with given namespace and tag version",
-		Long:  "uninstalls the specified group with given namespace and tag version",
+		Short: "uninstalls a group",
+		Long:  "uninstalls a group with given namespace and tag version",
 		Args:  cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			_, err := uninstall(args[0], flagNamespace, flagVerbose)
@@ -32,7 +32,7 @@ func uninstall(group, namespace string, flagVerbose bool) (string, error) {
 	}
 	output, err := cnf.Uninstall(log, sis, namespace, flagVerbose)
 	if err != nil {
-		return "", outputErrorf(output, err, "could not uninstall service group: %v", group)
+		return output, outputErrorf(output, err, "could not uninstall service group: %v", group)
 	}
 	return output, nil
 }

@@ -2,7 +2,6 @@ package configurd
 
 import (
 	"fmt"
-	"os/exec"
 	"strings"
 )
 
@@ -24,11 +23,8 @@ func (s Service) RunBuild(log Logger, dir, tag string, verbose bool) (string, er
 	}
 	log.Printf("Building service: %v", s.Name)
 
-	cmd := exec.Command(args[0], args[1:]...)
-	cmd.Dir = dir
+	output, err := runCommand(dir, args...)
 
-	out, err := cmd.CombinedOutput()
-	output := strings.Replace(string(out), "\n", "\n\t", -1)
 	if err != nil {
 		return output, err
 	}

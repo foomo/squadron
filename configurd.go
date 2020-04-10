@@ -65,14 +65,14 @@ func New(log Logger, basePath string) (Configurd, error) {
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() && (strings.HasSuffix(path, defaultConfigFileExt)) {
+		if !info.IsDir() && strings.HasSuffix(path, defaultConfigFileExt) {
 			file, err := os.Open(path)
 			if err != nil {
 				return err
 			}
 			defer file.Close()
 
-			var name = info.Name()[0 : len(info.Name())-len(filepath.Ext(info.Name()))]
+			name := strings.TrimSuffix(info.Name(), defaultConfigFileExt)
 			log.Printf("Loading service: %v, from: %q", name, relativePath(path, basePath))
 			svc, err := loadService(file, name)
 			if err != nil {
@@ -128,13 +128,12 @@ func loadGroups(log Logger, sl serviceLoader, basePath, namespace string) ([]Gro
 			return err
 		}
 		if !info.IsDir() && (strings.HasSuffix(path, defaultConfigFileExt)) {
-			var name = info.Name()[0 : len(info.Name())-len(filepath.Ext(info.Name()))]
+			name := strings.TrimSuffix(info.Name(), defaultConfigFileExt)
 			log.Printf("Loading group: %v, from: %q", name, relativePath(path, basePath))
 			g, err := loadGroup(log, sl, path, namespace, name)
 			if err != nil {
 				return err
 			}
-			g.name = name
 			gs = append(gs, g)
 		}
 		return nil
@@ -164,6 +163,7 @@ func loadGroup(log Logger, sl serviceLoader, path, namespace, group string) (Gro
 		}
 		wrapper.Group.Services[name] = loadServiceItem(wrapper.Group.Services[name], svc.Name, namespace, group, svc.Chart)
 	}
+	wrapper.Group.name = group
 	return wrapper.Group, nil
 }
 
@@ -217,12 +217,21 @@ func logOutput(log Logger, verbose bool, format string, args ...interface{}) {
 
 func Init(log Logger, dir string, flagVerbose bool) (string, error) {
 	log.Printf("Downloading example configuration into dir: %q", dir)
-	cmd := exec.Command("svn", "export", defaultInitUrl, dir)
+	output, err := runCommand("", "svn", "export", defaultInitUrl, dir)
 
-	out, err := cmd.CombinedOutput()
-	output := strings.Replace(string(out), "\n", "\n\t", -1)
 	if err != nil {
-		return "", fmt.Errorf("could not download a configurd example, output: \n%v", output)
+		return output, fmt.Errorf("could not download the configurd example")
 	}
 	return output, nil
+}
+
+func runCommand(cwd string, command ...string) (string, error) {
+	cmd := exec.Command(command[0], command[1:]...)
+	cmd.Dir = cwd
+	out, err := cmd.CombinedOutput()
+	output := strings.Replace(string(out), "\n", "\n\t", -1)
+	if out == nil {
+		output = err.Error()
+	}
+	return output, err
 }

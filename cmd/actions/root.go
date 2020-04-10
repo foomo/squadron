@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/foomo/configurd"
 	"github.com/sirupsen/logrus"
@@ -53,5 +54,5 @@ func Execute() {
 }
 
 func outputErrorf(output string, err error, format string, args ...interface{}) error {
-	return fmt.Errorf("%v, error: %v", fmt.Sprintf(format, args...), err)
+	return fmt.Errorf("%v\nerror: %v\noutput: %v", fmt.Sprintf(format, args...), err, strings.ReplaceAll(output, "\n", " "))
 }

@@ -3,7 +3,6 @@ package configurd
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -86,36 +85,30 @@ func generate(log Logger, si ServiceItem, basePath, outputDir string) error {
 func helmInstall(log Logger, si ServiceItem, image, tag, outputDir string) (string, error) {
 	log.Printf("Running helm install for service: %v", si.Name)
 	chartPath := path.Join(outputDir, si.Name)
-	cmdArgs := []string{
-		"install", si.Name, chartPath,
+	cmd := []string{
+		"helm", "install", si.Name, chartPath,
 		"-f", path.Join(chartPath, defaultOverridesFile),
 		"-n", si.namespace,
 		"--set", fmt.Sprintf("group=%v", si.group),
 		"--set", fmt.Sprintf("image.repository=%v:%v", image, tag),
 	}
-	cmd := exec.Command("helm", cmdArgs...)
-
-	out, err := cmd.CombinedOutput()
-	output := strings.Replace(string(out), "\n", "\n\t", -1)
+	output, err := runCommand("", cmd...)
 
 	if err != nil {
-		return "", fmt.Errorf("could not install a helm chart for service %v output: \n%v", si.Name, output)
+		return output, fmt.Errorf("could not install a helm chart for service %v", si.Name)
 	}
 	return output, nil
 }
 
 func helmUninstall(log Logger, si ServiceItem) (string, error) {
 	log.Printf("Running helm uninstall for service: %v", si.Name)
-	cmdArgs := []string{
-		"uninstall", "-n", si.namespace, si.Name,
+	cmd := []string{
+		"helm", "uninstall", "-n", si.namespace, si.Name,
 	}
-	cmd := exec.Command("helm", cmdArgs...)
-
-	out, err := cmd.CombinedOutput()
-	output := strings.Replace(string(out), "\n", "\n\t", -1)
+	output, err := runCommand("", cmd...)
 
 	if err != nil {
-		return "", fmt.Errorf("could not uninstall a helm chart for service: %v, namespace: %v, output: \n%v", si.Name, si.namespace, output)
+		return output, fmt.Errorf("could not uninstall a helm chart for service: %v, namespace: %v", si.Name, si.namespace)
 	}
 	return output, nil
 }
@@ -149,7 +142,7 @@ func (c Configurd) Install(log Logger, sis []ServiceItem, basePath, outputDir, t
 		}
 		out, err := helmInstall(log, si, s.Build.Image, tag, outputPath)
 		if err != nil {
-			return "", err
+			return out, err
 		}
 		logOutput(log, verbose, out)
 		output = append(output, out)
@@ -163,7 +156,7 @@ func (c Configurd) Uninstall(log Logger, sis []ServiceItem, namespace string, ve
 	for _, si := range sis {
 		out, err := helmUninstall(log, si)
 		if err != nil {
-			return "", err
+			return out, err
 		}
 		outputs = append(outputs, out)
 		logOutput(log, verbose, out)

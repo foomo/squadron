@@ -25,7 +25,7 @@ func Build(service, tag, dir string, flagVerbose bool) (string, error) {
 	}
 	output, err := svc.RunBuild(log, dir, tag, flagVerbose)
 	if err != nil {
-		return "", outputErrorf(output, err, "could not build service: %v", svc.Name)
+		return output, outputErrorf(output, err, "could not build service: %v", svc.Name)
 	}
 	return output, nil
 }

@@ -20,8 +20,8 @@ var (
 var (
 	installCmd = &cobra.Command{
 		Use:   "install [GROUP] -n {NAMESPACE} -t {TAG}",
-		Short: "installs the specified group with given namespace and tag version",
-		Long:  "installs the specified group with given namespace and tag version",
+		Short: "installs a group of services",
+		Long:  "installs a group of services with given namespace and tag version",
 		Args:  cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			_, err := install(args[0], flagNamespace, flagTag, flagDir, flagOutputDir, flagBuild, flagVerbose)
@@ -48,7 +48,7 @@ func install(group, namespace, tag, workDir, outputDir string, build, verbose bo
 	}
 	output, err := cnf.Install(log, sis, workDir, outputDir, tag, verbose)
 	if err != nil {
-		return "", outputErrorf(output, err, "could not install group: %v", group)
+		return output, outputErrorf(output, err, "could not install group: %v", group)
 	}
 	return output, nil
 }
