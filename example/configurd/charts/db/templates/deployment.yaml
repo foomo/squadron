@@ -1,3 +1,4 @@
+{{- $pvc := printf "%s-pvc" .Release.Name }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -23,14 +24,10 @@ spec:
         - name: {{ .Release.Name }}
           image: {{ .Values.image.repository }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          {{- with .Values.args }}
           args:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
-          {{- with .Values.env }}
+            {{- toYaml .Values.args | nindent 12 }}
           env:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
+            {{- toYaml .Values.env | nindent 12 }}
           ports:
             - name: container-port
               containerPort: {{ .Values.service.containerPort }}
@@ -43,6 +40,17 @@ spec:
               port: container-port
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+          {{- range .Values.volumeMounts }}
+            - name: {{ .name }}
+              mountPath: {{ .path }}
+          {{- end }}
+      volumes:
+      {{- range .Values.volumeMounts }}
+        - name: {{ .name }}
+          persistentVolumeClaim:
+            claimName: {{ $pvc }}
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
