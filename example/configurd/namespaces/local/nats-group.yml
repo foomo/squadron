@@ -1,0 +1,4 @@
+group:
+  services:
+    nats-service:
+      overrides: {}

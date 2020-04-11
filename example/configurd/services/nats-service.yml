@@ -1,0 +1,4 @@
+service:
+  build:
+    image: bitnami/nats
+  chart: nats
