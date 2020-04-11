@@ -1,0 +1,33 @@
+group:
+  services:
+    hello-service:
+      overrides:
+        args:
+          - "--greeting=hehe"
+        service:
+          containerPort: 80
+          port: 80
+        ingress:
+          path: /services/hello
+          host: localhost
+          enabled: true
+          paths:
+            - /services/hello
+          hosts:
+            - localhost
+    hi-service:
+      overrides:
+        args:
+          - "--greeting=hai"
+        service:
+          containerPort: 80
+          port: 80
+        ingress:
+          path: /services/hi
+          host: localhost
+          enabled: true
+          paths:
+            - /services/hi
+          hosts:
+            - localhost
+  jobs:
