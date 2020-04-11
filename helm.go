@@ -89,8 +89,7 @@ func helmInstall(log Logger, si ServiceItem, image, tag, outputDir string) (stri
 		"helm", "install", si.Name, chartPath,
 		"-f", path.Join(chartPath, defaultOverridesFile),
 		"-n", si.namespace,
-		"--set", fmt.Sprintf("group=%v", si.group),
-		"--set", fmt.Sprintf("image.repository=%v:%v", image, tag),
+		"--set", fmt.Sprintf("group=%v,image.repository=%v,image.tag=%v", si.Name, image, tag),
 	}
 	output, err := runCommand("", cmd...)
 
@@ -113,7 +112,7 @@ func helmUninstall(log Logger, si ServiceItem) (string, error) {
 	return output, nil
 }
 
-func (c Configurd) Install(log Logger, sis []ServiceItem, basePath, outputDir, tag string, verbose bool) (string, error) {
+func (c Configurd) Install(log Logger, sis []ServiceItem, basePath, outputDir string, verbose bool) (string, error) {
 	log.Printf("Installing services")
 	outputPath := path.Join(basePath, defaultOutputDir, outputDir)
 
@@ -140,7 +139,7 @@ func (c Configurd) Install(log Logger, sis []ServiceItem, basePath, outputDir, t
 		if err != nil {
 			return "", err
 		}
-		out, err := helmInstall(log, si, s.Build.Image, tag, outputPath)
+		out, err := helmInstall(log, si, s.Build.Image, s.Build.Tag, outputPath)
 		if err != nil {
 			return out, err
 		}

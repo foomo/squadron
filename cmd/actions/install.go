@@ -24,7 +24,7 @@ var (
 		Long:  "installs a group of services with given namespace and tag version",
 		Args:  cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			_, err := install(args[0], flagNamespace, flagTag, flagDir, flagOutputDir, flagBuild, flagVerbose)
+			_, err := install(args[0], flagNamespace, flagDir, flagOutputDir, flagBuild, flagVerbose)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -32,7 +32,7 @@ var (
 	}
 )
 
-func install(group, namespace, tag, workDir, outputDir string, build, verbose bool) (string, error) {
+func install(group, namespace, workDir, outputDir string, build, verbose bool) (string, error) {
 	sis := cnf.GetServiceItems(namespace, group)
 	if len(sis) == 0 {
 		return "", fmt.Errorf("could not find any service for namespace: %v and group: %v", namespace, group)
@@ -40,13 +40,13 @@ func install(group, namespace, tag, workDir, outputDir string, build, verbose bo
 	if build {
 		log.Printf("Building services")
 		for _, si := range sis {
-			_, err := Build(si.Name, tag, workDir, verbose)
+			_, err := Build(si.Name, workDir, verbose)
 			if err != nil {
 				return "", err
 			}
 		}
 	}
-	output, err := cnf.Install(log, sis, workDir, outputDir, tag, verbose)
+	output, err := cnf.Install(log, sis, workDir, outputDir, verbose)
 	if err != nil {
 		return output, outputErrorf(output, err, "could not install group: %v", group)
 	}
