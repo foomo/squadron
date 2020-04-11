@@ -1,0 +1,5 @@
+service:
+  build:
+    image: elasticsearch
+    tag: 7.6.2
+  chart: elasticsearch
