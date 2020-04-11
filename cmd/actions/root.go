@@ -29,7 +29,7 @@ var (
 			if cmd.Name() == "help" || cmd.Name() == "init" {
 				return
 			}
-			cnf, err = configurd.New(log, flagDir)
+			cnf, err = configurd.New(log, flagDir, flagTag)
 			if err != nil {
 				log.Fatal(err)
 			}
