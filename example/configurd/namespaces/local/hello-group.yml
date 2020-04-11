@@ -30,4 +30,18 @@ group:
             - /services/hi
           hosts:
             - localhost
-  jobs:
+    mongodb-service:
+      overrides:
+        service:
+          type: NodePort
+          containerPort: 27017
+        persistentVolume:
+          size: 1Gi
+          path: /data
+          reclaimPolicy: Delete
+          accessModes:
+            - ReadWriteOnce
+        volumeMounts:
+          - name: test-mount
+            path: /data/db
+jobs:
