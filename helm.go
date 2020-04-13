@@ -27,7 +27,7 @@ type JobItem struct {
 	chart     string
 }
 
-func generateYaml(log Logger, path string, data interface{}) error {
+func generateYaml(_ Logger, path string, data interface{}) error {
 	out, marshalErr := yaml.Marshal(data)
 	if marshalErr != nil {
 		return marshalErr
@@ -82,7 +82,7 @@ func generate(log Logger, si ServiceItem, basePath, outputDir string) error {
 	return nil
 }
 
-func helmInstall(log Logger, si ServiceItem, image, tag, outputDir string) (string, error) {
+func helmInstall(log Logger, si ServiceItem, image, tag, outputDir string, upgrade bool) (string, error) {
 	log.Printf("Running helm install for service: %v", si.Name)
 	chartPath := path.Join(outputDir, si.Name)
 	cmd := []string{
@@ -91,6 +91,9 @@ func helmInstall(log Logger, si ServiceItem, image, tag, outputDir string) (stri
 		"-n", si.namespace,
 		"--set", fmt.Sprintf("group=%v", si.group),
 		"--set", fmt.Sprintf("image.repository=%v:%v", image, tag),
+	}
+	if upgrade {
+		cmd = append(cmd, "--upgrade")
 	}
 	output, err := runCommand("", cmd...)
 
@@ -113,38 +116,47 @@ func helmUninstall(log Logger, si ServiceItem) (string, error) {
 	return output, nil
 }
 
-func (c Configurd) Install(log Logger, sis []ServiceItem, basePath, outputDir, tag string, verbose bool) (string, error) {
-	log.Printf("Installing services")
-	outputPath := path.Join(basePath, defaultOutputDir, outputDir)
+type InstallConfiguration struct {
+	ServiceItems []ServiceItem
+	BasePath     string
+	OutputDir    string
+	Tag          string
+	Upgrade      bool
+	Verbose      bool
+}
 
-	log.Printf("Entering dir: %q", path.Join(basePath, defaultOutputDir))
-	log.Printf("Removing dir: %q", outputDir)
+func (c Configurd) Install(log Logger, cnf InstallConfiguration) (string, error) {
+	log.Printf("Installing services")
+	outputPath := path.Join(cnf.BasePath, defaultOutputDir, cnf.OutputDir)
+
+	log.Printf("Entering dir: %q", path.Join(cnf.BasePath, defaultOutputDir))
+	log.Printf("Removing dir: %q", cnf.OutputDir)
 	if err := os.RemoveAll(outputPath); err != nil {
 		return "", fmt.Errorf("could not clean workdir directory: %w", err)
 	}
 
-	log.Printf("Creating dir: %q", outputDir)
+	log.Printf("Creating dir: %q", cnf.OutputDir)
 	if err := os.MkdirAll(outputPath, 0744); err != nil {
 		return "", fmt.Errorf("could not create a workdir directory: %w", err)
 	}
-	for _, si := range sis {
-		err := generate(log, si, basePath, outputDir)
+	for _, si := range cnf.ServiceItems {
+		err := generate(log, si, cnf.BasePath, cnf.OutputDir)
 		if err != nil {
 			return "", err
 		}
 	}
 
 	var output []string
-	for _, si := range sis {
+	for _, si := range cnf.ServiceItems {
 		s, err := c.Service(si.Name)
 		if err != nil {
 			return "", err
 		}
-		out, err := helmInstall(log, si, s.Build.Image, tag, outputPath)
+		out, err := helmInstall(log, si, s.Build.Image, cnf.Tag, outputPath, cnf.Upgrade)
 		if err != nil {
 			return out, err
 		}
-		logOutput(log, verbose, out)
+		logOutput(log, cnf.Verbose, out)
 		output = append(output, out)
 	}
 
