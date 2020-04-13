@@ -34,8 +34,8 @@ securityContext: {}
   # runAsUser: 1000
 
 service:
-  type: ClusterIP
-  containerPort: 3000
+  type: NodePort
+  containerPort: 27017
 
 group: test
 
@@ -55,7 +55,7 @@ persistentVolume:
 
 volumeMounts:
   - name: data
-    path: /var/lib/mysql
+    path: /data/db
 
 ingress:
   annotations: {}
