@@ -13,7 +13,6 @@ import (
 
 var (
 	log     = logrus.New()
-	cnf     configurd.Configurd
 	rootCmd = &cobra.Command{
 		Use: "configurd",
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
@@ -29,10 +28,6 @@ var (
 			if cmd.Name() == "help" || cmd.Name() == "init" {
 				return
 			}
-			cnf, err = configurd.New(log, flagDir)
-			if err != nil {
-				log.Fatal(err)
-			}
 		},
 	}
 
@@ -42,11 +37,19 @@ var (
 	flagNamespace string
 )
 
+func mustNewConfigurd() configurd.Configurd {
+	cnf, err := configurd.New(log, flagDir)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return cnf
+}
+
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&flagTag, "tag", "t", "latest", "Specifies the image tag")
 	rootCmd.PersistentFlags().StringVarP(&flagDir, "dir", "d", "", "Specifies working directory")
 	rootCmd.PersistentFlags().BoolVarP(&flagVerbose, "verbose", "v", false, "Specifies should command output be displayed")
-	rootCmd.AddCommand(buildCmd, installCmd, uninstallCmd, initCmd)
+	rootCmd.AddCommand(buildCmd, installCmd, uninstallCmd, initCmd, versionCmd)
 }
 
 func Execute() {

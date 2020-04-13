@@ -26,6 +26,7 @@ var (
 )
 
 func uninstall(group, namespace string, flagVerbose bool) (string, error) {
+	cnf := mustNewConfigurd()
 	sis := cnf.GetServiceItems(namespace, group)
 	if len(sis) == 0 {
 		return "", fmt.Errorf("could not find any service for namespace: %v and service group: %v", namespace, group)

@@ -33,6 +33,7 @@ var (
 )
 
 func install(group, namespace, tag, workDir, outputDir string, build, verbose bool) (string, error) {
+	cnf := mustNewConfigurd()
 	sis := cnf.GetServiceItems(namespace, group)
 	if len(sis) == 0 {
 		return "", fmt.Errorf("could not find any service for namespace: %v and group: %v", namespace, group)

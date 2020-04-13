@@ -19,6 +19,7 @@ var buildCmd = &cobra.Command{
 }
 
 func Build(service, tag, dir string, flagVerbose bool) (string, error) {
+	cnf := mustNewConfigurd()
 	svc, err := cnf.Service(service)
 	if err != nil {
 		return "", fmt.Errorf("service not found: %v", service)
