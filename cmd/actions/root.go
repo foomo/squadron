@@ -37,8 +37,8 @@ var (
 	flagNamespace string
 )
 
-func mustNewConfigurd() configurd.Configurd {
-	cnf, err := configurd.New(log, flagDir)
+func mustNewConfigurd(dir, tag string) configurd.Configurd {
+	cnf, err := configurd.New(log, dir, tag)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -53,7 +53,10 @@ func init() {
 }
 
 func Execute() {
-	rootCmd.Execute()
+	if err := rootCmd.Execute(); err != nil {
+		log.Fatal(err)
+	}
+
 }
 
 func outputErrorf(output string, err error, format string, args ...interface{}) error {
