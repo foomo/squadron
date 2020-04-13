@@ -24,7 +24,8 @@ const (
 )
 
 var (
-	ErrServiceNotFound = errors.New("service not found")
+	ErrServiceNotFound    = errors.New("service not found")
+	ErrBuildNotConfigured = errors.New("build parameter was not configured")
 )
 
 type Group struct {
@@ -215,7 +216,7 @@ func logOutput(log Logger, verbose bool, format string, args ...interface{}) {
 	}
 }
 
-func Init(log Logger, dir string, flagVerbose bool) (string, error) {
+func Init(log Logger, dir string, _ bool) (string, error) {
 	log.Printf("Downloading example configuration into dir: %q", dir)
 	output, err := runCommand("", "svn", "export", defaultInitUrl, dir)
 
@@ -230,7 +231,7 @@ func runCommand(cwd string, command ...string) (string, error) {
 	cmd.Dir = cwd
 	out, err := cmd.CombinedOutput()
 	output := strings.Replace(string(out), "\n", "\n\t", -1)
-	if out == nil {
+	if out == nil && err != nil {
 		output = err.Error()
 	}
 	return output, err

@@ -82,19 +82,19 @@ func generate(log Logger, si ServiceItem, basePath, outputDir string) error {
 	return nil
 }
 
-func helmInstall(log Logger, si ServiceItem, image, tag, outputDir string, upgrade bool) (string, error) {
+func helmInstall(log Logger, si ServiceItem, service Service, outputDir string, _ bool) (string, error) {
 	log.Printf("Running helm install for service: %v", si.Name)
 	chartPath := path.Join(outputDir, si.Name)
 	cmd := []string{
-		"helm", "install", si.Name, chartPath,
+		"helm", "upgrade", si.Name, chartPath,
 		"-f", path.Join(chartPath, defaultOverridesFile),
 		"-n", si.namespace,
+		"--install",
 		"--set", fmt.Sprintf("group=%v", si.group),
-		"--set", fmt.Sprintf("image.repository=%v:%v", image, tag),
+		"--set", fmt.Sprintf("image.repository=%s", service.Image),
+		"--set", fmt.Sprintf("image.tag=%s", service.Tag),
 	}
-	if upgrade {
-		cmd = append(cmd, "--upgrade")
-	}
+
 	output, err := runCommand("", cmd...)
 
 	if err != nil {
@@ -106,7 +106,10 @@ func helmInstall(log Logger, si ServiceItem, image, tag, outputDir string, upgra
 func helmUninstall(log Logger, si ServiceItem) (string, error) {
 	log.Printf("Running helm uninstall for service: %v", si.Name)
 	cmd := []string{
-		"helm", "uninstall", "-n", si.namespace, si.Name,
+		"helm",
+		"uninstall",
+		"-n", si.namespace,
+		si.Name,
 	}
 	output, err := runCommand("", cmd...)
 
@@ -152,7 +155,7 @@ func (c Configurd) Install(log Logger, cnf InstallConfiguration) (string, error)
 		if err != nil {
 			return "", err
 		}
-		out, err := helmInstall(log, si, s.Build.Image, cnf.Tag, outputPath, cnf.Upgrade)
+		out, err := helmInstall(log, si, s, outputPath, cnf.Upgrade)
 		if err != nil {
 			return out, err
 		}
