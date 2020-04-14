@@ -93,6 +93,10 @@ func helmInstall(log Logger, si ServiceItem, service Service, outputDir string, 
 		"--set", fmt.Sprintf("group=%v", si.group),
 		"--set", fmt.Sprintf("image.repository=%s", service.Image),
 		"--set", fmt.Sprintf("image.tag=%s", service.Tag),
+		"--set", fmt.Sprintf("image.tag=%s", service.Tag),
+		"--set", fmt.Sprintf("metadata.name=%s", service.Name),
+		"--set", fmt.Sprintf("metadata.component=%s", si.group),
+		"--set", fmt.Sprintf("metadata.namespace=%s", si.namespace),
 	}
 
 	output, err := runCommand("", cmd...)
