@@ -218,8 +218,7 @@ func logOutput(log Logger, verbose bool, format string, args ...interface{}) {
 }
 
 func Init(log Logger, dir string, flagVerbose bool) (string, error) {
-	errRestore := exampledata.RestoreAssets(dir, "")
-	return "done with export", errRestore
+	return "done with export", exampledata.RestoreAssets(dir, "")
 }
 
 func runCommand(cwd string, command ...string) (string, error) {
