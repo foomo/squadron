@@ -10,11 +10,6 @@ group:
         ingress:
           path: /services/hello
           host: localhost
-          enabled: true
-          paths:
-            - /services/hello
-          hosts:
-            - localhost
     hi-service:
       overrides:
         args:
@@ -25,9 +20,4 @@ group:
         ingress:
           path: /services/hi
           host: localhost
-          enabled: true
-          paths:
-            - /services/hi
-          hosts:
-            - localhost
   jobs:
