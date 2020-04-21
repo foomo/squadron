@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/foomo/configurd/exampledata"
+
 	"gopkg.in/yaml.v2"
 )
 
@@ -216,13 +218,8 @@ func logOutput(log Logger, verbose bool, format string, args ...interface{}) {
 }
 
 func Init(log Logger, dir string, flagVerbose bool) (string, error) {
-	log.Printf("Downloading example configuration into dir: %q", dir)
-	output, err := runCommand("", "svn", "export", defaultInitUrl, dir)
-
-	if err != nil {
-		return output, fmt.Errorf("could not download the configurd example")
-	}
-	return output, nil
+	errRestore := exampledata.RestoreAssets(dir, "")
+	return "done with export", errRestore
 }
 
 func runCommand(cwd string, command ...string) (string, error) {
