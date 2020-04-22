@@ -3,3 +3,6 @@ pack-example:
 
 build: pack-example
 	go build -o /usr/local/bin/configurd cmd/main.go
+
+test:
+	go test ./...

@@ -32,7 +32,7 @@ var (
 		Run: func(cmd *cobra.Command, args []string) {
 			_, err := install(args[0], flagNamespace, flagTag, flagDir, flagOutputDir, flagService, flagBuild, flagUpgrade, flagVerbose)
 			if err != nil {
-				log.Fatalf("Installation failed with error: %w", err)
+				log.WithError(err).Fatalf("Installation failed")
 			}
 		},
 	}
