@@ -34,9 +34,8 @@ securityContext: {}
   # runAsUser: 1000
 
 service:
-  type: ClusterIP
-  port: 80
-  containerPort: 3000
+  type: NodePort
+  containerPort: 27017
 
 group: test
 
@@ -47,6 +46,16 @@ env: []
 args: []
   # - "arg1==one"
 
+persistentVolume:
+  size: 1Gi
+  path: /tmp
+  reclaimPolicy: Delete
+  accessModes:
+    - ReadWriteOnce
+
+volumeMounts:
+  - name: data
+    path: /data/db
 
 ingress:
   annotations: {}
