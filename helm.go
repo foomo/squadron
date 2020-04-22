@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/otiai10/copy"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
 
@@ -27,7 +28,7 @@ type JobItem struct {
 	chart     string
 }
 
-func generateYaml(_ Logger, path string, data interface{}) error {
+func generateYaml(_ *logrus.Logger, path string, data interface{}) error {
 	out, marshalErr := yaml.Marshal(data)
 	if marshalErr != nil {
 		return marshalErr
@@ -44,14 +45,14 @@ func generateYaml(_ Logger, path string, data interface{}) error {
 	return nil
 }
 
-func generate(log Logger, si ServiceItem, basePath, outputDir string) error {
+func generate(log *logrus.Logger, si ServiceItem, basePath, outputDir string) error {
 	outputPath := path.Join(basePath, defaultOutputDir, outputDir, si.Name)
-	log.Printf("Creating dir: %q", path.Join(outputDir, si.Name))
+	log.Infof("Creating dir: %q", path.Join(outputDir, si.Name))
 	if err := os.MkdirAll(outputPath, 0744); err != nil {
 		return fmt.Errorf("could not create output dir: %w", err)
 	}
 
-	log.Printf("Copying chart: %v to dir: %q", si.chart, path.Join(outputDir, si.Name))
+	log.Infof("Copying chart: %v to dir: %q", si.chart, path.Join(outputDir, si.Name))
 	chartPath := path.Join(basePath, defaultChartDir, si.chart)
 	err := filepath.Walk(chartPath, func(source string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -82,8 +83,8 @@ func generate(log Logger, si ServiceItem, basePath, outputDir string) error {
 	return nil
 }
 
-func helmInstall(log Logger, si ServiceItem, service Service, outputDir string) (string, error) {
-	log.Printf("Running helm install for service: %v", si.Name)
+func helmInstall(log *logrus.Logger, si ServiceItem, service Service, outputDir string) (string, error) {
+	log.Infof("Running helm install for service: %v", si.Name)
 	chartPath := path.Join(outputDir, si.Name)
 	cmd := []string{
 		"helm", "upgrade", si.Name, chartPath,
@@ -106,8 +107,8 @@ func helmInstall(log Logger, si ServiceItem, service Service, outputDir string) 
 	return output, nil
 }
 
-func helmUninstall(log Logger, si ServiceItem) (string, error) {
-	log.Printf("Running helm uninstall for service: %v", si.Name)
+func helmUninstall(log *logrus.Logger, si ServiceItem) (string, error) {
+	log.Infof("Running helm uninstall for service: %v", si.Name)
 	cmd := []string{
 		"helm",
 		"uninstall",
@@ -130,22 +131,24 @@ type InstallConfiguration struct {
 	Verbose      bool
 }
 
-func (c Configurd) Install(log Logger, cnf InstallConfiguration) (string, error) {
-	log.Printf("Installing services")
+func (c Configurd) Install(cnf InstallConfiguration) (string, error) {
+	logger := c.config.Log
+
+	logger.Infof("Installing services")
 	outputPath := path.Join(cnf.BasePath, defaultOutputDir, cnf.OutputDir)
 
-	log.Printf("Entering dir: %q", path.Join(cnf.BasePath, defaultOutputDir))
-	log.Printf("Removing dir: %q", cnf.OutputDir)
+	logger.Infof("Entering dir: %q", path.Join(cnf.BasePath, defaultOutputDir))
+	logger.Infof("Removing dir: %q", cnf.OutputDir)
 	if err := os.RemoveAll(outputPath); err != nil {
 		return "", fmt.Errorf("could not clean workdir directory: %w", err)
 	}
 
-	log.Printf("Creating dir: %q", cnf.OutputDir)
+	logger.Printf("Creating dir: %q", cnf.OutputDir)
 	if err := os.MkdirAll(outputPath, 0744); err != nil {
 		return "", fmt.Errorf("could not create a workdir directory: %w", err)
 	}
 	for _, si := range cnf.ServiceItems {
-		err := generate(log, si, cnf.BasePath, cnf.OutputDir)
+		err := generate(logger, si, cnf.BasePath, cnf.OutputDir)
 		if err != nil {
 			return "", err
 		}
@@ -157,26 +160,28 @@ func (c Configurd) Install(log Logger, cnf InstallConfiguration) (string, error)
 		if err != nil {
 			return "", err
 		}
-		out, err := helmInstall(log, si, s, outputPath)
+		out, err := helmInstall(logger, si, s, outputPath)
 		if err != nil {
 			return out, err
 		}
-		logOutput(log, cnf.Verbose, out)
+		logger.Trace(out)
 		output = append(output, out)
 	}
 
 	return strings.Join(output, "\n"), nil
 }
 
-func (c Configurd) Uninstall(log Logger, sis []ServiceItem, namespace string, verbose bool) (string, error) {
+func (c Configurd) Uninstall(sis []ServiceItem, namespace string, verbose bool) (string, error) {
+	logger := c.config.Log
+
 	var outputs []string
 	for _, si := range sis {
-		out, err := helmUninstall(log, si)
+		out, err := helmUninstall(logger, si)
 		if err != nil {
 			return out, err
 		}
 		outputs = append(outputs, out)
-		logOutput(log, verbose, out)
+		logger.Trace(out)
 	}
 	return strings.Join(outputs, "\n"), nil
 }

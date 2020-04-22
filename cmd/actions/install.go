@@ -69,7 +69,7 @@ func install(group, namespace, tag, workDir, outputDir, service string, buildSer
 			}
 		}
 	}
-	output, err := cnf.Install(log, configurd.InstallConfiguration{
+	output, err := cnf.Install(configurd.InstallConfiguration{
 		ServiceItems: sis,
 		BasePath:     workDir,
 		OutputDir:    outputDir,
