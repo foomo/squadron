@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/foomo/configurd"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -37,13 +36,9 @@ var (
 )
 
 func install(group, namespace, tag, workDir, outputDir, service string, buildService, verbose bool) (string, error) {
-	log := logrus.New()
-	cnf := mustNewConfigurd(configurd.Config{
-		Log:      log,
-		Tag:      tag,
-		BasePath: workDir,
-		Verbose:  verbose,
-	})
+	log := newLogger(verbose)
+	cnf := mustNewConfigurd(log, tag, workDir)
+
 	sis := cnf.GetServiceItems(namespace, group)
 	if len(sis) == 0 {
 		return "", fmt.Errorf("could not find any service for namespace: %v and group: %v", namespace, group)

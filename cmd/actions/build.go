@@ -1,8 +1,6 @@
 package actions
 
 import (
-	"github.com/foomo/configurd"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -19,12 +17,8 @@ var buildCmd = &cobra.Command{
 }
 
 func build(service, tag, dir string, verbose bool) (string, error) {
-	cnf := mustNewConfigurd(configurd.Config{
-		Log:      logrus.New(),
-		Tag:      tag,
-		BasePath: dir,
-		Verbose:  verbose,
-	})
+	logger := newLogger(verbose)
+	cnf := mustNewConfigurd(logger, tag, dir)
 
 	return cnf.Build(service)
 }

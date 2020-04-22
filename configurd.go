@@ -44,7 +44,6 @@ type Namespace struct {
 type Config struct {
 	Tag      string
 	BasePath string
-	Verbose  bool
 	Log      *logrus.Logger
 }
 
@@ -227,7 +226,8 @@ func (c Configurd) Build(name string) (string, error) {
 	if err != nil {
 		return output, err
 	}
-	logOutput(l, c.config.Verbose, output)
+
+	l.Trace(output)
 
 	return output, err
 }

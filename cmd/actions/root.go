@@ -37,8 +37,18 @@ var (
 	flagNamespace string
 )
 
-func mustNewConfigurd(config configurd.Config) configurd.Configurd {
-	cnf, err := configurd.New(config)
+func newConfigurd(log *logrus.Logger, tag, basePath string) (configurd.Configurd, error) {
+	config := configurd.Config{
+		Tag:      tag,
+		BasePath: basePath,
+		Log:      log,
+	}
+
+	return configurd.New(config)
+}
+
+func mustNewConfigurd(log *logrus.Logger, tag, basePath string) configurd.Configurd {
+	cnf, err := newConfigurd(log, tag, basePath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -61,4 +71,12 @@ func Execute() {
 
 func outputErrorf(output string, err error, format string, args ...interface{}) error {
 	return fmt.Errorf("%v\nerror: %v\noutput: %v", fmt.Sprintf(format, args...), err, strings.ReplaceAll(output, "\n", " "))
+}
+
+func newLogger(verbose bool) *logrus.Logger {
+	logger := logrus.New()
+	if verbose {
+		logger.SetLevel(logrus.TraceLevel)
+	}
+	return logger
 }
