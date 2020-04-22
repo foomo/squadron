@@ -58,7 +58,7 @@ func relativePath(path, basePath string) string {
 	return strings.Replace(path, basePath+"/", "", -1)
 }
 
-func New(log Logger, basePath string) (Configurd, error) {
+func New(log Logger, basePath, tag string) (Configurd, error) {
 	log.Printf("Parsing configuration files")
 	log.Printf("Entering dir: %q", basePath)
 
@@ -77,7 +77,7 @@ func New(log Logger, basePath string) (Configurd, error) {
 
 			name := strings.TrimSuffix(info.Name(), defaultConfigFileExt)
 			log.Printf("Loading service: %v, from: %q", name, relativePath(path, basePath))
-			svc, err := loadService(file, name)
+			svc, err := loadService(file, name, tag)
 			if err != nil {
 				return err
 			}
@@ -221,7 +221,7 @@ func (c Configurd) ListGroups(namespace string) []string {
 	return groups
 }
 
-func loadService(reader io.Reader, name string) (Service, error) {
+func loadService(reader io.Reader, name, tag string) (Service, error) {
 	var wrapper struct {
 		Service Service `yaml:"service"`
 	}
@@ -229,6 +229,9 @@ func loadService(reader io.Reader, name string) (Service, error) {
 		return Service{}, fmt.Errorf("could not decode service: %w", err)
 	}
 	wrapper.Service.Name = name
+	if wrapper.Service.Build.Tag == "" {
+		wrapper.Service.Build.Tag = tag
+	}
 	return wrapper.Service, nil
 }
 
