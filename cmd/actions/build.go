@@ -1,8 +1,8 @@
 package actions
 
 import (
-	"fmt"
-
+	"github.com/foomo/configurd"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -18,15 +18,13 @@ var buildCmd = &cobra.Command{
 	},
 }
 
-func build(service, tag, dir string, flagVerbose bool) (string, error) {
-	cnf := mustNewConfigurd(dir, tag)
-	svc, err := cnf.Service(service)
-	if err != nil {
-		return "", fmt.Errorf("service not found: %v", service)
-	}
-	output, err := svc.RunBuild(log, dir, tag, flagVerbose)
-	if err != nil {
-		return output, outputErrorf(output, err, "could not build service: %v", svc.Name)
-	}
-	return output, nil
+func build(service, tag, dir string, verbose bool) (string, error) {
+	cnf := mustNewConfigurd(configurd.Config{
+		Log:      logrus.New(),
+		Tag:      tag,
+		BasePath: dir,
+		Verbose:  verbose,
+	})
+
+	return cnf.Build(service)
 }

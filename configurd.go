@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/foomo/configurd/exampledata"
+	"github.com/sirupsen/logrus"
 
 	"gopkg.in/yaml.v2"
 )
@@ -22,7 +23,6 @@ const (
 	defaultChartDir      = "configurd/charts"
 	defaultOutputDir     = "configurd/.workdir"
 	defaultOverridesFile = "overrides.yaml"
-	defaultInitUrl       = "https://github.com/foomo/configurd.git/branches/feature/helm-charts-deployments/example"
 )
 
 var (
@@ -41,7 +41,15 @@ type Namespace struct {
 	groups []Group
 }
 
+type Config struct {
+	Tag      string
+	BasePath string
+	Verbose  bool
+	Log      *logrus.Logger
+}
+
 type Configurd struct {
+	config     Config
 	Services   []Service
 	Templates  []string
 	Namespaces []Namespace
@@ -58,12 +66,16 @@ func relativePath(path, basePath string) string {
 	return strings.Replace(path, basePath+"/", "", -1)
 }
 
-func New(log Logger, basePath, defaultTag string) (Configurd, error) {
+func New(config Config) (Configurd, error) {
+	log := config.Log
 	log.Printf("Parsing configuration files")
-	log.Printf("Entering dir: %q", basePath)
+	log.Printf("Entering dir: %q", config.BasePath)
 
-	c := Configurd{}
-	serviceDir := path.Join(basePath, defaultServiceDir)
+	c := Configurd{
+		config: config,
+	}
+
+	serviceDir := path.Join(config.BasePath, defaultServiceDir)
 	err := filepath.Walk(serviceDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -76,8 +88,8 @@ func New(log Logger, basePath, defaultTag string) (Configurd, error) {
 			defer file.Close()
 
 			name := strings.TrimSuffix(info.Name(), defaultConfigFileExt)
-			log.Printf("Loading service: %v, from: %q", name, relativePath(path, basePath))
-			svc, err := loadService(file, name, defaultTag)
+			log.Printf("Loading service: %v, from: %q", name, relativePath(path, config.BasePath))
+			svc, err := loadService(file, name, config.Tag)
 			if err != nil {
 				return err
 			}
@@ -90,7 +102,7 @@ func New(log Logger, basePath, defaultTag string) (Configurd, error) {
 		return Configurd{}, err
 	}
 
-	c.Namespaces, err = loadNamespaces(log, c.Service, basePath)
+	c.Namespaces, err = loadNamespaces(log, c.Service, config.BasePath)
 
 	if err != nil {
 		return Configurd{}, err
@@ -185,6 +197,31 @@ func (c Configurd) Service(name string) (Service, error) {
 		}
 	}
 	return Service{}, ErrServiceNotFound
+}
+
+func (c Configurd) Build(name string) (string, error) {
+	l := c.config.Log
+	s, err := c.Service(name)
+	if err != nil {
+		return "", err
+	}
+
+	if s.Build == "" {
+		return "", ErrBuildNotConfigured
+	}
+	args := strings.Split(s.Build, " ")
+	if args[0] == "docker" {
+		args = append(strings.Split(s.Build, " "), "-t", fmt.Sprintf("%v:%v", s.Image, s.Tag))
+	}
+	l.Printf("Building service: %v", s.Name)
+
+	output, err := runCommand(c.config.BasePath, args...)
+	if err != nil {
+		return output, err
+	}
+	logOutput(l, c.config.Verbose, output)
+
+	return output, err
 }
 
 func (c Configurd) GetServiceItems(namespace, group string) []ServiceItem {

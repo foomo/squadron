@@ -37,8 +37,8 @@ var (
 	flagNamespace string
 )
 
-func mustNewConfigurd(dir, tag string) configurd.Configurd {
-	cnf, err := configurd.New(log, dir, tag)
+func mustNewConfigurd(config configurd.Config) configurd.Configurd {
+	cnf, err := configurd.New(config)
 	if err != nil {
 		log.Fatal(err)
 	}

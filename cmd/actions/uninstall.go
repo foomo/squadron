@@ -3,6 +3,8 @@ package actions
 import (
 	"fmt"
 
+	"github.com/foomo/configurd"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -25,13 +27,19 @@ var (
 	}
 )
 
-func uninstall(group, namespace, tag, dir string, flagVerbose bool) (string, error) {
-	cnf := mustNewConfigurd(dir, tag)
+func uninstall(group, namespace, tag, dir string, verbose bool) (string, error) {
+
+	cnf := mustNewConfigurd(configurd.Config{
+		Tag:      tag,
+		BasePath: dir,
+		Verbose:  verbose,
+		Log:      logrus.New(),
+	})
 	sis := cnf.GetServiceItems(namespace, group)
 	if len(sis) == 0 {
 		return "", fmt.Errorf("could not find any service for namespace: %v and service group: %v", namespace, group)
 	}
-	output, err := cnf.Uninstall(log, sis, namespace, flagVerbose)
+	output, err := cnf.Uninstall(log, sis, namespace, verbose)
 	if err != nil {
 		return output, outputErrorf(output, err, "could not uninstall service group: %v", group)
 	}
