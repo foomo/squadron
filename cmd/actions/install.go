@@ -10,7 +10,6 @@ import (
 
 func init() {
 	installCmd.Flags().BoolVarP(&flagBuild, "build", "b", false, "Build service group before publishing")
-	installCmd.Flags().BoolVarP(&flagUpgrade, "upgrade", "u", false, "Upgrade the service if already installed")
 	installCmd.Flags().StringVarP(&flagOutputDir, "output", "o", "default", "Specifies output directory")
 	installCmd.Flags().StringVarP(&flagNamespace, "namespace", "n", "default", "Specifies the namespace")
 	installCmd.Flags().StringVarP(&flagService, "service", "s", "", "Specifies the service to work with")
@@ -18,7 +17,6 @@ func init() {
 
 var (
 	flagBuild     bool
-	flagUpgrade   bool
 	flagOutputDir string
 	flagService   string
 )
@@ -30,7 +28,7 @@ var (
 		Long:  "installs a group of services with given namespace and tag version",
 		Args:  cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			_, err := install(args[0], flagNamespace, flagTag, flagDir, flagOutputDir, flagService, flagBuild, flagUpgrade, flagVerbose)
+			_, err := install(args[0], flagNamespace, flagTag, flagDir, flagOutputDir, flagService, flagBuild, flagVerbose)
 			if err != nil {
 				log.WithError(err).Fatalf("Installation failed")
 			}
@@ -38,7 +36,7 @@ var (
 	}
 )
 
-func install(group, namespace, tag, workDir, outputDir, service string, buildService, upgrade, verbose bool) (string, error) {
+func install(group, namespace, tag, workDir, outputDir, service string, buildService, verbose bool) (string, error) {
 	log := logrus.New()
 	cnf := mustNewConfigurd(configurd.Config{
 		Log:      log,
@@ -81,7 +79,6 @@ func install(group, namespace, tag, workDir, outputDir, service string, buildSer
 		BasePath:     workDir,
 		OutputDir:    outputDir,
 		Tag:          tag,
-		Upgrade:      upgrade,
 		Verbose:      verbose,
 	})
 

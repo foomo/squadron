@@ -82,7 +82,7 @@ func generate(log Logger, si ServiceItem, basePath, outputDir string) error {
 	return nil
 }
 
-func helmInstall(log Logger, si ServiceItem, service Service, outputDir string, _ bool) (string, error) {
+func helmInstall(log Logger, si ServiceItem, service Service, outputDir string) (string, error) {
 	log.Printf("Running helm install for service: %v", si.Name)
 	chartPath := path.Join(outputDir, si.Name)
 	cmd := []string{
@@ -127,7 +127,6 @@ type InstallConfiguration struct {
 	BasePath     string
 	OutputDir    string
 	Tag          string
-	Upgrade      bool
 	Verbose      bool
 }
 
@@ -158,7 +157,7 @@ func (c Configurd) Install(log Logger, cnf InstallConfiguration) (string, error)
 		if err != nil {
 			return "", err
 		}
-		out, err := helmInstall(log, si, s, outputPath, cnf.Upgrade)
+		out, err := helmInstall(log, si, s, outputPath)
 		if err != nil {
 			return out, err
 		}
