@@ -1,6 +1,7 @@
 package configurd
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"io"
@@ -200,6 +201,26 @@ func (c Configurd) GetServiceItems(namespace, group string) []ServiceItem {
 	return sis
 }
 
+func (c Configurd) ListServices() []string {
+	var services []string
+	for _, service := range c.Services {
+		services = append(services, service.Name)
+	}
+	return services
+}
+
+func (c Configurd) ListGroups(namespace string) []string {
+	var groups []string
+	for _, ns := range c.Namespaces {
+		if namespace == "" || namespace == ns.name {
+			for _, group := range ns.groups {
+				groups = append(groups, group.name)
+			}
+		}
+	}
+	return groups
+}
+
 func loadService(reader io.Reader, name string) (Service, error) {
 	var wrapper struct {
 		Service Service `yaml:"service"`
@@ -211,23 +232,37 @@ func loadService(reader io.Reader, name string) (Service, error) {
 	return wrapper.Service, nil
 }
 
-func logOutput(log Logger, verbose bool, format string, args ...interface{}) {
-	if verbose {
-		log.Printf(format, args...)
-	}
-}
-
 func Init(log Logger, dir string, flagVerbose bool) (string, error) {
 	return "done with export", exampledata.RestoreAssets(dir, "")
 }
 
-func runCommand(cwd string, command ...string) (string, error) {
+func runCommand(cwd string, log Logger, verbose bool, command ...string) (string, error) {
 	cmd := exec.Command(command[0], command[1:]...)
 	cmd.Dir = cwd
-	out, err := cmd.CombinedOutput()
-	output := strings.Replace(string(out), "\n", "\n\t", -1)
-	if out == nil {
-		output = err.Error()
+
+	cmdReader, err := cmd.StdoutPipe()
+	if err != nil {
+		return "", err
 	}
+	cmd.Stderr = cmd.Stdout
+
+	if err := cmd.Start(); err != nil {
+		return "", err
+	}
+
+	var out []string
+	scanner := bufio.NewScanner(cmdReader)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if verbose {
+			fmt.Printf("\t%s\n", line)
+		}
+		out = append(out, line)
+	}
+	output := strings.Join(out, "\n")
+	if err := cmd.Wait(); err != nil {
+		return "", err
+	}
+
 	return output, err
 }

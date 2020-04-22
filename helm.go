@@ -82,7 +82,7 @@ func generate(log Logger, si ServiceItem, basePath, outputDir string) error {
 	return nil
 }
 
-func helmInstall(log Logger, si ServiceItem, image, tag, outputDir string) (string, error) {
+func helmInstall(log Logger, verbose bool, si ServiceItem, image, tag, outputDir string) (string, error) {
 	log.Printf("Running helm install for service: %v", si.Name)
 	chartPath := path.Join(outputDir, si.Name)
 	cmd := []string{
@@ -92,7 +92,7 @@ func helmInstall(log Logger, si ServiceItem, image, tag, outputDir string) (stri
 		"--set", fmt.Sprintf("group=%v", si.group),
 		"--set", fmt.Sprintf("image.repository=%v:%v", image, tag),
 	}
-	output, err := runCommand("", cmd...)
+	output, err := runCommand("", log, verbose, cmd...)
 
 	if err != nil {
 		return output, fmt.Errorf("could not install a helm chart for service %v", si.Name)
@@ -100,12 +100,12 @@ func helmInstall(log Logger, si ServiceItem, image, tag, outputDir string) (stri
 	return output, nil
 }
 
-func helmUninstall(log Logger, si ServiceItem) (string, error) {
+func helmUninstall(log Logger, verbose bool, si ServiceItem) (string, error) {
 	log.Printf("Running helm uninstall for service: %v", si.Name)
 	cmd := []string{
 		"helm", "uninstall", "-n", si.namespace, si.Name,
 	}
-	output, err := runCommand("", cmd...)
+	output, err := runCommand("", log, verbose, cmd...)
 
 	if err != nil {
 		return output, fmt.Errorf("could not uninstall a helm chart for service: %v, namespace: %v", si.Name, si.namespace)
@@ -140,11 +140,10 @@ func (c Configurd) Install(log Logger, sis []ServiceItem, basePath, outputDir, t
 		if err != nil {
 			return "", err
 		}
-		out, err := helmInstall(log, si, s.Build.Image, tag, outputPath)
+		out, err := helmInstall(log, verbose, si, s.Build.Image, tag, outputPath)
 		if err != nil {
 			return out, err
 		}
-		logOutput(log, verbose, out)
 		output = append(output, out)
 	}
 
@@ -154,12 +153,11 @@ func (c Configurd) Install(log Logger, sis []ServiceItem, basePath, outputDir, t
 func (c Configurd) Uninstall(log Logger, sis []ServiceItem, namespace string, verbose bool) (string, error) {
 	var outputs []string
 	for _, si := range sis {
-		out, err := helmUninstall(log, si)
+		out, err := helmUninstall(log, verbose, si)
 		if err != nil {
 			return out, err
 		}
 		outputs = append(outputs, out)
-		logOutput(log, verbose, out)
 	}
 	return strings.Join(outputs, "\n"), nil
 }

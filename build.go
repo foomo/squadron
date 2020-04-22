@@ -22,12 +22,5 @@ func (s Service) RunBuild(log Logger, dir, tag string, verbose bool) (string, er
 		args = append(strings.Split(s.Build.Command, " "), "-t", fmt.Sprintf("%v:%v", s.Build.Image, tag))
 	}
 	log.Printf("Building service: %v", s.Name)
-
-	output, err := runCommand(dir, args...)
-
-	if err != nil {
-		return output, err
-	}
-	logOutput(log, verbose, output)
-	return output, nil
+	return runCommand(dir, log, verbose, args...)
 }
