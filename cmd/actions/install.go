@@ -63,22 +63,17 @@ func install(group, namespace, tag, workDir, outputDir, service string, buildSer
 	if buildService {
 		log.Printf("Building services")
 		for _, si := range sis {
-			_, err := build(si.Name, tag, workDir, verbose)
+			output, err := build(si.Name, tag, workDir, verbose)
 			if err != nil {
-				return "", err
+				return output, err
 			}
 		}
 	}
-	output, err := cnf.Install(configurd.InstallConfiguration{
+	return cnf.Install(configurd.InstallConfiguration{
 		ServiceItems: sis,
 		BasePath:     workDir,
 		OutputDir:    outputDir,
 		Tag:          tag,
 		Verbose:      verbose,
 	})
-
-	if err != nil {
-		return output, outputErrorf(output, err, "could not install group: %v", group)
-	}
-	return output, nil
 }
