@@ -93,11 +93,15 @@ func helmInstall(log *logrus.Logger, si ServiceItem, service Service, outputDir 
 		"-n", si.namespace,
 		"--install",
 		"--set", fmt.Sprintf("group=%v", si.group),
-		"--set", fmt.Sprintf("image.repository=%s", service.Image),
-		"--set", fmt.Sprintf("image.tag=%s", service.Tag),
 		"--set", fmt.Sprintf("metadata.name=%s", service.Name),
 		"--set", fmt.Sprintf("metadata.component=%s", si.group),
 		"--set", fmt.Sprintf("metadata.namespace=%s", si.namespace),
+	}
+	if service.Image != "" {
+		cmd = append(cmd, "--set", fmt.Sprintf("image.repository=%s", service.Image))
+	}
+	if service.Tag != "" {
+		cmd = append(cmd, "--set", fmt.Sprintf("image.tag=%s", service.Tag))
 	}
 	return runCommand(log, "", cmd...)
 }
