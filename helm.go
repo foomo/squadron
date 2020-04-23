@@ -85,6 +85,7 @@ func generate(log *logrus.Logger, si ServiceItem, basePath, outputDir string) er
 
 func helmInstall(log *logrus.Logger, si ServiceItem, service Service, outputDir string) (string, error) {
 	log.Infof("Running helm install for service: %v", si.Name)
+
 	chartPath := path.Join(outputDir, si.Name)
 	cmd := []string{
 		"helm", "upgrade", si.Name, chartPath,
@@ -98,13 +99,7 @@ func helmInstall(log *logrus.Logger, si ServiceItem, service Service, outputDir 
 		"--set", fmt.Sprintf("metadata.component=%s", si.group),
 		"--set", fmt.Sprintf("metadata.namespace=%s", si.namespace),
 	}
-
-	output, err := runCommand("", cmd...)
-
-	if err != nil {
-		return output, fmt.Errorf("could not install a helm chart for service %v", si.Name)
-	}
-	return output, nil
+	return runCommand(log, "", cmd...)
 }
 
 func helmUninstall(log *logrus.Logger, si ServiceItem) (string, error) {
@@ -115,12 +110,7 @@ func helmUninstall(log *logrus.Logger, si ServiceItem) (string, error) {
 		"-n", si.namespace,
 		si.Name,
 	}
-	output, err := runCommand("", cmd...)
-
-	if err != nil {
-		return output, fmt.Errorf("could not uninstall a helm chart for service: %v, namespace: %v", si.Name, si.namespace)
-	}
-	return output, nil
+	return runCommand(log, "", cmd...)
 }
 
 type InstallConfiguration struct {
@@ -164,7 +154,6 @@ func (c Configurd) Install(cnf InstallConfiguration) (string, error) {
 		if err != nil {
 			return out, err
 		}
-		logger.Trace(out)
 		output = append(output, out)
 	}
 
@@ -181,7 +170,6 @@ func (c Configurd) Uninstall(sis []ServiceItem, namespace string, verbose bool) 
 			return out, err
 		}
 		outputs = append(outputs, out)
-		logger.Trace(out)
 	}
 	return strings.Join(outputs, "\n"), nil
 }
