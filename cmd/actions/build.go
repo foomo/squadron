@@ -20,5 +20,9 @@ func build(service, tag, dir string, verbose bool) (string, error) {
 	logger := newLogger(verbose)
 	cnf := mustNewConfigurd(logger, tag, dir)
 
-	return cnf.Build(service)
+	s, err := cnf.Service(service)
+	if err != nil {
+		return "", err
+	}
+	return cnf.Build(s)
 }

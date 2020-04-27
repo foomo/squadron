@@ -1,8 +1,6 @@
 package actions
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 )
 
@@ -29,10 +27,19 @@ func uninstall(group, namespace, tag, dir string, verbose bool) (string, error) 
 	log := newLogger(verbose)
 	cnf := mustNewConfigurd(log, tag, dir)
 
-	sis := cnf.GetServiceItems(namespace, group)
-	if len(sis) == 0 {
-		return "", fmt.Errorf("could not find any service for namespace: %v and service group: %v", namespace, group)
+	ns, err := cnf.Namespace(namespace)
+	if err != nil {
+		return "", err
 	}
+	g, err := ns.Group(group)
+	if err != nil {
+		return "", err
+	}
+	sis, err := g.ServiceItems()
+	if err != nil {
+		return "", err
+	}
+
 	output, err := cnf.Uninstall(sis, namespace, verbose)
 	if err != nil {
 		return output, outputErrorf(output, err, "could not uninstall service group: %v", group)

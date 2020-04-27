@@ -193,21 +193,62 @@ func loadServiceItem(item ServiceItem, service, namespace, group, chart string) 
 }
 
 func (c Configurd) Service(name string) (Service, error) {
-	for _, svc := range c.Services {
-		if svc.Name == name {
-			return svc, nil
+	var available []string
+	for _, s := range c.Services {
+		if s.Name == name {
+			return s, nil
 		}
+		available = append(available, s.Name)
 	}
-	return Service{}, ErrServiceNotFound
+	return Service{}, errResourceNotFound(name, "service", available)
 }
 
-func (c Configurd) Build(name string) (string, error) {
-	l := c.config.Log
-	s, err := c.Service(name)
-	if err != nil {
-		return "", err
+func (c Configurd) Namespace(name string) (Namespace, error) {
+	var available []string
+	for _, ns := range c.Namespaces {
+		if ns.name == name {
+			return ns, nil
+		}
+		available = append(available, ns.name)
 	}
+	return Namespace{}, errResourceNotFound(name, "namespace", available)
+}
 
+func (ns Namespace) Group(name string) (Group, error) {
+	var available []string
+	for _, g := range ns.groups {
+		if g.name == name {
+			return g, nil
+		}
+		available = append(available, g.name)
+	}
+	return Group{}, errResourceNotFound(name, "group", available)
+}
+
+func (g Group) ServiceItem(name string) (ServiceItem, error) {
+	var available []string
+	for _, s := range g.Services {
+		if s.Name == name {
+			return s, nil
+		}
+		available = append(available, s.Name)
+	}
+	return ServiceItem{}, errResourceNotFound(name, "serviceItem", available)
+}
+
+func (g Group) ServiceItems() ([]ServiceItem, error) {
+	if len(g.Services) == 0 {
+		return nil, fmt.Errorf("could not find any service for group: %v", g.name)
+	}
+	var sis []ServiceItem
+	for _, si := range g.Services {
+		sis = append(sis, si)
+	}
+	return sis, nil
+}
+
+func (c Configurd) Build(s Service) (string, error) {
+	l := c.config.Log
 	if s.Build == "" {
 		return "", ErrBuildNotConfigured
 	}
@@ -225,20 +266,6 @@ func (c Configurd) Build(name string) (string, error) {
 	l.Trace(output)
 
 	return output, err
-}
-
-func (c Configurd) GetServiceItems(namespace, group string) []ServiceItem {
-	var sis []ServiceItem
-	for _, ns := range c.Namespaces {
-		for _, g := range ns.groups {
-			for _, si := range g.Services {
-				if (namespace == "" || namespace == ns.name) && (group == "" || group == g.name) {
-					sis = append(sis, si)
-				}
-			}
-		}
-	}
-	return sis
 }
 
 func loadService(reader io.Reader, name, defaultTag string) (Service, error) {
@@ -269,4 +296,11 @@ func runCommand(cwd string, command ...string) (string, error) {
 		output = err.Error()
 	}
 	return output, err
+}
+
+func errResourceNotFound(name, resource string, available []string) error {
+	if name == "" {
+		return fmt.Errorf("%s not provided. Available: %s", resource, strings.Join(available, ", "))
+	}
+	return fmt.Errorf("%s '%s' not found. Available: %s", resource, name, strings.Join(available, ", "))
 }
