@@ -43,6 +43,17 @@ spec:
               port: container-port
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            {{- range .Values.volumes }}
+            - name: {{ .name }}
+              mountPath: {{ .mount }}
+            {{- end }}
+      volumes:
+        {{- range .Values.volumes }}
+        - name: {{ .name }}
+          hostPath:
+            path: {{ .host }}
+        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
