@@ -1,6 +1,8 @@
 package actions
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 )
 
@@ -27,8 +29,12 @@ var buildCmd = &cobra.Command{
 func build(service, tag, dir string, push, verbose bool) (string, error) {
 	logger := newLogger(verbose)
 	cnf := mustNewConfigurd(logger, tag, dir)
+	svc, err := cnf.Service(service)
+	if err != nil {
+		return "", fmt.Errorf("could not find service: %w", err)
+	}
 
-	out, err := cnf.Build(service)
+	out, err := cnf.Build(svc)
 	if err != nil {
 		return out, err
 	}
