@@ -7,14 +7,21 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/mitchellh/mapstructure"
 	"github.com/otiai10/copy"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
 
+type Volume struct {
+	Name  string
+	Host  string
+	Mount string
+}
+
 type ServiceItem struct {
 	Name      string
-	Overrides interface{}
+	Overrides map[string]interface{}
 	namespace string
 	group     string
 	chart     string
@@ -45,6 +52,15 @@ func generateYaml(_ *logrus.Logger, path string, data interface{}) error {
 	return nil
 }
 
+func fixVolumeRelativePath(basePath string, volumes interface{}) []Volume {
+	var vs []Volume
+	mapstructure.Decode(volumes, &vs)
+	for i := 0; i < len(vs); i++ {
+		vs[i].Host = strings.Replace(vs[i].Host, "./", fmt.Sprintf("%v/", basePath), 1)
+	}
+	return vs
+}
+
 func generate(log *logrus.Logger, si ServiceItem, basePath, outputDir string) error {
 	outputPath := path.Join(basePath, defaultOutputDir, outputDir, si.Name)
 	log.Infof("Creating dir: %q", path.Join(outputDir, si.Name))
@@ -73,6 +89,10 @@ func generate(log *logrus.Logger, si ServiceItem, basePath, outputDir string) er
 	})
 	if err != nil {
 		return fmt.Errorf("could not copy template files: %w", err)
+	}
+
+	if _, ok := si.Overrides["volumes"]; ok {
+		si.Overrides["volumes"] = fixVolumeRelativePath(basePath, si.Overrides["volumes"])
 	}
 
 	log.Printf("Generating yaml file: %q", path.Join(outputDir, si.Name, defaultOverridesFile))
