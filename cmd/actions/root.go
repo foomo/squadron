@@ -1,10 +1,8 @@
 package actions
 
 import (
-	"fmt"
 	"os"
 	"path"
-	"strings"
 
 	"github.com/foomo/configurd"
 	"github.com/sirupsen/logrus"
@@ -67,10 +65,6 @@ func Execute() {
 		log.Fatal(err)
 	}
 
-}
-
-func outputErrorf(output string, err error, format string, args ...interface{}) error {
-	return fmt.Errorf("%v\nerror: %v\noutput: %v", fmt.Sprintf(format, args...), err, strings.ReplaceAll(output, "\n", " "))
 }
 
 func newLogger(verbose bool) *logrus.Logger {

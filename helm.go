@@ -7,14 +7,21 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/mitchellh/mapstructure"
 	"github.com/otiai10/copy"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
 
+type Volume struct {
+	Name  string
+	Host  string
+	Mount string
+}
+
 type ServiceItem struct {
 	Name      string
-	Overrides interface{}
+	Overrides map[string]interface{}
 	namespace string
 	group     string
 	chart     string
@@ -43,6 +50,15 @@ func generateYaml(_ *logrus.Logger, path string, data interface{}) error {
 		return writeErr
 	}
 	return nil
+}
+
+func fixVolumeRelativePath(basePath string, volumes interface{}) []Volume {
+	var vs []Volume
+	mapstructure.Decode(volumes, &vs)
+	for i := 0; i < len(vs); i++ {
+		vs[i].Host = strings.Replace(vs[i].Host, "./", fmt.Sprintf("%v/", basePath), 1)
+	}
+	return vs
 }
 
 func generate(log *logrus.Logger, si ServiceItem, basePath, outputDir string) error {
@@ -75,6 +91,10 @@ func generate(log *logrus.Logger, si ServiceItem, basePath, outputDir string) er
 		return fmt.Errorf("could not copy template files: %w", err)
 	}
 
+	if _, ok := si.Overrides["volumes"]; ok {
+		si.Overrides["volumes"] = fixVolumeRelativePath(basePath, si.Overrides["volumes"])
+	}
+
 	log.Printf("Generating yaml file: %q", path.Join(outputDir, si.Name, defaultOverridesFile))
 	err = generateYaml(log, path.Join(outputPath, defaultOverridesFile), si.Overrides)
 	if err != nil {
@@ -85,6 +105,7 @@ func generate(log *logrus.Logger, si ServiceItem, basePath, outputDir string) er
 
 func helmInstall(log *logrus.Logger, si ServiceItem, service Service, outputDir string) (string, error) {
 	log.Infof("Running helm install for service: %v", si.Name)
+
 	chartPath := path.Join(outputDir, si.Name)
 	cmd := []string{
 		"helm", "upgrade", si.Name, chartPath,
@@ -92,19 +113,17 @@ func helmInstall(log *logrus.Logger, si ServiceItem, service Service, outputDir 
 		"-n", si.namespace,
 		"--install",
 		"--set", fmt.Sprintf("group=%v", si.group),
-		"--set", fmt.Sprintf("image.repository=%s", service.Image),
-		"--set", fmt.Sprintf("image.tag=%s", service.Tag),
 		"--set", fmt.Sprintf("metadata.name=%s", service.Name),
 		"--set", fmt.Sprintf("metadata.component=%s", si.group),
 		"--set", fmt.Sprintf("metadata.namespace=%s", si.namespace),
 	}
-
-	output, err := runCommand("", cmd...)
-
-	if err != nil {
-		return output, fmt.Errorf("could not install a helm chart for service %v", si.Name)
+	if service.Image != "" {
+		cmd = append(cmd, "--set", fmt.Sprintf("image.repository=%s", service.Image))
 	}
-	return output, nil
+	if service.Tag != "" {
+		cmd = append(cmd, "--set", fmt.Sprintf("image.tag=%s", service.Tag))
+	}
+	return runCommand(log, "", cmd...)
 }
 
 func helmUninstall(log *logrus.Logger, si ServiceItem) (string, error) {
@@ -115,12 +134,7 @@ func helmUninstall(log *logrus.Logger, si ServiceItem) (string, error) {
 		"-n", si.namespace,
 		si.Name,
 	}
-	output, err := runCommand("", cmd...)
-
-	if err != nil {
-		return output, fmt.Errorf("could not uninstall a helm chart for service: %v, namespace: %v", si.Name, si.namespace)
-	}
-	return output, nil
+	return runCommand(log, "", cmd...)
 }
 
 type InstallConfiguration struct {
@@ -164,7 +178,6 @@ func (c Configurd) Install(cnf InstallConfiguration) (string, error) {
 		if err != nil {
 			return out, err
 		}
-		logger.Trace(out)
 		output = append(output, out)
 	}
 
@@ -181,7 +194,6 @@ func (c Configurd) Uninstall(sis []ServiceItem, namespace string, verbose bool) 
 			return out, err
 		}
 		outputs = append(outputs, out)
-		logger.Trace(out)
 	}
 	return strings.Join(outputs, "\n"), nil
 }

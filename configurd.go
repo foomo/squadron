@@ -1,6 +1,7 @@
 package configurd
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"io"
@@ -258,14 +259,7 @@ func (c Configurd) Build(s Service) (string, error) {
 	}
 	l.Infof("Building service: %v", s.Name)
 
-	output, err := runCommand(c.config.BasePath, args...)
-	if err != nil {
-		return output, err
-	}
-
-	l.Trace(output)
-
-	return output, err
+	return runCommand(c.config.Log, c.config.BasePath, args...)
 }
 
 func loadService(reader io.Reader, name, defaultTag string) (Service, error) {
@@ -282,19 +276,37 @@ func loadService(reader io.Reader, name, defaultTag string) (Service, error) {
 	return wrapper.Service, nil
 }
 
-func Init(log *logrus.Logger, dir string, _ bool) (string, error) {
+func Init(log *logrus.Logger, dir string) (string, error) {
 	log.Infof("Downloading example configuration into dir: %q", dir)
-	return "done with export", exampledata.RestoreAssets(dir, "")
+	return "", exampledata.RestoreAssets(dir, "")
 }
 
-func runCommand(cwd string, command ...string) (string, error) {
+func runCommand(log *logrus.Logger, cwd string, command ...string) (string, error) {
 	cmd := exec.Command(command[0], command[1:]...)
 	cmd.Dir = cwd
-	out, err := cmd.CombinedOutput()
-	output := strings.Replace(string(out), "\n", "\n\t", -1)
-	if out == nil && err != nil {
-		output = err.Error()
+
+	cmdReader, err := cmd.StdoutPipe()
+	if err != nil {
+		return "", err
 	}
+	cmd.Stderr = cmd.Stdout
+
+	if err := cmd.Start(); err != nil {
+		return "", err
+	}
+
+	var out []string
+	scanner := bufio.NewScanner(cmdReader)
+	for scanner.Scan() {
+		line := scanner.Text()
+		log.Trace(line)
+		out = append(out, line)
+	}
+	output := strings.Join(out, "\n")
+	if err := cmd.Wait(); err != nil {
+		return output, fmt.Errorf("%s, %s", err.Error(), output)
+	}
+
 	return output, err
 }
 
