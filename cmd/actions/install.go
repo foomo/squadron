@@ -1,8 +1,6 @@
 package actions
 
 import (
-	"fmt"
-
 	"github.com/foomo/configurd"
 	"github.com/spf13/cobra"
 )
@@ -39,25 +37,25 @@ func install(group, namespace, tag, workDir, outputDir, service string, buildSer
 	log := newLogger(verbose)
 	cnf := mustNewConfigurd(log, tag, workDir)
 
-	sis := cnf.GetServiceItems(namespace, group)
-	if len(sis) == 0 {
-		return "", fmt.Errorf("could not find any service for namespace: %v and group: %v", namespace, group)
+	ns, err := cnf.Namespace(namespace)
+	if err != nil {
+		return "", err
+	}
+	g, err := ns.Group(group)
+	if err != nil {
+		return "", err
+	}
+	sis, err := g.ServiceItems()
+	if err != nil {
+		return "", err
 	}
 
-	// If one service is selected
 	if service != "" {
-		filtered := make([]configurd.ServiceItem, 1)
-		for _, si := range sis {
-			if si.Name == service {
-				filtered[0] = si
-				break
-			}
+		si, err := g.ServiceItem(service)
+		if err != nil {
+			return "", err
 		}
-		sis = filtered
-	}
-
-	if len(sis) == 0 {
-		return "", fmt.Errorf("no services found to install")
+		sis = []configurd.ServiceItem{si}
 	}
 
 	if buildService {
