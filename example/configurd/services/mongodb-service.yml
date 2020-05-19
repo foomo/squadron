@@ -1,4 +1,3 @@
 service:
-  build:
-    image: mongo
+  image: mongo
   chart: mongodb

@@ -11,7 +11,7 @@ var buildCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		_, err := build(args[0], flagTag, flagDir, flagVerbose)
 		if err != nil {
-			log.Fatal(err)
+			log.WithError(err).Fatalf("Build failed")
 		}
 	},
 }

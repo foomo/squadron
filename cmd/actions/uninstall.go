@@ -19,7 +19,7 @@ var (
 		Run: func(cmd *cobra.Command, args []string) {
 			_, err := uninstall(args[0], flagNamespace, flagTag, flagDir, flagVerbose)
 			if err != nil {
-				log.Fatal(err)
+				log.WithError(err).Fatalf("Uninstallation failed")
 			}
 		},
 	}
@@ -33,9 +33,5 @@ func uninstall(group, namespace, tag, dir string, verbose bool) (string, error) 
 	if len(sis) == 0 {
 		return "", fmt.Errorf("could not find any service for namespace: %v and service group: %v", namespace, group)
 	}
-	output, err := cnf.Uninstall(sis, namespace, verbose)
-	if err != nil {
-		return output, outputErrorf(output, err, "could not uninstall service group: %v", group)
-	}
-	return output, nil
+	return cnf.Uninstall(sis, namespace, verbose)
 }
