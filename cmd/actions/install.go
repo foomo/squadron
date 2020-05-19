@@ -63,7 +63,7 @@ func install(group, namespace, tag, workDir, outputDir, service string, buildSer
 	if buildService {
 		log.Printf("Building services")
 		for _, si := range sis {
-			output, err := build(si.Name, tag, workDir, verbose)
+			output, err := build(si.Name, tag, workDir, true, verbose)
 			if err != nil {
 				return output, err
 			}
