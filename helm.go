@@ -35,7 +35,7 @@ type JobItem struct {
 	chart     string
 }
 
-func generateYaml(_ *logrus.Logger, path string, data interface{}) error {
+func generateYaml(_ *logrus.Entry, path string, data interface{}) error {
 	out, marshalErr := yaml.Marshal(data)
 	if marshalErr != nil {
 		return marshalErr
@@ -61,7 +61,7 @@ func fixVolumeRelativePath(basePath string, volumes interface{}) []Volume {
 	return vs
 }
 
-func generate(log *logrus.Logger, si ServiceItem, basePath, outputDir string) error {
+func generate(log *logrus.Entry, si ServiceItem, basePath, outputDir string) error {
 	outputPath := path.Join(basePath, defaultOutputDir, outputDir, si.Name)
 	log.Infof("Creating dir: %q", path.Join(outputDir, si.Name))
 	if err := os.MkdirAll(outputPath, 0744); err != nil {
@@ -103,7 +103,7 @@ func generate(log *logrus.Logger, si ServiceItem, basePath, outputDir string) er
 	return nil
 }
 
-func helmInstall(log *logrus.Logger, si ServiceItem, service Service, outputDir string) (string, error) {
+func helmInstall(log *logrus.Entry, si ServiceItem, service Service, outputDir string) (string, error) {
 	log.Infof("Running helm install for service: %v", si.Name)
 
 	chartPath := path.Join(outputDir, si.Name)
@@ -123,10 +123,10 @@ func helmInstall(log *logrus.Logger, si ServiceItem, service Service, outputDir 
 	if service.Tag != "" {
 		cmd = append(cmd, "--set", fmt.Sprintf("image.tag=%s", service.Tag))
 	}
-	return runCommand(log, "", cmd...)
+	return runCommand(log, "", nil, cmd...)
 }
 
-func helmUninstall(log *logrus.Logger, si ServiceItem) (string, error) {
+func helmUninstall(log *logrus.Entry, si ServiceItem) (string, error) {
 	log.Infof("Running helm uninstall for service: %v", si.Name)
 	cmd := []string{
 		"helm",
@@ -134,7 +134,7 @@ func helmUninstall(log *logrus.Logger, si ServiceItem) (string, error) {
 		"-n", si.namespace,
 		si.Name,
 	}
-	return runCommand(log, "", cmd...)
+	return runCommand(log, "", nil, cmd...)
 }
 
 type InstallConfiguration struct {

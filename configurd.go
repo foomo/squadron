@@ -45,7 +45,7 @@ type Namespace struct {
 type Config struct {
 	Tag      string
 	BasePath string
-	Log      *logrus.Logger
+	Log      *logrus.Entry
 }
 
 type Configurd struct {
@@ -114,7 +114,7 @@ func New(config Config) (Configurd, error) {
 	return c, nil
 }
 
-func loadNamespaces(log *logrus.Logger, sl serviceLoader, basePath string) ([]Namespace, error) {
+func loadNamespaces(log *logrus.Entry, sl serviceLoader, basePath string) ([]Namespace, error) {
 	var nss []Namespace
 	namespaceDir := path.Join(basePath, defaultNamespaceDir)
 	err := filepath.Walk(namespaceDir, func(path string, info os.FileInfo, err error) error {
@@ -138,7 +138,7 @@ func loadNamespaces(log *logrus.Logger, sl serviceLoader, basePath string) ([]Na
 	return nss, err
 }
 
-func loadGroups(log *logrus.Logger, sl serviceLoader, basePath, namespace string) ([]Group, error) {
+func loadGroups(log *logrus.Entry, sl serviceLoader, basePath, namespace string) ([]Group, error) {
 	var gs []Group
 	groupPath := path.Join(basePath, defaultNamespaceDir, namespace)
 	err := filepath.Walk(groupPath, func(path string, info os.FileInfo, err error) error {
@@ -159,7 +159,7 @@ func loadGroups(log *logrus.Logger, sl serviceLoader, basePath, namespace string
 	return gs, err
 }
 
-func loadGroup(log *logrus.Logger, sl serviceLoader, path, namespace, group string) (Group, error) {
+func loadGroup(log *logrus.Entry, sl serviceLoader, path, namespace, group string) (Group, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return Group{}, err
@@ -253,13 +253,29 @@ func (c Configurd) Build(s Service) (string, error) {
 	if s.Build == "" {
 		return "", ErrBuildNotConfigured
 	}
+
 	args := strings.Split(s.Build, " ")
 	if args[0] == "docker" {
 		args = append(strings.Split(s.Build, " "), "-t", fmt.Sprintf("%v:%v", s.Image, s.Tag))
 	}
 	l.Infof("Building service: %v", s.Name)
+	env := []string{
+		fmt.Sprintf("TAG=%s", s.Tag),
+	}
 
-	return runCommand(c.config.Log, c.config.BasePath, args...)
+	return runCommand(l, c.config.BasePath, env, args...)
+}
+
+func (c Configurd) Push(name string) (string, error) {
+	l := c.config.Log
+	s, err := c.Service(name)
+	if err != nil {
+		return "", fmt.Errorf("could not find service: %w", err)
+	}
+	image := fmt.Sprintf("%s:%s", s.Image, s.Tag)
+
+	l.Infof("Pushing service %v to %s", s.Name, image)
+	return runCommand(l, c.config.BasePath, nil, "docker", "push", image)
 }
 
 func loadService(reader io.Reader, name, defaultTag string) (Service, error) {
@@ -281,9 +297,13 @@ func Init(log *logrus.Logger, dir string) (string, error) {
 	return "", exampledata.RestoreAssets(dir, "")
 }
 
-func runCommand(log *logrus.Logger, cwd string, command ...string) (string, error) {
+func runCommand(log *logrus.Entry, cwd string, env []string, command ...string) (string, error) {
 	cmd := exec.Command(command[0], command[1:]...)
 	cmd.Dir = cwd
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, env...)
+
+	log.Tracef("executing %q from wd %q", cmd.String(), cmd.Dir)
 
 	cmdReader, err := cmd.StdoutPipe()
 	if err != nil {
