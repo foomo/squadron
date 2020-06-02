@@ -6,6 +6,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/mitchellh/mapstructure"
 	"github.com/otiai10/copy"
@@ -116,6 +117,7 @@ func helmInstall(log *logrus.Entry, si ServiceItem, service Service, outputDir s
 		"--set", fmt.Sprintf("metadata.name=%s", service.Name),
 		"--set", fmt.Sprintf("metadata.component=%s", si.group),
 		"--set", fmt.Sprintf("metadata.namespace=%s", si.namespace),
+		"--set", fmt.Sprintf("timestamp=%v", time.Now().Unix()),
 	}
 	if service.Image != "" {
 		cmd = append(cmd, "--set", fmt.Sprintf("image.repository=%s", service.Image))

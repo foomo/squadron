@@ -18,6 +18,8 @@ spec:
       labels:
         app.kubernetes.io/name: {{ .Release.Name }}
         app.kubernetes.io/part-of: {{ .Values.group }}
+      annotations:
+        timestamp: "{{ .Values.timestamp }}"
     spec:
       containers:
         - name: {{ .Release.Name }}

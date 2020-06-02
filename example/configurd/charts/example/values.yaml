@@ -38,6 +38,8 @@ service:
   port: 80
   containerPort: 3000
 
+timestamp: ""
+
 group: test
 
 env: []
