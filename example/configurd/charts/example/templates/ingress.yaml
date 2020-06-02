@@ -1,4 +1,6 @@
-{{- if and .Values.ingress.host .Values.ingress.path }}
+{{- if .Values.ingress.hosts }}
+{{ $serviceName := .Release.Name }}
+{{ $servicePort := .Values.service.containerPort }}
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
@@ -16,15 +18,19 @@ spec:
 {{- if .Values.ingress.secretName }}
   tls:
     - hosts:
-      - {{ .Values.ingress.host }}
+      {{ range .Values.ingress.hosts }}
+      - {{ .name }}
+      {{ end }}
       secretName: {{ .Values.ingress.secretName }}
 {{- end }}
   rules:
-    - host: {{ .Values.ingress.host }}
+    {{ range .Values.ingress.hosts }}
+    - host: {{ .name }}
       http:
         paths:
-          - path: {{ .Values.ingress.path }}
+          - path: {{ .path }}
             backend:
-              serviceName: {{ .Release.Name }}
-              servicePort: {{ .Values.service.containerPort }}
+              serviceName: {{ $serviceName }}
+              servicePort: {{ $servicePort }}
+    {{ end }}
 {{- end }}

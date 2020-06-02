@@ -8,8 +8,9 @@ group:
           containerPort: 80
           port: 80
         ingress:
-          path: /services/hello
-          host: localhost
+          hosts:
+            - name: localhost
+              path: /services/hello
         volumes:
           - name: config
             host: ./application
@@ -22,6 +23,7 @@ group:
           containerPort: 80
           port: 80
         ingress:
-          path: /services/hi
-          host: localhost
+          hosts:
+            - name: localhost
+              path: /services/hi
 jobs:
