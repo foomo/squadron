@@ -5,9 +5,9 @@ metadata:
   name: "{{ .Chart.Name }}"
   labels:
     app.kubernetes.io/name: {{ .Chart.Name }}
-    app.kubernetes.io/part-of: {{ .Release.name }}
+    app.kubernetes.io/part-of: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
-    helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Revision }}"
+    helm.sh/chart: "{{ .Release.Name }}-{{ .Release.Revision }}"
   {{- with .Values.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
