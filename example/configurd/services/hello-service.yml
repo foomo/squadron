@@ -1,4 +1,8 @@
 service:
   image: foomo/configurd-hello
-  chart: example
   build: "docker build application/"
+  chart:
+    name: example
+    repository: file://./configurd/charts/example
+    # path to the chart dir relative to the base path (example/)
+    version: 0.2.0

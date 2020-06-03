@@ -1,27 +1,25 @@
 group:
   services:
     hello-service:
-      overrides:
-        args:
-          - "--greeting=hehe"
-        service:
-          containerPort: 80
-          port: 80
-        ingress:
-          path: /services/hello
-          host: localhost
-        volumes:
-          - name: config
-            host: ./application
-            mount: /config/
+      args:
+        - "--greeting=hehe"
+      service:
+        containerPort: 80
+        port: 80
+      ingress:
+        path: /services/hello
+        host: localhost
+      volumes:
+        - name: config
+          host: ./application
+          mount: /config/
     hi-service:
-      overrides:
-        args:
-          - "--greeting=hai"
-        service:
-          containerPort: 80
-          port: 80
-        ingress:
-          path: /services/hi
-          host: localhost
+      args:
+        - "--greeting=hai"
+      service:
+        containerPort: 80
+        port: 80
+      ingress:
+        path: /services/hi
+        host: localhost
 jobs:
