@@ -18,12 +18,18 @@ import (
 )
 
 const (
-	defaultConfigFileExt = ".yml"
-	defaultServiceDir    = "configurd/services"
-	defaultNamespaceDir  = "configurd/namespaces"
-	defaultChartDir      = "configurd/charts"
-	defaultOutputDir     = "configurd/.workdir"
-	defaultOverridesFile = "overrides.yaml"
+	defaultConfigFileExt   = ".yml"
+	defaultServiceDir      = "configurd/services"
+	defaultNamespaceDir    = "configurd/namespaces"
+	defaultOutputDir       = "configurd/.workdir"
+	chartsDir              = "charts"
+	chartLockFile          = "Chart.lock"
+	chartFile              = "Chart.yaml"
+	valuesFile             = "values.yaml"
+	defaultChartAPIVersion = "v2"
+	defaultChartType       = "application" // application or library
+	defaultChartVersion    = "0.1.0"
+	defaultChartAppVersion = "1.16.0"
 )
 
 var (
@@ -31,10 +37,12 @@ var (
 	ErrBuildNotConfigured = errors.New("build parameter was not configured")
 )
 
+type Override map[string]interface{}
+
 type Group struct {
 	name     string
-	Services map[string]ServiceItem
-	Jobs     map[string]JobItem
+	Services map[string]Override
+	Jobs     map[string]Override
 }
 
 type Namespace struct {
@@ -56,11 +64,11 @@ type Configurd struct {
 }
 
 type Service struct {
-	Name  string `yaml:"-"`
-	Image string `yaml:"image"`
-	Tag   string `yaml:"tag"`
-	Build string `yaml:"build"`
-	Chart string `yaml:"chart"`
+	Name  string          `yaml:"-"`
+	Image string          `yaml:"image"`
+	Tag   string          `yaml:"tag"`
+	Build string          `yaml:"build"`
+	Chart ChartDependency `yaml:"chart"`
 }
 
 type serviceLoader func(string) (Service, error)
@@ -92,7 +100,7 @@ func New(config Config) (Configurd, error) {
 
 			name := strings.TrimSuffix(info.Name(), defaultConfigFileExt)
 			log.Infof("Loading service: %v, from: %q", name, relativePath(path, config.BasePath))
-			svc, err := loadService(file, name, config.Tag)
+			svc, err := loadService(file, name, config.Tag, config.BasePath)
 			if err != nil {
 				return err
 			}
@@ -172,25 +180,8 @@ func loadGroup(log *logrus.Entry, sl serviceLoader, path, namespace, group strin
 	if err := yaml.NewDecoder(file).Decode(&wrapper); err != nil {
 		return Group{}, fmt.Errorf("could not decode group: %w", err)
 	}
-
-	for name := range wrapper.Group.Services {
-		log.Infof("Loading group item: %v", name)
-		svc, err := sl(name)
-		if err != nil {
-			return Group{}, err
-		}
-		wrapper.Group.Services[name] = loadServiceItem(wrapper.Group.Services[name], svc.Name, namespace, group, svc.Chart)
-	}
 	wrapper.Group.name = group
 	return wrapper.Group, nil
-}
-
-func loadServiceItem(item ServiceItem, service, namespace, group, chart string) ServiceItem {
-	item.Name = service
-	item.namespace = namespace
-	item.group = group
-	item.chart = chart
-	return item
 }
 
 func (c Configurd) Service(name string) (Service, error) {
@@ -226,26 +217,22 @@ func (ns Namespace) Group(name string) (Group, error) {
 	return Group{}, errResourceNotFound(name, "group", available)
 }
 
-func (g Group) ServiceItem(name string) (ServiceItem, error) {
+func (g Group) ServiceOverride(name string) (Override, error) {
 	var available []string
-	for _, s := range g.Services {
-		if s.Name == name {
-			return s, nil
+	for n, v := range g.Services {
+		if name == n {
+			return v, nil
 		}
-		available = append(available, s.Name)
+		available = append(available, name)
 	}
-	return ServiceItem{}, errResourceNotFound(name, "serviceItem", available)
+	return nil, errResourceNotFound(name, "serviceOverride", available)
 }
 
-func (g Group) ServiceItems() ([]ServiceItem, error) {
+func (g Group) ServiceOverrides() (map[string]Override, error) {
 	if len(g.Services) == 0 {
 		return nil, fmt.Errorf("could not find any service for group: %v", g.name)
 	}
-	var sis []ServiceItem
-	for _, si := range g.Services {
-		sis = append(sis, si)
-	}
-	return sis, nil
+	return g.Services, nil
 }
 
 func (c Configurd) Build(s Service) (string, error) {
@@ -278,7 +265,7 @@ func (c Configurd) Push(name string) (string, error) {
 	return runCommand(l, c.config.BasePath, nil, "docker", "push", image)
 }
 
-func loadService(reader io.Reader, name, defaultTag string) (Service, error) {
+func loadService(reader io.Reader, name, defaultTag, basePath string) (Service, error) {
 	var wrapper struct {
 		Service Service `yaml:"service"`
 	}
@@ -289,6 +276,10 @@ func loadService(reader io.Reader, name, defaultTag string) (Service, error) {
 	if wrapper.Service.Tag == "" {
 		wrapper.Service.Tag = defaultTag
 	}
+	wrapper.Service.Chart.Repository =
+		strings.Replace(wrapper.Service.Chart.Repository, "file://./", fmt.Sprintf("file://%v/", basePath), 1)
+	// correct the relative path for the file:// chart repository
+	wrapper.Service.Chart.Alias = name
 	return wrapper.Service, nil
 }
 

@@ -31,14 +31,10 @@ func uninstall(group, namespace, tag, dir string, verbose bool) (string, error) 
 	if err != nil {
 		return "", err
 	}
-	g, err := ns.Group(group)
-	if err != nil {
-		return "", err
-	}
-	sis, err := g.ServiceItems()
+	_, err = ns.Group(group)
 	if err != nil {
 		return "", err
 	}
 
-	return cnf.Uninstall(sis, namespace, verbose)
+	return cnf.Uninstall(group, namespace, verbose)
 }

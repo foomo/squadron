@@ -45,33 +45,37 @@ func install(group, namespace, tag, workDir, outputDir, service string, buildSer
 	if err != nil {
 		return "", err
 	}
-	sis, err := g.ServiceItems()
+	sos, err := g.ServiceOverrides()
 	if err != nil {
 		return "", err
 	}
 
 	if service != "" {
-		si, err := g.ServiceItem(service)
+		so, err := g.ServiceOverride(service)
 		if err != nil {
 			return "", err
 		}
-		sis = []configurd.ServiceItem{si}
+		sos = map[string]configurd.Override{
+			service: so,
+		}
 	}
 
 	if buildService {
 		log.Printf("Building services")
-		for _, si := range sis {
-			output, err := build(si.Name, tag, workDir, true, verbose)
+		for name := range sos {
+			output, err := build(name, tag, workDir, false, verbose)
 			if err != nil {
 				return output, err
 			}
 		}
 	}
 	return cnf.Install(configurd.InstallConfiguration{
-		ServiceItems: sis,
-		BasePath:     workDir,
-		OutputDir:    outputDir,
-		Tag:          tag,
-		Verbose:      verbose,
+		ServiceOverrides: sos,
+		BasePath:         workDir,
+		OutputDir:        outputDir,
+		Tag:              tag,
+		Verbose:          verbose,
+		Group:            group,
+		Namespace:        namespace,
 	})
 }
