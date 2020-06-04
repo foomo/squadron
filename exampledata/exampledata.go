@@ -5,7 +5,7 @@
 // example/configurd/.gitignore (8B)
 // example/configurd/.workdir/default/hello-service/.helmignore (342B)
 // example/configurd/.workdir/default/hello-service/Chart.yaml (106B)
-// example/configurd/.workdir/default/hello-service/overrides.yaml (256B)
+// example/configurd/.workdir/default/hello-service/overrides.yaml (240B)
 // example/configurd/.workdir/default/hello-service/templates/_helpers.tpl (1.045kB)
 // example/configurd/.workdir/default/hello-service/templates/deployment.yaml (2.067kB)
 // example/configurd/.workdir/default/hello-service/templates/ingress.yaml (1.013kB)
@@ -29,12 +29,11 @@
 // example/configurd/charts/mongodb/templates/service.yaml (455B)
 // example/configurd/charts/mongodb/templates/tests/test-connection.yaml (557B)
 // example/configurd/charts/mongodb/values.yaml (1.688kB)
-// example/configurd/namespaces/local/hello-group.yml (632B)
+// example/configurd/namespaces/local/hello-group.yml (608B)
 // example/configurd/services/example.yml (414B)
 // example/configurd/services/hello-service.yml (93B)
 // example/configurd/services/hi-service.yml (91B)
 // deployment-patch.yaml (433B)
-// deployment-spec-selector.tpl (242B)
 
 package exampledata
 
@@ -178,7 +177,7 @@ func configurdWorkdirDefaultHelloServiceHelmignore() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "configurd/.workdir/default/hello-service/.helmignore", size: 342, mode: os.FileMode(0644), modTime: time.Unix(1591273369, 0)}
+	info := bindataFileInfo{name: "configurd/.workdir/default/hello-service/.helmignore", size: 342, mode: os.FileMode(0644), modTime: time.Unix(1591275423, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x6a, 0x47, 0x51, 0x86, 0xcc, 0xba, 0xa9, 0xa0, 0xa4, 0xde, 0x5e, 0x96, 0xa5, 0xcb, 0x6d, 0xdc, 0xf9, 0xfa, 0xd0, 0xd7, 0x6b, 0xc3, 0x8e, 0x4, 0x47, 0xa, 0xc8, 0x44, 0x45, 0xb2, 0x1a, 0x16}}
 	return a, nil
 }
@@ -198,12 +197,12 @@ func configurdWorkdirDefaultHelloServiceChartYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "configurd/.workdir/default/hello-service/Chart.yaml", size: 106, mode: os.FileMode(0644), modTime: time.Unix(1591273369, 0)}
+	info := bindataFileInfo{name: "configurd/.workdir/default/hello-service/Chart.yaml", size: 106, mode: os.FileMode(0644), modTime: time.Unix(1591275423, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xa4, 0xa3, 0x89, 0xbd, 0x29, 0xae, 0x35, 0x24, 0x16, 0x67, 0x5b, 0xa1, 0x31, 0xb7, 0x39, 0x9, 0xed, 0xc3, 0xb, 0x17, 0xc1, 0xd0, 0xc9, 0x6e, 0x4, 0xe0, 0x64, 0xea, 0x9, 0x5d, 0xd1, 0x56}}
 	return a, nil
 }
 
-var _configurdWorkdirDefaultHelloServiceOverridesYaml = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x34\xce\x41\x6a\xee\x30\x0c\x04\xe0\xbd\x4f\xa1\x0b\x04\x3d\xde\xaa\x18\xba\x6a\x0f\xd0\x4d\x0f\x60\xfc\x4f\x6d\x17\x5b\x32\x92\x13\x7a\xfc\xf2\x27\xe9\x6e\x90\x06\xe9\x4b\x56\x3c\x86\x8d\xb6\xad\x18\xb0\x9a\x94\xd7\x8a\x8a\xd0\xa4\x18\xdc\x63\x20\xaa\xea\xeb\x0c\x1b\x49\x1a\x88\xd4\x35\xa7\xfe\x9c\x06\x22\xa2\x99\x56\x8d\xc4\x0e\x3b\x5a\x86\x73\x45\xef\x1a\x0c\xb3\xb7\x9c\xde\x74\x97\x15\xe9\x7f\xb8\xd7\xcf\x33\x59\x65\xa5\x26\xb0\x0f\xb5\x15\xe9\xe5\x5f\x20\x9a\x7f\xf1\xd0\xbe\x0f\x9c\xa4\xeb\x59\x56\xf9\x6a\xe5\x66\x44\xe2\x4f\x87\x39\x8f\x89\xef\x24\x7a\xb4\xcc\xef\x9a\xf7\x01\x59\xce\x0f\x1c\x7c\xd5\x77\x7b\x30\x7e\xd2\x98\x1d\x9c\xe6\x29\x59\x4d\x25\x10\x8d\x0b\x74\xf7\x38\xfc\x06\x00\x00\xff\xff\x64\x64\x1e\x9e\x00\x01\x00\x00")
+var _configurdWorkdirDefaultHelloServiceOverridesYaml = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x34\x8e\x41\x6e\xc4\x20\x0c\x45\xf7\x9c\xc2\x17\x88\xdc\x65\x85\xd4\x5d\x0f\xd0\x4d\x0f\x60\x31\xbf\x40\x05\x36\xc2\x24\xea\xf1\xab\x4c\x32\xbb\x6f\xeb\xf9\xf9\xcb\xcc\x1e\xc3\x46\xdb\x96\x27\xb0\xaa\xe6\x8f\x82\x82\x50\x35\x4f\xb8\xc7\x40\x54\xcc\xd7\x33\x6c\xa4\xd2\x11\xa9\x59\x92\x76\x6e\x03\x11\xd1\x90\x55\x22\xb1\x63\x1e\x35\xc1\xb9\xa0\x35\x0b\xf7\x78\x9e\x25\xd3\x25\x55\x31\xbf\x6c\xae\x48\xef\x6f\x81\x68\xbc\xe2\x61\x6d\xef\x78\x56\xb8\xe4\xc9\xf4\xa7\xe6\xfb\x6d\x24\xfe\x76\x4c\xe7\x3e\xf0\x2b\x6a\x47\x4d\xfc\x69\x69\xef\xd0\xe5\xfc\xc0\xc1\x17\xbe\xcf\x07\xe3\x4f\xfa\x68\x60\x19\xa3\xd5\x24\xab\x9a\x06\xa2\x6e\xbb\x9e\x9a\x8b\xe3\xf0\x1f\x00\x00\xff\xff\x0d\x6e\xf9\x3c\xf0\x00\x00\x00")
 
 func configurdWorkdirDefaultHelloServiceOverridesYamlBytes() ([]byte, error) {
 	return bindataRead(
@@ -218,8 +217,8 @@ func configurdWorkdirDefaultHelloServiceOverridesYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "configurd/.workdir/default/hello-service/overrides.yaml", size: 256, mode: os.FileMode(0644), modTime: time.Unix(1591273369, 0)}
-	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x57, 0x72, 0xa0, 0x2d, 0x9c, 0x94, 0xdc, 0x23, 0x1b, 0x1e, 0x88, 0x7f, 0x76, 0x41, 0xa9, 0x45, 0x1f, 0x2c, 0x80, 0x8b, 0x41, 0x6, 0xd, 0xc3, 0x1f, 0x4f, 0x2c, 0x10, 0x5e, 0x54, 0xb0, 0x1c}}
+	info := bindataFileInfo{name: "configurd/.workdir/default/hello-service/overrides.yaml", size: 240, mode: os.FileMode(0644), modTime: time.Unix(1591275423, 0)}
+	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xce, 0x5c, 0x3f, 0x57, 0x19, 0xc7, 0x8a, 0x2d, 0x14, 0xc5, 0x3f, 0x6a, 0xf2, 0x5e, 0x31, 0x17, 0xe1, 0x76, 0x4c, 0x64, 0x11, 0x45, 0x45, 0xc0, 0x1e, 0xc4, 0xc3, 0x12, 0xfc, 0xcb, 0xe7, 0x91}}
 	return a, nil
 }
 
@@ -238,7 +237,7 @@ func configurdWorkdirDefaultHelloServiceTemplates_helpersTpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "configurd/.workdir/default/hello-service/templates/_helpers.tpl", size: 1045, mode: os.FileMode(0644), modTime: time.Unix(1591273369, 0)}
+	info := bindataFileInfo{name: "configurd/.workdir/default/hello-service/templates/_helpers.tpl", size: 1045, mode: os.FileMode(0644), modTime: time.Unix(1591275423, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x44, 0xb0, 0x6b, 0xd, 0x90, 0x89, 0xbb, 0x4, 0xfd, 0x26, 0xc5, 0x68, 0x60, 0x4d, 0x6a, 0x5a, 0x23, 0x70, 0x2a, 0x48, 0x23, 0x9c, 0x1d, 0x71, 0x42, 0xb, 0x6, 0x3, 0x65, 0xfb, 0xea, 0x3f}}
 	return a, nil
 }
@@ -258,7 +257,7 @@ func configurdWorkdirDefaultHelloServiceTemplatesDeploymentYaml() (*asset, error
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "configurd/.workdir/default/hello-service/templates/deployment.yaml", size: 2067, mode: os.FileMode(0644), modTime: time.Unix(1591273369, 0)}
+	info := bindataFileInfo{name: "configurd/.workdir/default/hello-service/templates/deployment.yaml", size: 2067, mode: os.FileMode(0644), modTime: time.Unix(1591275423, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xb8, 0x7c, 0x90, 0x45, 0x2b, 0xdb, 0xfe, 0xca, 0x5e, 0x58, 0xcd, 0xb4, 0x65, 0xda, 0x10, 0xec, 0xd0, 0x1a, 0xbc, 0xf4, 0xf2, 0x33, 0xe1, 0xe3, 0x19, 0xe8, 0xd0, 0x37, 0xbd, 0x27, 0x5b, 0xfc}}
 	return a, nil
 }
@@ -278,7 +277,7 @@ func configurdWorkdirDefaultHelloServiceTemplatesIngressYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "configurd/.workdir/default/hello-service/templates/ingress.yaml", size: 1013, mode: os.FileMode(0644), modTime: time.Unix(1591273369, 0)}
+	info := bindataFileInfo{name: "configurd/.workdir/default/hello-service/templates/ingress.yaml", size: 1013, mode: os.FileMode(0644), modTime: time.Unix(1591275423, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x71, 0x31, 0x0, 0x8e, 0x36, 0x83, 0xf4, 0xd6, 0x53, 0x7f, 0xeb, 0x15, 0x1a, 0x46, 0x69, 0xdf, 0x4d, 0x9e, 0x8b, 0xaf, 0x3c, 0x72, 0xc8, 0x5a, 0xf0, 0xd0, 0xec, 0xbe, 0x6d, 0xc9, 0x1b, 0x85}}
 	return a, nil
 }
@@ -298,7 +297,7 @@ func configurdWorkdirDefaultHelloServiceTemplatesServiceYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "configurd/.workdir/default/hello-service/templates/service.yaml", size: 476, mode: os.FileMode(0644), modTime: time.Unix(1591273369, 0)}
+	info := bindataFileInfo{name: "configurd/.workdir/default/hello-service/templates/service.yaml", size: 476, mode: os.FileMode(0644), modTime: time.Unix(1591275423, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x76, 0x70, 0xb2, 0x74, 0x71, 0x52, 0xcc, 0xad, 0xa6, 0x9e, 0x51, 0x10, 0x25, 0xdc, 0xaf, 0xc, 0x29, 0xa3, 0x19, 0x3c, 0xdd, 0x9f, 0x10, 0x47, 0xd1, 0xa2, 0x86, 0x6d, 0x4f, 0xb9, 0x21, 0x97}}
 	return a, nil
 }
@@ -318,7 +317,7 @@ func configurdWorkdirDefaultHelloServiceTemplatesTestsTestConnectionYaml() (*ass
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "configurd/.workdir/default/hello-service/templates/tests/test-connection.yaml", size: 557, mode: os.FileMode(0644), modTime: time.Unix(1591273369, 0)}
+	info := bindataFileInfo{name: "configurd/.workdir/default/hello-service/templates/tests/test-connection.yaml", size: 557, mode: os.FileMode(0644), modTime: time.Unix(1591275423, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xff, 0x1e, 0x76, 0x8c, 0xa3, 0xb5, 0xf5, 0xe1, 0x31, 0x77, 0x28, 0xd9, 0x4c, 0x67, 0xce, 0x75, 0x37, 0x1c, 0x5c, 0xb8, 0xc3, 0xbc, 0x22, 0x1c, 0x4, 0xa, 0x5d, 0xab, 0xfb, 0xdd, 0x92, 0x7e}}
 	return a, nil
 }
@@ -338,7 +337,7 @@ func configurdWorkdirDefaultHelloServiceValuesYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "configurd/.workdir/default/hello-service/values.yaml", size: 1548, mode: os.FileMode(0644), modTime: time.Unix(1591273369, 0)}
+	info := bindataFileInfo{name: "configurd/.workdir/default/hello-service/values.yaml", size: 1548, mode: os.FileMode(0644), modTime: time.Unix(1591275423, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xae, 0x9b, 0x91, 0x2, 0x3c, 0x74, 0x44, 0xf5, 0x30, 0x13, 0xc4, 0xac, 0xbe, 0x6a, 0xf9, 0xa5, 0xab, 0xb2, 0x96, 0x82, 0xd1, 0x42, 0x45, 0x73, 0x83, 0x21, 0xd6, 0xa1, 0x33, 0x5d, 0xb2, 0xcc}}
 	return a, nil
 }
@@ -683,7 +682,7 @@ func configurdChartsMongodbValuesYaml() (*asset, error) {
 	return a, nil
 }
 
-var _configurdNamespacesLocalHelloGroupYml = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\xcc\x90\xc1\x4e\x05\x21\x0c\x45\xf7\xf3\x15\xcd\xdb\x23\xc6\x95\x21\x71\xe5\x0f\xf8\x0b\x88\x15\x6a\x98\x96\x14\x66\xbe\xdf\xf0\xf0\x4d\x1e\xb3\xd1\xa5\x5d\x91\x7b\x2f\xb7\x70\xa2\xca\x56\xdc\x02\x50\x51\x77\x0a\x58\xfb\x19\x20\x61\xce\x62\x7e\xb4\x21\x01\xc8\x8e\xaa\xf4\x71\xcb\xf4\x51\x2c\x99\x82\x7f\x95\x8d\x9b\x83\xa7\x43\xf7\x1a\xef\x52\x00\x06\x2e\xc6\x44\x45\x6c\xc4\xf1\x25\x61\xc2\xcb\xe1\x9e\xb6\xf4\x09\xc2\xcd\x13\xa3\xbe\x89\x36\x07\xcf\x8f\x77\x5e\x39\x4b\xc4\x51\xb1\x4e\xeb\x92\xd4\x36\x09\xfd\x05\xec\x57\x74\x90\x25\xf8\xdc\xfd\xc9\x05\x28\xbe\x25\x07\xf6\x86\xc1\x5e\x09\x1c\x99\x5d\xf2\xb6\xe2\xe9\x4b\xa3\x30\x08\x7f\x52\x9c\xda\x7a\xbd\x83\x07\xeb\xcb\x95\x4e\x23\xe1\xc9\x5f\x07\x2e\x3b\xae\xda\x41\x9c\xfe\x80\xfb\x17\xac\x9e\xfe\x3d\x55\x5a\xbe\xe4\xbd\xba\xe5\x3b\x00\x00\xff\xff\xb6\x7c\xd9\xef\x78\x02\x00\x00")
+var _configurdNamespacesLocalHelloGroupYml = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\xcc\x90\xc1\x4e\xc6\x20\x10\x84\xef\x7d\x8a\xc9\x7f\xaf\x78\x34\x24\xbe\x83\xaf\x80\xb8\xc2\x1a\xca\x92\x85\xf6\xf9\x0d\xe2\xff\xa7\xf4\xea\xc5\x3d\xb5\xf3\x2d\x03\x33\x41\x65\x2f\x76\x01\x2a\xe9\xc1\x9e\x6a\xff\x06\x22\xa5\x24\xeb\xaf\x36\x24\x40\x0e\x52\xe5\x8f\xfb\x4e\x1f\xa7\xe1\xf4\x07\xac\xb8\xad\x6b\x50\xa2\xc6\x39\xbc\x46\x8a\x74\x7b\xd0\x8b\x5b\x1f\x2f\xb9\x39\xce\xa4\x6f\xa2\xcd\xe2\xe5\xf9\xc4\xca\x55\xe2\x1c\x94\xea\x74\x5d\x94\xda\x26\xa1\xbf\x20\xbb\x8d\x2c\x92\x78\x97\x3a\x9f\x28\x50\x5c\x8b\x16\xe6\x1e\xd7\xfc\x24\x7d\xec\x1c\x92\xf6\x8d\x2e\x91\x86\xa1\x97\xfc\xc9\x61\x72\xeb\xf6\x16\x4f\xc6\x95\x92\xd8\xbb\xc6\x92\x27\xbe\xc9\x9e\x9b\x85\x19\x47\xcd\x68\x96\xff\x5e\xab\xe3\x7f\xdf\x2a\x2f\x5f\xf2\x5e\xed\xf2\x1d\x00\x00\xff\xff\x61\xde\x21\x99\x60\x02\x00\x00")
 
 func configurdNamespacesLocalHelloGroupYmlBytes() ([]byte, error) {
 	return bindataRead(
@@ -698,8 +697,8 @@ func configurdNamespacesLocalHelloGroupYml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "configurd/namespaces/local/hello-group.yml", size: 632, mode: os.FileMode(0644), modTime: time.Unix(1591273338, 0)}
-	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xdc, 0x4e, 0xfa, 0x53, 0x11, 0xa8, 0x1b, 0x85, 0x51, 0x3b, 0x33, 0x57, 0x40, 0xcd, 0x5c, 0x6f, 0x2, 0x76, 0x9b, 0x71, 0xf8, 0xa9, 0xf, 0x49, 0xba, 0xd9, 0x21, 0x50, 0xf0, 0xeb, 0x89, 0x79}}
+	info := bindataFileInfo{name: "configurd/namespaces/local/hello-group.yml", size: 608, mode: os.FileMode(0644), modTime: time.Unix(1591273925, 0)}
+	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x32, 0x64, 0xf3, 0x23, 0x1e, 0x9f, 0xc, 0x97, 0x1e, 0xce, 0xe6, 0x1f, 0x3a, 0x5a, 0x61, 0x55, 0xa, 0xdf, 0x51, 0x3a, 0x60, 0x9d, 0xb8, 0xd2, 0x5c, 0xff, 0x8, 0xdb, 0xf3, 0x47, 0xa5, 0x79}}
 	return a, nil
 }
 
@@ -780,26 +779,6 @@ func deploymentPatchYaml() (*asset, error) {
 
 	info := bindataFileInfo{name: "deployment-patch.yaml", size: 433, mode: os.FileMode(0644), modTime: time.Unix(1591273627, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xe0, 0xc7, 0x4, 0xbf, 0x4d, 0xa3, 0x1b, 0xd0, 0x62, 0x18, 0xb2, 0x96, 0xb7, 0xe5, 0xa8, 0x7e, 0xf3, 0x8, 0xc5, 0x73, 0x6b, 0x63, 0x4, 0x16, 0xac, 0xd0, 0x1c, 0x2a, 0xfe, 0xbf, 0xf2, 0x1}}
-	return a, nil
-}
-
-var _deploymentSpecSelectorTpl = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x8c\xcd\x31\x0e\x82\x40\x10\x85\xe1\xde\x53\xbc\x6c\x86\x4e\x39\x00\x89\x37\xf0\x08\x36\xb8\x3e\x94\x30\xae\xb8\xb3\xd9\x86\x70\x77\xb3\x31\x44\xa4\xb2\x9b\xe2\x9f\xef\x4d\xd3\x01\xb1\x0d\x37\x42\x86\x3d\x24\xa3\x39\xa2\xb6\x91\xbe\x36\x2a\x7d\x7a\x46\xcc\xf3\x0e\x00\x4a\xd9\x77\xe0\x0b\x32\xc0\x3d\xda\xe4\xef\xa7\xf6\x42\x35\xb7\x14\x4b\xb5\xf2\xb4\x78\x92\xb7\xc5\x18\xfb\x90\x3a\xb8\xca\x9a\xca\xce\xc1\x15\x52\x74\x5b\x31\x5c\xd7\xe3\x54\xe3\x5f\x50\xfe\xf9\xfa\x20\xdf\xf3\x1d\x00\x00\xff\xff\x11\xd7\x92\x0c\xf2\x00\x00\x00")
-
-func deploymentSpecSelectorTplBytes() ([]byte, error) {
-	return bindataRead(
-		_deploymentSpecSelectorTpl,
-		"deployment-spec-selector.tpl",
-	)
-}
-
-func deploymentSpecSelectorTpl() (*asset, error) {
-	bytes, err := deploymentSpecSelectorTplBytes()
-	if err != nil {
-		return nil, err
-	}
-
-	info := bindataFileInfo{name: "deployment-spec-selector.tpl", size: 242, mode: os.FileMode(0644), modTime: time.Unix(1591266898, 0)}
-	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x8d, 0x7a, 0x17, 0x1e, 0xd5, 0x19, 0x43, 0x5a, 0x70, 0x7e, 0x19, 0x5, 0xcc, 0xc2, 0x39, 0x54, 0x46, 0x44, 0x19, 0x6, 0xf7, 0xaf, 0x78, 0x5c, 0xa9, 0x8d, 0xb, 0x99, 0x1c, 0x13, 0xf1, 0xc1}}
 	return a, nil
 }
 
@@ -928,7 +907,6 @@ var _bindata = map[string]func() (*asset, error){
 	"configurd/services/hello-service.yml":                                          configurdServicesHelloServiceYml,
 	"configurd/services/hi-service.yml":                                             configurdServicesHiServiceYml,
 	"deployment-patch.yaml":                                                         deploymentPatchYaml,
-	"deployment-spec-selector.tpl":                                                  deploymentSpecSelectorTpl,
 }
 
 // AssetDir returns the file names below a certain
@@ -1039,8 +1017,7 @@ var _bintree = &bintree{nil, map[string]*bintree{
 			"hi-service.yml":    &bintree{configurdServicesHiServiceYml, map[string]*bintree{}},
 		}},
 	}},
-	"deployment-patch.yaml":        &bintree{deploymentPatchYaml, map[string]*bintree{}},
-	"deployment-spec-selector.tpl": &bintree{deploymentSpecSelectorTpl, map[string]*bintree{}},
+	"deployment-patch.yaml": &bintree{deploymentPatchYaml, map[string]*bintree{}},
 }}
 
 // RestoreAsset restores an asset under the given directory.
