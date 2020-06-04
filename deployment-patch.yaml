@@ -1,0 +1,17 @@
+spec:
+  template:
+    spec:
+      containers:
+      - name: {{ .Name }}
+        command: ["/bin/sh"]
+        args: ["-c", "while true; do echo dummy!; sleep 3600; done"]
+        image: {{ .Image }}
+        livenessProbe:
+        readinessProbe:
+        volumeMounts:
+          - mountPath: {{ .MountPath }}
+            name: {{ .Name }}
+      volumes:
+        - name: {{ .Name }}
+          hostPath:
+            path: {{ .HostPath }}
