@@ -18,14 +18,16 @@ import (
 )
 
 const (
-	defaultConfigFileExt   = ".yml"
-	defaultServiceDir      = "configurd/services"
-	defaultNamespaceDir    = "configurd/namespaces"
-	defaultChartDir        = "configurd/charts"
-	defaultOutputDir       = "configurd/.workdir"
-	defaultOverridesFile   = "overrides.yaml"
-	devDeploymentPatchFile = "deployment-patch.yaml"
-	defaultRolloutTimeout  = "15s"
+	defaultConfigFileExt      = ".yml"
+	defaultServiceDir         = "configurd/services"
+	defaultNamespaceDir       = "configurd/namespaces"
+	defaultChartDir           = "configurd/charts"
+	defaultOutputDir          = "configurd/.workdir"
+	defaultOverridesFile      = "overrides.yaml"
+	devDeploymentPatchFile    = "deployment-patch.yaml"
+	devDeploymentTemplateFile = "deployment-spec-selector.tpl"
+	defaultWaitTimeout        = "15s"
+	conditionContainersReady  = "condition=ContainersReady"
 )
 
 var (

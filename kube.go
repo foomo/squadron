@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 
 	"github.com/foomo/configurd/exampledata"
 	"github.com/sirupsen/logrus"
@@ -18,6 +19,12 @@ func RolloutDev(l *logrus.Entry, deployment, namespace, image, tag, mountPath st
 		return "", err
 	}
 	patchPath := path.Join(os.TempDir(), devDeploymentPatchFile)
+
+	l.Infof("extracting deployment template file")
+	if err := exampledata.RestoreAsset(os.TempDir(), devDeploymentTemplateFile); err != nil {
+		return "", err
+	}
+	templatePath := path.Join(os.TempDir(), devDeploymentTemplateFile)
 
 	l.Infof("rendering deployment patch template")
 	patch, err := renderTemplate(
@@ -34,7 +41,7 @@ func RolloutDev(l *logrus.Entry, deployment, namespace, image, tag, mountPath st
 	}
 
 	l.Infof("waiting for deployment to get ready")
-	out, err := waitForRollout(l, deployment, namespace, defaultRolloutTimeout)
+	out, err := waitForRollout(l, deployment, namespace, defaultWaitTimeout)
 	if err != nil {
 		return out, err
 	}
@@ -44,16 +51,28 @@ func RolloutDev(l *logrus.Entry, deployment, namespace, image, tag, mountPath st
 	if err != nil {
 		return out, err
 	}
-	defer rollbackDev(l, deployment, namespace, patchPath)
+	defer rollbackDev(l, deployment, namespace, patchPath, templatePath)
 
-	l.Infof("waiting for deployment to get ready")
-	out, err = waitForRollout(l, deployment, namespace, defaultRolloutTimeout)
+	l.Infof("getting selectors for deployment %v in namespace %v", deployment, namespace)
+	selectors, err := getDeploymentSelectors(l, deployment, namespace, templatePath)
+	if err != nil {
+		return out, err
+	}
+
+	l.Infof("getting most recent pod names from deployment %v in namespace %v", deployment, namespace)
+	pod, err := getMostRecentPodBySelectors(l, selectors, namespace)
+	if err != nil {
+		return "", err
+	}
+
+	l.Infof("waiting for pod %v with %q", pod, conditionContainersReady)
+	out, err = waitForPodState(l, namespace, pod, conditionContainersReady, defaultWaitTimeout)
 	if err != nil {
 		return out, err
 	}
 
 	l.Infof("running interactive shell for patched deployment %v", deployment)
-	return execDeploymentShell(l, deployment, namespace)
+	return execShell(l, fmt.Sprintf("pod/%v", pod), fmt.Sprintf("/%v", deployment), namespace)
 }
 
 func rollbackDeployment(l *logrus.Entry, deployment, namespace string) (string, error) {
@@ -72,13 +91,67 @@ func waitForRollout(l *logrus.Entry, deployment, namespace, timeout string) (str
 	}
 	return runCommand(l, "", nil, cmd...)
 }
+func getDeploymentSelectors(l *logrus.Entry, name, namespace, templatePath string) (map[string]string, error) {
+	cmd := []string{
+		"kubectl", "-n", namespace,
+		"get", "deployment", name,
+		"-o", fmt.Sprintf("go-template-file=%v", templatePath),
+	}
+	out, err := runCommand(l, "", nil, cmd...)
+	if err != nil {
+		return nil, fmt.Errorf("%v, error:%s", out, err)
+	}
 
-func execDeploymentShell(l *logrus.Entry, deployment, namespace string) (string, error) {
+	selectors := make(map[string]string)
+	for _, s := range strings.Split(strings.TrimSuffix(out, "\n"), "\n") {
+		pieces := strings.Split(s, ":")
+		selectors[pieces[0]] = pieces[1]
+	}
+	return selectors, nil
+}
+
+func getMostRecentPodBySelectors(l *logrus.Entry, selectors map[string]string, namespace string) (string, error) {
+	var selector []string
+	for k, v := range selectors {
+		selector = append(selector, fmt.Sprintf("%v=%v", k, v))
+	}
+	cmd := []string{
+		"kubectl", "-n", namespace,
+		"--selector", strings.Join(selector, ","),
+		"get", "pods", "--sort-by=.status.startTime",
+		"-o", "name",
+	}
+	out, err := runCommand(l, "", nil, cmd...)
+	if err != nil {
+		return out, err
+	}
+	pods := strings.Split(out, "\n")
+	pod := pods[0]
+	if len(pods) > 1 {
+		pod = pods[len(pods)-1]
+	}
+	if pod == "" {
+		return "", fmt.Errorf("no pods found")
+	}
+	return strings.TrimPrefix(pod, "pod/"), nil
+}
+
+func waitForPodState(l *logrus.Entry, namepsace, pod, condition, timeout string) (string, error) {
+	cmd := []string{
+		"kubectl", "-n", namepsace,
+		"wait", fmt.Sprintf("pod/%v", pod),
+		fmt.Sprintf("--for=%v", condition),
+		fmt.Sprintf("--timeout=%v", timeout),
+	}
+	return runCommand(l, "", nil, cmd...)
+}
+
+func execShell(l *logrus.Entry, resource, path, namespace string) (string, error) {
 	cmdArgs := []string{
 		"kubectl", "-n", namespace,
-		"exec", "-it", fmt.Sprintf("deployment/%v", deployment),
+		"exec", "-it", resource,
 		"--", "/bin/sh", "-c",
-		fmt.Sprintf("cd /%v && /bin/sh", deployment),
+		fmt.Sprintf("cd /%v && /bin/sh", path),
 	}
 	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
 	cmd.Stdout = os.Stdout
@@ -88,17 +161,18 @@ func execDeploymentShell(l *logrus.Entry, deployment, namespace string) (string,
 	l.Tracef("executing %q from wd %q", cmd.String(), cmd.Dir)
 	err := cmd.Run()
 	if err != nil {
-		// shouldnt return error since it triggers on exit from interactive shell
+		// shouldnt return error since it triggers
+		// on exit from interactive shell
 		// if the previous command has failed
 		l.Warn(err)
 	}
 	return "", nil
 }
 
-func patchDeployment(l *logrus.Entry, patch, name, namespace string) (string, error) {
+func patchDeployment(l *logrus.Entry, patch, deployment, namespace string) (string, error) {
 	cmd := []string{
-		"kubectl", "patch", "deployment", name,
-		"-n", namespace,
+		"kubectl", "-n", namespace,
+		"patch", "deployment", deployment,
 		"--patch", patch,
 	}
 	return runCommand(l, "", nil, cmd...)
@@ -117,11 +191,16 @@ func renderTemplate(path string, values interface{}) (string, error) {
 	return buf.String(), nil
 }
 
-func rollbackDev(l *logrus.Entry, deployment, namespace, patchPath string) {
+func rollbackDev(l *logrus.Entry, deployment, namespace, patchPath, templatePath string) {
 	// called with defer
 	l.Infof("removing deployment patch file")
 	if err := os.Remove(patchPath); err != nil {
 		l.WithError(err).Errorf("couldnt delete %v", patchPath)
+	}
+
+	l.Infof("removing deployment template file")
+	if err := os.Remove(templatePath); err != nil {
+		l.WithError(err).Errorf("couldnt delete %v", templatePath)
 	}
 
 	l.Infof("rolling back deployment %v in namespace %v", deployment, namespace)

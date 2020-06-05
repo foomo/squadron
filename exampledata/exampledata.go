@@ -34,6 +34,7 @@
 // example/configurd/services/hello-service.yml (93B)
 // example/configurd/services/hi-service.yml (91B)
 // deployment-patch.yaml (433B)
+// deployment-spec-selector.tpl (243B)
 
 package exampledata
 
@@ -782,6 +783,26 @@ func deploymentPatchYaml() (*asset, error) {
 	return a, nil
 }
 
+var _deploymentSpecSelectorTpl = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x8c\xcd\x41\x0e\x82\x30\x10\x85\xe1\xbd\xa7\x78\x69\xca\x4e\x39\x00\x89\x37\xf0\x08\x6e\x6a\x7d\x28\x61\xac\xd8\x69\xba\x21\xdc\xdd\x34\x86\xa4\xb2\x62\x37\x8b\x7f\xbe\x37\xcf\x27\x44\x17\x1e\x84\x1d\x8f\xb0\x19\xdd\x19\xad\x4e\xf4\xad\x52\xe8\xd3\x3b\x62\x59\x0e\x00\x50\xca\xa1\x07\x3f\xb0\x23\xcc\xcb\x25\xff\xbc\xb8\x1b\x45\xcd\x5a\xac\x55\xe5\x49\xf1\x6c\xde\x16\x53\x1c\x42\xea\x61\x1a\xed\x1a\xbd\x06\x53\x48\x2b\xdb\x8a\xe1\x5e\x8f\x53\x94\xbb\xa0\xfc\xf7\xf5\x43\xaa\xf3\x1b\x00\x00\xff\xff\xb6\xb4\x6b\x58\xf3\x00\x00\x00")
+
+func deploymentSpecSelectorTplBytes() ([]byte, error) {
+	return bindataRead(
+		_deploymentSpecSelectorTpl,
+		"deployment-spec-selector.tpl",
+	)
+}
+
+func deploymentSpecSelectorTpl() (*asset, error) {
+	bytes, err := deploymentSpecSelectorTplBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "deployment-spec-selector.tpl", size: 243, mode: os.FileMode(0644), modTime: time.Unix(1591344195, 0)}
+	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xf5, 0x4, 0x3a, 0x63, 0x75, 0x13, 0x41, 0x97, 0x4c, 0xe5, 0x4c, 0x9f, 0xc0, 0xcf, 0x1b, 0x18, 0xf1, 0xd2, 0xd1, 0x77, 0x83, 0x7b, 0xb3, 0xd1, 0xbd, 0xa5, 0x3, 0x56, 0xbd, 0xf7, 0x56, 0x80}}
+	return a, nil
+}
+
 // Asset loads and returns the asset for the given name.
 // It returns an error if the asset could not be found or
 // could not be loaded.
@@ -907,6 +928,7 @@ var _bindata = map[string]func() (*asset, error){
 	"configurd/services/hello-service.yml":                                          configurdServicesHelloServiceYml,
 	"configurd/services/hi-service.yml":                                             configurdServicesHiServiceYml,
 	"deployment-patch.yaml":                                                         deploymentPatchYaml,
+	"deployment-spec-selector.tpl":                                                  deploymentSpecSelectorTpl,
 }
 
 // AssetDir returns the file names below a certain
@@ -1017,7 +1039,8 @@ var _bintree = &bintree{nil, map[string]*bintree{
 			"hi-service.yml":    &bintree{configurdServicesHiServiceYml, map[string]*bintree{}},
 		}},
 	}},
-	"deployment-patch.yaml": &bintree{deploymentPatchYaml, map[string]*bintree{}},
+	"deployment-patch.yaml":        &bintree{deploymentPatchYaml, map[string]*bintree{}},
+	"deployment-spec-selector.tpl": &bintree{deploymentSpecSelectorTpl, map[string]*bintree{}},
 }}
 
 // RestoreAsset restores an asset under the given directory.
