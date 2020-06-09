@@ -13,7 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func RolloutDev(l *logrus.Entry, deployment, namespace, image, tag, mountPath string) (string, error) {
+func RolloutDev(l *logrus.Entry, deployment, container, namespace, image, tag, hostPath string) (string, error) {
 	l.Infof("extracting deployment patch file")
 	if err := exampledata.RestoreAsset(os.TempDir(), devDeploymentPatchFile); err != nil {
 		return "", err
@@ -26,14 +26,25 @@ func RolloutDev(l *logrus.Entry, deployment, namespace, image, tag, mountPath st
 	}
 	templatePath := path.Join(os.TempDir(), devDeploymentTemplateFile)
 
+	l.Infof("Getting container names for deployment %v", deployment)
+	containers, err := getContainerNames(l, deployment, namespace)
+	if err != nil {
+		return "", err
+	}
+	if !stringInSlice(container, containers) {
+		return "", fmt.Errorf("Could not find container %v defined in deployment %v, available: %v",
+			container, deployment, strings.Join(containers, ", "))
+	}
+
 	l.Infof("rendering deployment patch template")
+	mountPath := fmt.Sprintf("/%v-mount", deployment)
 	patch, err := renderTemplate(
 		patchPath,
 		map[string]string{
-			"Name":      deployment,
-			"MountPath": fmt.Sprintf("/%v", deployment),
-			"HostPath":  mountPath,
-			"Image":     fmt.Sprintf("%v:%v", image, tag),
+			"ContainerName": container,
+			"MountPath":     mountPath,
+			"HostPath":      hostPath,
+			"Image":         fmt.Sprintf("%v:%v", image, tag),
 		},
 	)
 	if err != nil {
@@ -72,7 +83,7 @@ func RolloutDev(l *logrus.Entry, deployment, namespace, image, tag, mountPath st
 	}
 
 	l.Infof("running interactive shell for patched deployment %v", deployment)
-	return execShell(l, fmt.Sprintf("pod/%v", pod), fmt.Sprintf("/%v", deployment), namespace)
+	return execShell(l, fmt.Sprintf("pod/%v", pod), mountPath, namespace)
 }
 
 func rollbackDeployment(l *logrus.Entry, deployment, namespace string) (string, error) {
@@ -91,10 +102,25 @@ func waitForRollout(l *logrus.Entry, deployment, namespace, timeout string) (str
 	}
 	return runCommand(l, "", nil, cmd...)
 }
-func getDeploymentSelectors(l *logrus.Entry, name, namespace, templatePath string) (map[string]string, error) {
+
+func getContainerNames(l *logrus.Entry, deployment, namespace string) ([]string, error) {
 	cmd := []string{
 		"kubectl", "-n", namespace,
-		"get", "deployment", name,
+		"get", "deployment", deployment,
+		"-o", fmt.Sprintf("jsonpath=%v", "{.spec.template.spec.containers[*].name}"),
+	}
+	out, err := runCommand(l, "", nil, cmd...)
+	if err != nil {
+		return nil, fmt.Errorf("%v, error:%s", out, err)
+	}
+
+	return strings.Split(out, " "), nil
+}
+
+func getDeploymentSelectors(l *logrus.Entry, deployment, namespace, templatePath string) (map[string]string, error) {
+	cmd := []string{
+		"kubectl", "-n", namespace,
+		"get", "deployment", deployment,
 		"-o", fmt.Sprintf("go-template-file=%v", templatePath),
 	}
 	out, err := runCommand(l, "", nil, cmd...)
@@ -208,4 +234,13 @@ func rollbackDev(l *logrus.Entry, deployment, namespace, patchPath, templatePath
 	if err != nil {
 		l.WithError(err).Errorf("deployment rollback failed")
 	}
+}
+
+func stringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
 }

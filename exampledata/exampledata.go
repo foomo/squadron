@@ -30,10 +30,12 @@
 // example/configurd/charts/mongodb/templates/tests/test-connection.yaml (557B)
 // example/configurd/charts/mongodb/values.yaml (1.688kB)
 // example/configurd/namespaces/local/hello-group.yml (608B)
+// example/configurd/namespaces/local/mongodb-group.yml (207B)
 // example/configurd/services/example.yml (414B)
 // example/configurd/services/hello-service.yml (93B)
 // example/configurd/services/hi-service.yml (91B)
-// deployment-patch.yaml (433B)
+// example/configurd/services/mongodb-service.yml (41B)
+// deployment-patch.yaml (488B)
 // deployment-spec-selector.tpl (243B)
 
 package exampledata
@@ -418,7 +420,7 @@ func configurdChartsExampleTemplatesDeploymentYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "configurd/charts/example/templates/deployment.yaml", size: 2067, mode: os.FileMode(0644), modTime: time.Unix(1591188459, 0)}
+	info := bindataFileInfo{name: "configurd/charts/example/templates/deployment.yaml", size: 2067, mode: os.FileMode(0644), modTime: time.Unix(1591695452, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xb8, 0x7c, 0x90, 0x45, 0x2b, 0xdb, 0xfe, 0xca, 0x5e, 0x58, 0xcd, 0xb4, 0x65, 0xda, 0x10, 0xec, 0xd0, 0x1a, 0xbc, 0xf4, 0xf2, 0x33, 0xe1, 0xe3, 0x19, 0xe8, 0xd0, 0x37, 0xbd, 0x27, 0x5b, 0xfc}}
 	return a, nil
 }
@@ -438,7 +440,7 @@ func configurdChartsExampleTemplatesIngressYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "configurd/charts/example/templates/ingress.yaml", size: 1013, mode: os.FileMode(0644), modTime: time.Unix(1591173806, 0)}
+	info := bindataFileInfo{name: "configurd/charts/example/templates/ingress.yaml", size: 1013, mode: os.FileMode(0644), modTime: time.Unix(1591695452, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x71, 0x31, 0x0, 0x8e, 0x36, 0x83, 0xf4, 0xd6, 0x53, 0x7f, 0xeb, 0x15, 0x1a, 0x46, 0x69, 0xdf, 0x4d, 0x9e, 0x8b, 0xaf, 0x3c, 0x72, 0xc8, 0x5a, 0xf0, 0xd0, 0xec, 0xbe, 0x6d, 0xc9, 0x1b, 0x85}}
 	return a, nil
 }
@@ -498,7 +500,7 @@ func configurdChartsExampleValuesYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "configurd/charts/example/values.yaml", size: 1548, mode: os.FileMode(0644), modTime: time.Unix(1591105997, 0)}
+	info := bindataFileInfo{name: "configurd/charts/example/values.yaml", size: 1548, mode: os.FileMode(0644), modTime: time.Unix(1591695452, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xae, 0x9b, 0x91, 0x2, 0x3c, 0x74, 0x44, 0xf5, 0x30, 0x13, 0xc4, 0xac, 0xbe, 0x6a, 0xf9, 0xa5, 0xab, 0xb2, 0x96, 0x82, 0xd1, 0x42, 0x45, 0x73, 0x83, 0x21, 0xd6, 0xa1, 0x33, 0x5d, 0xb2, 0xcc}}
 	return a, nil
 }
@@ -698,8 +700,28 @@ func configurdNamespacesLocalHelloGroupYml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "configurd/namespaces/local/hello-group.yml", size: 608, mode: os.FileMode(0644), modTime: time.Unix(1591273925, 0)}
+	info := bindataFileInfo{name: "configurd/namespaces/local/hello-group.yml", size: 608, mode: os.FileMode(0644), modTime: time.Unix(1591695452, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x32, 0x64, 0xf3, 0x23, 0x1e, 0x9f, 0xc, 0x97, 0x1e, 0xce, 0xe6, 0x1f, 0x3a, 0x5a, 0x61, 0x55, 0xa, 0xdf, 0x51, 0x3a, 0x60, 0x9d, 0xb8, 0xd2, 0x5c, 0xff, 0x8, 0xdb, 0xf3, 0x47, 0xa5, 0x79}}
+	return a, nil
+}
+
+var _configurdNamespacesLocalMongodbGroupYml = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x54\xcd\xb1\xca\xc2\x40\x10\x04\xe0\xfe\x7f\x8a\x79\x81\xf0\x63\x7b\xb5\x60\x25\x8a\x85\xd6\xe7\xdd\x10\x17\x2e\xd9\xb0\x7b\x09\xe8\xd3\x4b\x50\xf1\x9c\x6a\xf9\x66\x61\x7a\xd3\x79\x0a\x7f\x80\xd3\x16\x49\xf4\xf5\x06\x06\x1d\x7b\xcd\xd7\xee\xad\x2f\x04\x74\xa1\x99\xe4\xcf\xd7\x9a\x89\xe6\xe2\x95\x63\x3d\x6b\x99\x07\x7e\x1b\xc0\xe5\xc1\x80\xcd\x4e\x1a\x9b\x62\xbd\x05\xfc\xe7\x58\x63\xa3\xc6\x54\xa2\x0c\x47\x2d\x92\xee\x01\x5b\x16\x56\x36\x7d\x4c\x89\xee\x7b\xfd\x99\x5e\xd3\xe1\xc4\x98\x2f\x26\x95\x87\x31\xf1\x19\x00\x00\xff\xff\xc8\x43\x40\x51\xcf\x00\x00\x00")
+
+func configurdNamespacesLocalMongodbGroupYmlBytes() ([]byte, error) {
+	return bindataRead(
+		_configurdNamespacesLocalMongodbGroupYml,
+		"configurd/namespaces/local/mongodb-group.yml",
+	)
+}
+
+func configurdNamespacesLocalMongodbGroupYml() (*asset, error) {
+	bytes, err := configurdNamespacesLocalMongodbGroupYmlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "configurd/namespaces/local/mongodb-group.yml", size: 207, mode: os.FileMode(0644), modTime: time.Unix(1591695452, 0)}
+	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xb, 0xdf, 0x11, 0x85, 0x6d, 0xbc, 0xda, 0xaa, 0x8e, 0xd3, 0x28, 0xe9, 0x8b, 0xca, 0x50, 0x6c, 0xdc, 0x23, 0x71, 0xa, 0x73, 0xe1, 0x70, 0xc6, 0x68, 0xed, 0xfa, 0xe3, 0x6d, 0xad, 0xd0, 0xac}}
 	return a, nil
 }
 
@@ -763,7 +785,27 @@ func configurdServicesHiServiceYml() (*asset, error) {
 	return a, nil
 }
 
-var _deploymentPatchYaml = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x7c\x90\xcf\x4a\xc3\x40\x10\xc6\xef\x3e\xc5\x67\xce\xd6\x16\x04\x0f\xe9\x0b\xe8\xa1\xd2\xbb\x78\x98\x26\x43\x77\x61\x67\x37\xec\x6c\x2a\x52\xf2\xee\x32\xe4\x8f\x11\xb4\x73\x9a\xfc\xbe\xf0\xfd\xd8\xd1\x8e\x9b\xfa\x0e\x28\x2c\x5d\xa0\xc2\xb6\x03\x33\xb5\x69\x52\x2c\xe4\x23\x67\x9d\xc9\x06\x91\x84\x6b\x5c\xaf\x78\x7c\x23\x61\x0c\xc3\x94\xd8\xdf\x22\x14\xdb\x1a\xef\xd5\xf6\xe4\xe3\x56\x5d\xf5\xb1\x84\x94\xcf\x6a\xc9\xa6\xa9\x1e\x50\x7d\x3a\x1f\x18\x25\xf7\xbc\x47\x9b\xc0\x8d\x4b\x68\x7b\x91\xaf\xfb\x3d\x34\x30\x77\x78\x7a\xde\xed\x2c\x8b\xbc\x2a\xf1\x42\xe7\x49\xfe\x6a\xeb\xda\x1e\xfc\x85\x23\xab\x1e\x73\x3a\x71\xbd\xe0\xcc\xd4\xfa\x3f\xf8\x25\x85\x5e\xf8\x90\xfa\x58\xf4\x87\xda\x03\xc5\xd8\x91\x8a\x1b\x45\x87\xf9\x73\x2d\xb3\xf9\xef\x10\x63\xf3\xaa\xf4\xd6\xcd\x00\x97\x74\xb4\xfd\x2a\xef\x16\xff\xcb\x94\x63\x18\xbe\x03\x00\x00\xff\xff\x76\xc4\x19\x9c\xb1\x01\x00\x00")
+var _configurdServicesMongodbServiceYml = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x2a\x4e\x2d\x2a\xcb\x4c\x4e\xb5\xe2\x52\x50\xc8\xcc\x4d\x4c\x4f\xb5\x52\xc8\xcd\xcf\x4b\xcf\xe7\x52\x50\x48\xce\x48\x2c\x2a\x81\x72\x53\x92\xb8\x00\x01\x00\x00\xff\xff\x58\x47\xc0\x77\x29\x00\x00\x00")
+
+func configurdServicesMongodbServiceYmlBytes() ([]byte, error) {
+	return bindataRead(
+		_configurdServicesMongodbServiceYml,
+		"configurd/services/mongodb-service.yml",
+	)
+}
+
+func configurdServicesMongodbServiceYml() (*asset, error) {
+	bytes, err := configurdServicesMongodbServiceYmlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "configurd/services/mongodb-service.yml", size: 41, mode: os.FileMode(0644), modTime: time.Unix(1591695452, 0)}
+	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xb9, 0xf8, 0x34, 0xf0, 0xdb, 0x4b, 0x50, 0x86, 0x93, 0x86, 0xa3, 0x29, 0xc0, 0xbc, 0xb5, 0x88, 0xa, 0x3e, 0x16, 0x41, 0x4f, 0x70, 0xc8, 0xa3, 0x45, 0x2c, 0x24, 0x2e, 0x6f, 0xbf, 0xd3, 0xc4}}
+	return a, nil
+}
+
+var _deploymentPatchYaml = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x94\x90\x3f\x4f\x03\x31\x0c\xc5\xf7\x7e\x0a\x93\x99\xd0\x4a\x48\x0c\xd7\x91\x05\x86\xa2\xee\x88\xc1\xcd\x59\x4d\xa4\x38\x89\x92\x5c\x11\xaa\xee\xbb\x23\x73\x7f\x08\x52\x17\x3c\x39\xbf\x97\xf8\xbd\xb8\x24\x32\xdd\x06\xa0\x12\x27\x8f\x95\xa4\x07\x58\xa8\x94\x89\xa1\xa2\x0b\x94\xcb\x42\x34\x04\x64\xea\xe0\x7a\x85\x87\xe7\x45\x7d\x43\x26\x18\xc7\xf9\x8a\x3c\x63\xc6\xd0\x77\xf0\xae\xb6\x27\x17\xb6\xc5\xaa\x8f\x55\xc4\x7c\x2e\xa2\x68\xa3\xee\x41\x7d\x5a\xe7\x09\x6a\x1e\x68\x0f\x7d\x04\x32\x36\x42\x3f\x30\x7f\xdd\xed\xa1\x78\xa2\x04\x8f\x4f\xbb\x9d\x68\x81\x9a\x21\x8e\xf1\x3c\xa7\x78\x95\xb6\x75\xf7\xee\x42\x81\x4a\x39\xe6\x78\xa2\x6e\xc5\x99\xb0\x77\x37\xf8\x25\xfa\x81\xe9\x10\x87\x50\xcb\x2f\x95\x9f\xb2\xb0\x23\x56\x3b\x19\x1d\x96\x63\x6b\x26\x35\x6d\x44\xdd\x5a\x89\x4e\x58\x8d\xd5\x3f\x93\xd4\xa6\x35\x6c\xbc\xf4\x7f\x27\x48\xd9\x58\xa6\x6c\x7f\xa2\xa4\x35\xed\xcb\xac\xc3\x38\x7e\x07\x00\x00\xff\xff\x61\x83\x67\xef\xe8\x01\x00\x00")
 
 func deploymentPatchYamlBytes() ([]byte, error) {
 	return bindataRead(
@@ -778,8 +820,8 @@ func deploymentPatchYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "deployment-patch.yaml", size: 433, mode: os.FileMode(0644), modTime: time.Unix(1591273627, 0)}
-	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xe0, 0xc7, 0x4, 0xbf, 0x4d, 0xa3, 0x1b, 0xd0, 0x62, 0x18, 0xb2, 0x96, 0xb7, 0xe5, 0xa8, 0x7e, 0xf3, 0x8, 0xc5, 0x73, 0x6b, 0x63, 0x4, 0x16, 0xac, 0xd0, 0x1c, 0x2a, 0xfe, 0xbf, 0xf2, 0x1}}
+	info := bindataFileInfo{name: "deployment-patch.yaml", size: 488, mode: os.FileMode(0644), modTime: time.Unix(1591696165, 0)}
+	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x5b, 0xc7, 0xf9, 0x5f, 0xb6, 0x64, 0x66, 0xed, 0x4, 0x16, 0xd0, 0xba, 0x9c, 0x4, 0x78, 0x9a, 0x3f, 0xe, 0x3d, 0x3, 0x84, 0xaf, 0x56, 0x43, 0x15, 0x92, 0x96, 0xe5, 0xb2, 0x11, 0xf2, 0x6c}}
 	return a, nil
 }
 
@@ -798,7 +840,7 @@ func deploymentSpecSelectorTpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "deployment-spec-selector.tpl", size: 243, mode: os.FileMode(0644), modTime: time.Unix(1591344195, 0)}
+	info := bindataFileInfo{name: "deployment-spec-selector.tpl", size: 243, mode: os.FileMode(0644), modTime: time.Unix(1591695452, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xf5, 0x4, 0x3a, 0x63, 0x75, 0x13, 0x41, 0x97, 0x4c, 0xe5, 0x4c, 0x9f, 0xc0, 0xcf, 0x1b, 0x18, 0xf1, 0xd2, 0xd1, 0x77, 0x83, 0x7b, 0xb3, 0xd1, 0xbd, 0xa5, 0x3, 0x56, 0xbd, 0xf7, 0x56, 0x80}}
 	return a, nil
 }
@@ -924,9 +966,11 @@ var _bindata = map[string]func() (*asset, error){
 	"configurd/charts/mongodb/templates/tests/test-connection.yaml":                 configurdChartsMongodbTemplatesTestsTestConnectionYaml,
 	"configurd/charts/mongodb/values.yaml":                                          configurdChartsMongodbValuesYaml,
 	"configurd/namespaces/local/hello-group.yml":                                    configurdNamespacesLocalHelloGroupYml,
+	"configurd/namespaces/local/mongodb-group.yml":                                  configurdNamespacesLocalMongodbGroupYml,
 	"configurd/services/example.yml":                                                configurdServicesExampleYml,
 	"configurd/services/hello-service.yml":                                          configurdServicesHelloServiceYml,
 	"configurd/services/hi-service.yml":                                             configurdServicesHiServiceYml,
+	"configurd/services/mongodb-service.yml":                                        configurdServicesMongodbServiceYml,
 	"deployment-patch.yaml":                                                         deploymentPatchYaml,
 	"deployment-spec-selector.tpl":                                                  deploymentSpecSelectorTpl,
 }
@@ -1030,13 +1074,15 @@ var _bintree = &bintree{nil, map[string]*bintree{
 		}},
 		"namespaces": &bintree{nil, map[string]*bintree{
 			"local": &bintree{nil, map[string]*bintree{
-				"hello-group.yml": &bintree{configurdNamespacesLocalHelloGroupYml, map[string]*bintree{}},
+				"hello-group.yml":   &bintree{configurdNamespacesLocalHelloGroupYml, map[string]*bintree{}},
+				"mongodb-group.yml": &bintree{configurdNamespacesLocalMongodbGroupYml, map[string]*bintree{}},
 			}},
 		}},
 		"services": &bintree{nil, map[string]*bintree{
-			"example.yml":       &bintree{configurdServicesExampleYml, map[string]*bintree{}},
-			"hello-service.yml": &bintree{configurdServicesHelloServiceYml, map[string]*bintree{}},
-			"hi-service.yml":    &bintree{configurdServicesHiServiceYml, map[string]*bintree{}},
+			"example.yml":         &bintree{configurdServicesExampleYml, map[string]*bintree{}},
+			"hello-service.yml":   &bintree{configurdServicesHelloServiceYml, map[string]*bintree{}},
+			"hi-service.yml":      &bintree{configurdServicesHiServiceYml, map[string]*bintree{}},
+			"mongodb-service.yml": &bintree{configurdServicesMongodbServiceYml, map[string]*bintree{}},
 		}},
 	}},
 	"deployment-patch.yaml":        &bintree{deploymentPatchYaml, map[string]*bintree{}},

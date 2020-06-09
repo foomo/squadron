@@ -2,7 +2,7 @@ spec:
   template:
     spec:
       containers:
-      - name: {{ .Name }}
+      - name: {{ .ContainerName }}
         command: ["/bin/sh"]
         args: ["-c", "while true; do echo dummy!; sleep 3600; done"]
         image: {{ .Image }}
@@ -10,8 +10,8 @@ spec:
         readinessProbe:
         volumeMounts:
           - mountPath: {{ .MountPath }}
-            name: {{ .Name }}
+            name: "{{ .ContainerName }}-patch-mount"
       volumes:
-        - name: {{ .Name }}
+        - name: "{{ .ContainerName }}-patch-mount"
           hostPath:
             path: {{ .HostPath }}
