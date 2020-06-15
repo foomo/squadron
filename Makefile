@@ -1,7 +1,7 @@
-pack-example:
-	go-bindata -prefix=example -o exampledata/exampledata.go -pkg exampledata example/... deployment-patch.yaml deployment-spec-selector.tpl
+pack-data:
+	go-bindata -o bindata/bindata.go -pkg bindata example/... dummy/...
 
-build: pack-example
+build: pack-data
 	go build -o /usr/local/bin/configurd cmd/main.go
 
 test:

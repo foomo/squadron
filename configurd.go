@@ -2,6 +2,7 @@ package configurd
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -10,24 +11,25 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
-	"github.com/foomo/configurd/exampledata"
+	"github.com/foomo/configurd/bindata"
 	"github.com/sirupsen/logrus"
 
 	"gopkg.in/yaml.v2"
 )
 
 const (
-	defaultConfigFileExt      = ".yml"
-	defaultServiceDir         = "configurd/services"
-	defaultNamespaceDir       = "configurd/namespaces"
-	defaultChartDir           = "configurd/charts"
-	defaultOutputDir          = "configurd/.workdir"
-	defaultOverridesFile      = "overrides.yaml"
-	devDeploymentPatchFile    = "deployment-patch.yaml"
-	devDeploymentTemplateFile = "deployment-spec-selector.tpl"
-	defaultWaitTimeout        = "15s"
-	conditionContainersReady  = "condition=ContainersReady"
+	defaultConfigFileExt     = ".yml"
+	defaultServiceDir        = "configurd/services"
+	defaultNamespaceDir      = "configurd/namespaces"
+	defaultChartDir          = "configurd/charts"
+	defaultOutputDir         = "configurd/.workdir"
+	defaultOverridesFile     = "overrides.yaml"
+	devDeploymentPatchFile   = "deployment-patch.yaml"
+	defaultWaitTimeout       = "15s"
+	conditionContainersReady = "condition=ContainersReady"
+	defaultPatchedLabel      = "dev-mode-patched"
 )
 
 var (
@@ -298,7 +300,7 @@ func loadService(reader io.Reader, name, defaultTag string) (Service, error) {
 
 func Init(log *logrus.Logger, dir string) (string, error) {
 	log.Infof("Downloading example configuration into dir: %q", dir)
-	return "", exampledata.RestoreAssets(dir, "")
+	return "", bindata.RestoreAssets(dir, "example")
 }
 
 func runCommand(log *logrus.Entry, cwd string, env []string, command ...string) (string, error) {
@@ -339,4 +341,80 @@ func errResourceNotFound(name, resource string, available []string) error {
 		return fmt.Errorf("%s not provided. Available: %s", resource, strings.Join(available, ", "))
 	}
 	return fmt.Errorf("%s '%s' not found. Available: %s", resource, name, strings.Join(available, ", "))
+}
+
+type Cmd struct {
+	timeoutSec time.Duration
+	cmd        *exec.Cmd
+}
+
+func command(command ...string) *Cmd {
+	cmd := exec.Command(command[0], command[1:]...)
+	cmd.Env = os.Environ()
+	return &Cmd{cmd: cmd}
+}
+
+func (c *Cmd) cwd(path string) *Cmd {
+	c.cmd.Dir = path
+	return c
+}
+
+func (c *Cmd) env(env []string) *Cmd {
+	c.cmd.Env = append(c.cmd.Env, env...)
+	return c
+}
+
+func (c *Cmd) stdin(stdin *os.File) *Cmd {
+	c.cmd.Stdin = stdin
+	return c
+}
+
+func (c *Cmd) stdout(stdout *os.File) *Cmd {
+	c.cmd.Stdout = stdout
+	return c
+}
+
+func (c *Cmd) stderr(stderr *os.File) *Cmd {
+	c.cmd.Stderr = stderr
+	return c
+}
+
+func (c *Cmd) timeout(sec time.Duration) *Cmd {
+	c.timeoutSec = sec * time.Second
+	return c
+}
+
+func (c *Cmd) run(l *logrus.Entry) (string, error) {
+	l.Tracef("executing %q from wd %q", c.cmd.String(), c.cmd.Dir)
+
+	combinedBuf := new(bytes.Buffer)
+	traceWriter := l.WriterLevel(logrus.TraceLevel)
+	errorWriter := l.WriterLevel(logrus.ErrorLevel)
+	mwStdout := io.MultiWriter(traceWriter, combinedBuf)
+	mwStderr := io.MultiWriter(errorWriter, combinedBuf)
+
+	if c.cmd.Stdout == nil {
+		c.cmd.Stdout = mwStdout
+	}
+	if c.cmd.Stderr == nil {
+		c.cmd.Stderr = mwStderr
+	}
+
+	if err := c.cmd.Start(); err != nil {
+		return "", err
+	}
+	if c.timeoutSec != 0 {
+		timer := time.AfterFunc(c.timeoutSec, func() {
+			c.cmd.Process.Kill()
+		})
+		defer timer.Stop()
+	}
+
+	if err := c.cmd.Wait(); err != nil {
+		if c.timeoutSec == 0 {
+			return "", err
+		}
+	}
+
+	return combinedBuf.String(), nil
 }
