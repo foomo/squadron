@@ -44,8 +44,7 @@
 // example/configurd/services/hello-service.yml (93B)
 // example/configurd/services/hi-service.yml (91B)
 // example/configurd/services/mongodb-service.yml (41B)
-// dummy/Dockerfile (175B)
-// dummy/delve.sh (138B)
+// dummy/Dockerfile (159B)
 // dummy/deployment-patch.yaml (587B)
 
 package bindata
@@ -995,7 +994,7 @@ func exampleConfigurdServicesMongodbServiceYml() (*asset, error) {
 	return a, nil
 }
 
-var _dummyDockerfile = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x72\x0c\x72\x57\xf0\xf4\x75\x74\x77\xb5\x4d\xcf\xcf\x49\xcc\x4b\xb7\x4a\xcc\x29\xc8\xcc\x4b\xe5\x72\x0b\xf2\xf7\x55\x50\x01\xcb\x70\x71\xc1\x15\x71\x39\xfb\x07\x44\x2a\xa4\xa4\xe6\x94\xa5\xea\x15\x67\xc0\x19\x5c\x41\xa1\x7e\x0a\xfa\x49\x99\x79\xfa\x48\x82\x70\xdd\xae\x7e\x21\x41\x91\x01\xfe\x9e\x7e\x21\x0a\xd1\x4a\x50\x55\x4a\x3a\x0a\x4a\xba\xc9\x20\xb2\x3c\x23\x33\x27\x55\xa1\xa4\xa8\x34\xd5\x5a\x21\x25\x5f\x21\x35\x39\x23\x5f\x21\xa5\x34\x37\xb7\x52\xd1\x5a\xa1\x38\x27\x35\xb5\x40\xc1\xd8\xcc\xc0\x00\x24\x97\x97\xaa\x14\x0b\x08\x00\x00\xff\xff\x32\x20\x46\xa4\xaf\x00\x00\x00")
+var _dummyDockerfile = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x24\xc9\xb1\x8a\x83\x30\x1c\x07\xe0\x3d\x4f\xf1\xbb\x70\xe3\x79\x11\x0e\x6e\xa8\x74\x70\xb0\xe2\xa0\x96\x60\x87\x52\x3a\x68\xf2\x27\x11\x12\x53\x6a\xb4\xf4\xed\x8b\xed\xf2\x2d\x5f\x2e\x4b\x54\x75\x5e\x16\x7b\x13\x5c\x3f\x99\x9d\xeb\x23\xcd\x91\x1d\x64\x5b\xe3\xfb\x3d\x8c\xc9\x53\x03\x13\x60\x28\xc2\x8c\xd1\x2e\xc3\xaf\x0a\x5e\x98\x90\x68\x72\x2b\x89\x8f\xca\x6b\xa1\xdd\xca\x58\xd1\x74\xf2\x7c\x6c\xab\xa6\xc3\x85\x8b\x61\x9c\xc4\x6c\xf9\x0f\x78\xa2\x36\x1f\x76\x74\x84\x78\x5f\x28\x83\x0e\x20\x65\x03\xf4\xe2\xfd\xf3\x2b\xc3\xec\x88\x6e\xf8\xfb\x4f\xd3\xed\x26\xe2\xd7\x57\x00\x00\x00\xff\xff\xdc\x9d\x89\x8e\x9f\x00\x00\x00")
 
 func dummyDockerfileBytes() ([]byte, error) {
 	return bindataRead(
@@ -1010,28 +1009,8 @@ func dummyDockerfile() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "dummy/Dockerfile", size: 175, mode: os.FileMode(0644), modTime: time.Unix(1591885539, 0)}
-	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x99, 0x6f, 0xc5, 0xdd, 0x8d, 0x5c, 0xbe, 0x4e, 0x7d, 0x8b, 0xe, 0x5b, 0xc4, 0x1b, 0xbb, 0x92, 0x3e, 0xfa, 0x88, 0xe4, 0xa9, 0xb9, 0x64, 0xd8, 0xc, 0x23, 0x38, 0x2a, 0x8c, 0x9, 0xb5, 0x57}}
-	return a, nil
-}
-
-var _dummyDelveSh = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x24\xcb\xc1\xaa\xc2\x40\x0c\x85\xe1\x7d\x9f\xe2\x10\xee\x76\x6e\x71\xab\xf8\x24\xe2\x22\xce\xa4\x99\x60\x9a\x14\x1c\xfb\xfc\x62\xdd\x1c\x38\x7c\xfc\xb6\xe0\x06\xfa\x3b\x11\xae\x20\x4d\xe7\xd0\x33\xfb\x66\x21\x84\xfb\x05\xa3\x4b\x4c\x00\x20\xb5\x27\xc8\xe2\x35\xd8\xdd\x42\xd1\xc4\x77\xa1\xc3\x78\x7b\x82\x5b\x43\x29\x91\xa5\x72\xed\x02\xb5\x71\x90\x26\x54\xc6\xf7\xf6\xf7\xe3\xbf\xe6\x3a\x6b\x96\x23\x9d\x7f\x5b\xd7\x36\x37\xdf\xa7\xc5\x3e\x01\x00\x00\xff\xff\x57\xda\xd9\xb5\x8a\x00\x00\x00")
-
-func dummyDelveShBytes() ([]byte, error) {
-	return bindataRead(
-		_dummyDelveSh,
-		"dummy/delve.sh",
-	)
-}
-
-func dummyDelveSh() (*asset, error) {
-	bytes, err := dummyDelveShBytes()
-	if err != nil {
-		return nil, err
-	}
-
-	info := bindataFileInfo{name: "dummy/delve.sh", size: 138, mode: os.FileMode(0644), modTime: time.Unix(1591885536, 0)}
-	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x9a, 0xf5, 0xda, 0x45, 0x27, 0x75, 0x18, 0x46, 0x38, 0x26, 0x48, 0xd4, 0xc7, 0xb9, 0xe0, 0x16, 0x19, 0x23, 0x4a, 0x45, 0x57, 0xe1, 0xa9, 0x5, 0x2f, 0x40, 0xdb, 0xa4, 0x3c, 0xb5, 0xf3, 0xfd}}
+	info := bindataFileInfo{name: "dummy/Dockerfile", size: 159, mode: os.FileMode(0644), modTime: time.Unix(1592293729, 0)}
+	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xb7, 0xc, 0x19, 0x92, 0x96, 0xad, 0xb, 0x64, 0xe0, 0x7e, 0xe2, 0x90, 0x97, 0x6b, 0xf5, 0xa3, 0x25, 0x71, 0x3f, 0x12, 0xec, 0x77, 0xfa, 0xbc, 0x65, 0xae, 0xa5, 0xb3, 0xb7, 0xa8, 0x89, 0x38}}
 	return a, nil
 }
 
@@ -1050,7 +1029,7 @@ func dummyDeploymentPatchYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "dummy/deployment-patch.yaml", size: 587, mode: os.FileMode(0644), modTime: time.Unix(1591947456, 0)}
+	info := bindataFileInfo{name: "dummy/deployment-patch.yaml", size: 587, mode: os.FileMode(0644), modTime: time.Unix(1592293761, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x61, 0xbc, 0xc0, 0xc0, 0x89, 0x34, 0x6c, 0x8f, 0x50, 0x48, 0xb, 0xc2, 0xe7, 0xec, 0x33, 0x2c, 0xa9, 0x65, 0xea, 0x8, 0xdb, 0x97, 0x34, 0x21, 0x4c, 0xd9, 0xfd, 0x99, 0x2b, 0x16, 0x39, 0x81}}
 	return a, nil
 }
@@ -1191,7 +1170,6 @@ var _bindata = map[string]func() (*asset, error){
 	"example/configurd/services/hi-service.yml":                                             exampleConfigurdServicesHiServiceYml,
 	"example/configurd/services/mongodb-service.yml":                                        exampleConfigurdServicesMongodbServiceYml,
 	"dummy/Dockerfile":            dummyDockerfile,
-	"dummy/delve.sh":              dummyDelveSh,
 	"dummy/deployment-patch.yaml": dummyDeploymentPatchYaml,
 }
 
@@ -1241,7 +1219,6 @@ type bintree struct {
 var _bintree = &bintree{nil, map[string]*bintree{
 	"dummy": &bintree{nil, map[string]*bintree{
 		"Dockerfile":            &bintree{dummyDockerfile, map[string]*bintree{}},
-		"delve.sh":              &bintree{dummyDelveSh, map[string]*bintree{}},
 		"deployment-patch.yaml": &bintree{dummyDeploymentPatchYaml, map[string]*bintree{}},
 	}},
 	"example": &bintree{nil, map[string]*bintree{

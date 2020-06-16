@@ -6,12 +6,25 @@
         {
             "label": "delve start",
             "type": "shell",
-            "command": "go run cmd/main.go dev delve hello-service --input example/application/hello.go -n local --args '--greeting=kek'",
+            "command": "go run cmd/main.go dev delve hello-service --input example/application/hello.go -n local --args '--greeting=kek' -v",
+            "isBackground": true,
+            "problemMatcher": {
+                "pattern": {
+                    "regexp": ".",
+                    "file": 1,
+                    "location": 2,
+                    "message": 3
+                },
+                "background": {
+                    "beginsPattern": ".* executing delve command .*",
+                    "endsPattern": ".* API server listening at: .*"
+                }
+		    }
         },
         {
             "label": "delve clean",
             "type": "shell",
             "command": "go run cmd/main.go dev delve hello-service -n local --cleanup",
-        }
+        },
     ]
 }

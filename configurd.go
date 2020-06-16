@@ -27,7 +27,7 @@ const (
 	defaultOutputDir         = "configurd/.workdir"
 	defaultOverridesFile     = "overrides.yaml"
 	devDeploymentPatchFile   = "deployment-patch.yaml"
-	defaultWaitTimeout       = "15s"
+	defaultWaitTimeout       = "30s"
 	conditionContainersReady = "condition=ContainersReady"
 	defaultPatchedLabel      = "dev-mode-patched"
 )
@@ -346,12 +346,13 @@ func errResourceNotFound(name, resource string, available []string) error {
 type Cmd struct {
 	timeoutSec time.Duration
 	cmd        *exec.Cmd
+	wait       bool
 }
 
 func command(command ...string) *Cmd {
 	cmd := exec.Command(command[0], command[1:]...)
 	cmd.Env = os.Environ()
-	return &Cmd{cmd: cmd}
+	return &Cmd{cmd: cmd, wait: true}
 }
 
 func (c *Cmd) cwd(path string) *Cmd {
@@ -384,12 +385,17 @@ func (c *Cmd) timeout(sec time.Duration) *Cmd {
 	return c
 }
 
+func (c *Cmd) noWait() *Cmd {
+	c.wait = false
+	return c
+}
+
 func (c *Cmd) run(l *logrus.Entry) (string, error) {
 	l.Tracef("executing %q from wd %q", c.cmd.String(), c.cmd.Dir)
 
 	combinedBuf := new(bytes.Buffer)
 	traceWriter := l.WriterLevel(logrus.TraceLevel)
-	errorWriter := l.WriterLevel(logrus.ErrorLevel)
+	errorWriter := l.WriterLevel(logrus.WarnLevel)
 	mwStdout := io.MultiWriter(traceWriter, combinedBuf)
 	mwStderr := io.MultiWriter(errorWriter, combinedBuf)
 
@@ -403,16 +409,18 @@ func (c *Cmd) run(l *logrus.Entry) (string, error) {
 	if err := c.cmd.Start(); err != nil {
 		return "", err
 	}
-	if c.timeoutSec != 0 {
-		timer := time.AfterFunc(c.timeoutSec, func() {
-			c.cmd.Process.Kill()
-		})
-		defer timer.Stop()
-	}
+	if c.wait {
+		if c.timeoutSec != 0 {
+			timer := time.AfterFunc(c.timeoutSec, func() {
+				c.cmd.Process.Kill()
+			})
+			defer timer.Stop()
+		}
 
-	if err := c.cmd.Wait(); err != nil {
-		if c.timeoutSec == 0 {
-			return "", err
+		if err := c.cmd.Wait(); err != nil {
+			if c.timeoutSec == 0 {
+				return "", err
+			}
 		}
 	}
 

@@ -7,7 +7,6 @@ import (
 	"os"
 	"path"
 	"strings"
-	"time"
 
 	"github.com/foomo/configurd/bindata"
 	"github.com/sirupsen/logrus"
@@ -33,12 +32,7 @@ func newPatchValues(deployment, container, hostPath string) *patchValues {
 	}
 }
 
-func DelveDevCleanup(l *logrus.Entry, namespace, deployment, container string) (string, error) {
-	l.Infof("checking if deployment is patched")
-	isPatched, err := deploymentIsPatched(l, deployment, namespace)
-	if err != nil {
-		return "", err
-	}
+func DelveCleanup(l *logrus.Entry, namespace, deployment, container string, isPatched bool) (string, error) {
 	if !isPatched {
 		return "", fmt.Errorf("deployment not patched, stopping debug")
 	}
@@ -56,26 +50,14 @@ func DelveDevCleanup(l *logrus.Entry, namespace, deployment, container string) (
 	}
 
 	l.Infof("cleaning up debug processes")
-	execPod(l, pod, container, namespace, []string{"pkill", "dlv"}, 0)
-	execPod(l, pod, container, namespace, []string{"pkill", deployment}, 0)
+	execPod(l, pod, container, namespace, []string{"pkill", "dlv"})
+	execPod(l, pod, container, namespace, []string{"pkill", deployment})
 	return "", nil
 }
 
-func DelveDev(l *logrus.Entry, namespace, deployment, container, input string, args []string) (string, error) {
-	l.Infof("checking if deployment is patched")
-	isPatched, err := deploymentIsPatched(l, deployment, namespace)
-	if err != nil {
-		return "", err
-	}
+func Delve(l *logrus.Entry, namespace, deployment, container, input string, args []string, isPatched bool) (string, error) {
 	if !isPatched {
 		return "", fmt.Errorf("deployment not patched, stopping debug")
-	}
-
-	binPath := path.Join(os.TempDir(), deployment)
-	l.Infof("building %q for debug", input)
-	_, err = debugBuild(l, input, binPath, []string{"GOOS=linux"})
-	if err != nil {
-		return "", err
 	}
 
 	l.Infof("getting deployment %v info", deployment)
@@ -86,6 +68,13 @@ func DelveDev(l *logrus.Entry, namespace, deployment, container, input string, a
 
 	l.Infof("getting most recent pod with selector from deployment %v", deployment)
 	pod, err := getMostRecentPodBySelectors(l, d.Spec.Selector.MatchLabels, namespace)
+	if err != nil {
+		return "", err
+	}
+
+	binPath := path.Join(os.TempDir(), deployment)
+	l.Infof("building %q for debug", input)
+	_, err = debugBuild(l, input, binPath, []string{"GOOS=linux"})
 	if err != nil {
 		return "", err
 	}
@@ -105,6 +94,7 @@ func DelveDev(l *logrus.Entry, namespace, deployment, container, input string, a
 		"--listen=:2345",
 		// "--accept-multiclient",
 		// "--continue",
+		// "--log",
 	}
 	if len(args) == 0 {
 		args, err = getArgsFromPod(l, namespace, pod, container)
@@ -115,17 +105,16 @@ func DelveDev(l *logrus.Entry, namespace, deployment, container, input string, a
 	if len(args) > 0 {
 		cmd = append(append(cmd, "--"), args...)
 	}
-	return execPod(l, pod, container, namespace, cmd, 1)
+	return execPod(l, pod, container, namespace, cmd)
 }
 
-func RolloutDev(l *logrus.Entry, deployment, container, namespace, image, tag, hostPath string, goDebug bool) (string, error) {
-	l.Infof("checking if deployment is patched")
-	isPatched, err := deploymentIsPatched(l, deployment, namespace)
-	if err != nil {
-		return "", err
-	}
+func Patch(l *logrus.Entry, deployment, container, namespace, image, tag, hostPath string, isPatched bool) (string, error) {
 	if isPatched {
-		return "", fmt.Errorf("deployment already patched, to patch again, run stop first")
+		l.Warnf("deployment already patched, running rollback first")
+		out, err := Rollback(l, deployment, namespace, isPatched)
+		if err != nil {
+			return out, err
+		}
 	}
 
 	l.Infof("extracting dummy files")
@@ -134,20 +123,26 @@ func RolloutDev(l *logrus.Entry, deployment, container, namespace, image, tag, h
 	}
 	dummyPath := path.Join(os.TempDir(), "dummy")
 
-	l.Infof("building dummy image with %v:%v", image, tag)
-	_, err = buildDummy(l, image, tag, dummyPath, goDebug)
+	l.Infof("getting deployment %v info", deployment)
+	d, err := getDeployment(l, deployment, namespace)
 	if err != nil {
 		return "", err
 	}
 
-	l.Infof("getting container names for deployment %v", deployment)
-	containers, err := getContainerNames(l, deployment, namespace)
-	if err != nil {
-		return "", err
-	}
+	containers := getContainerNames(l, d)
 	if !stringInSlice(container, containers) {
 		return "", fmt.Errorf("Could not find container %v defined in deployment %v, available: %v",
 			container, deployment, strings.Join(containers, ", "))
+	}
+
+	if image == "" {
+		image, tag, err = getDeploymentImageTag(d, container)
+	}
+
+	l.Infof("building dummy image with %v:%v", image, tag)
+	_, err = buildDummy(l, image, tag, dummyPath)
+	if err != nil {
+		return "", err
 	}
 
 	l.Infof("rendering deployment patch template")
@@ -165,24 +160,16 @@ func RolloutDev(l *logrus.Entry, deployment, container, namespace, image, tag, h
 		return out, err
 	}
 
-	l.Infof("getting deployment %v info", deployment)
-	d, err := getDeployment(l, deployment, namespace)
-	if err != nil {
-		return "", err
-	}
-
 	l.Infof("patching deployment for development")
 	out, err = patchDeployment(l, patch, deployment, namespace)
 	if err != nil {
 		return out, err
 	}
 
-	if goDebug {
-		l.Infof("exposing deployment %v for delve", deployment)
-		out, err = exposeDeployment(l, deployment, namespace, 2345)
-		if err != nil {
-			return out, err
-		}
+	l.Infof("exposing deployment %v for delve", deployment)
+	out, err = exposeDeployment(l, deployment, namespace, 2345)
+	if err != nil {
+		return out, err
 	}
 
 	l.Infof("getting most recent pod with selector from deployment %v", deployment)
@@ -205,12 +192,7 @@ func RolloutDev(l *logrus.Entry, deployment, container, namespace, image, tag, h
 	return "", nil
 }
 
-func RollbackDev(l *logrus.Entry, deployment, namespace string) (string, error) {
-	l.Infof("checking if deployment is patched")
-	isPatched, err := deploymentIsPatched(l, deployment, namespace)
-	if err != nil {
-		return "", err
-	}
+func Rollback(l *logrus.Entry, deployment, namespace string, isPatched bool) (string, error) {
 	if !isPatched {
 		return "", fmt.Errorf("deployment not patched, stopping rollback")
 	}
@@ -231,12 +213,7 @@ func RollbackDev(l *logrus.Entry, deployment, namespace string) (string, error) 
 	return "", nil
 }
 
-func ShellDev(l *logrus.Entry, deployment, namespace string) (string, error) {
-	l.Infof("checking if deployment is patched")
-	isPatched, err := deploymentIsPatched(l, deployment, namespace)
-	if err != nil {
-		return "", err
-	}
+func ShellDev(l *logrus.Entry, deployment, namespace string, isPatched bool) (string, error) {
 	if !isPatched {
 		return "", fmt.Errorf("deployment not patched, stopping shell exec")
 	}
@@ -263,7 +240,8 @@ func ShellDev(l *logrus.Entry, deployment, namespace string) (string, error) {
 	return "", execShell(l, fmt.Sprintf("pod/%v", pod), getMountPath(deployment), namespace)
 }
 
-func deploymentIsPatched(l *logrus.Entry, deployment, namespace string) (bool, error) {
+func DeploymentIsPatched(l *logrus.Entry, deployment, namespace string) (bool, error) {
+	l.Infof("checking if deployment is patched")
 	cmd := []string{
 		"kubectl", "-n", namespace,
 		"get", "deployment", deployment,
@@ -296,18 +274,12 @@ func waitForRollout(l *logrus.Entry, deployment, namespace, timeout string) (str
 	return command(cmd...).run(l)
 }
 
-func getContainerNames(l *logrus.Entry, deployment, namespace string) ([]string, error) {
-	cmd := []string{
-		"kubectl", "-n", namespace,
-		"get", "deployment", deployment,
-		"-o", fmt.Sprintf("jsonpath=%v", "{.spec.template.spec.containers[*].name}"),
+func getContainerNames(l *logrus.Entry, deployment *v1.Deployment) []string {
+	var containers []string
+	for _, c := range deployment.Spec.Template.Spec.Containers {
+		containers = append(containers, c.Name)
 	}
-	out, err := command(cmd...).run(l)
-	if err != nil {
-		return nil, fmt.Errorf("%v, error:%s", out, err)
-	}
-
-	return strings.Split(out, " "), nil
+	return containers
 }
 
 func getMostRecentPodBySelectors(l *logrus.Entry, selectors map[string]string, namespace string) (string, error) {
@@ -396,12 +368,7 @@ func getMountPath(name string) string {
 	return fmt.Sprintf("/%v-mount", name)
 }
 
-func buildDummy(l *logrus.Entry, image, tag, path string, goDebug bool) (string, error) {
-	if goDebug {
-		l.Warnf("go debug mode override: using golang:alpine as image")
-		image = "golang"
-		tag = "alpine"
-	}
+func buildDummy(l *logrus.Entry, image, tag, path string) (string, error) {
 	cmd := []string{
 		"docker", "build", ".",
 		"--build-arg", fmt.Sprintf("IMAGE=%v:%v", image, tag),
@@ -428,7 +395,7 @@ func copyToPod(l *logrus.Entry, pod, container, namespace, source, destination s
 	return command(cmd...).run(l)
 }
 
-func execPod(l *logrus.Entry, pod, container, namespace string, cmd []string, timeout time.Duration) (string, error) {
+func execPod(l *logrus.Entry, pod, container, namespace string, cmd []string) (string, error) {
 	c := []string{
 		"kubectl", "-n", namespace,
 		"exec", pod,
@@ -436,7 +403,7 @@ func execPod(l *logrus.Entry, pod, container, namespace string, cmd []string, ti
 		"--",
 	}
 	c = append(c, cmd...)
-	return command(c...).timeout(timeout).run(l)
+	return command(c...).run(l)
 }
 
 func exposeDeployment(l *logrus.Entry, deployment, namespace string, port int) (string, error) {
@@ -459,15 +426,6 @@ func deleteDelveService(l *logrus.Entry, deployment, namespace string) (string, 
 	return command(cmd...).run(l)
 }
 
-func getDeploymentArgs(l *logrus.Entry, deployment *v1.Deployment, container string) ([]string, error) {
-	for _, c := range deployment.Spec.Template.Spec.Containers {
-		if c.Name == container {
-			return c.Args, nil
-		}
-	}
-	return nil, fmt.Errorf("deployment %v args not found", deployment)
-}
-
 func getDeployment(l *logrus.Entry, deployment, namespace string) (*v1.Deployment, error) {
 	cmd := []string{
 		"kubectl", "-n", namespace,
@@ -486,7 +444,7 @@ func getDeployment(l *logrus.Entry, deployment, namespace string) (*v1.Deploymen
 }
 
 func getArgsFromPod(l *logrus.Entry, namespace, pod, container string) ([]string, error) {
-	out, err := execPod(l, pod, container, namespace, []string{"cat", "/args.yaml"}, 0)
+	out, err := execPod(l, pod, container, namespace, []string{"cat", "/args.yaml"})
 	if err != nil {
 		return nil, err
 	}
@@ -516,4 +474,17 @@ func copyArgsToPod(l *logrus.Entry, deployment *v1.Deployment, namespace, pod, c
 		return err
 	}
 	return nil
+}
+
+func getDeploymentImageTag(deployment *v1.Deployment, container string) (string, string, error) {
+	for _, c := range deployment.Spec.Template.Spec.Containers {
+		if c.Name == container {
+			pieces := strings.Split(c.Image, ":")
+			if len(pieces) != 2 {
+				break
+			}
+			return pieces[0], pieces[1], nil
+		}
+	}
+	return "", "", fmt.Errorf("could not find image from deployment and image flag not specified")
 }
