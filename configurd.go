@@ -365,18 +365,24 @@ func (c *Cmd) env(env []string) *Cmd {
 	return c
 }
 
-func (c *Cmd) stdin(stdin *os.File) *Cmd {
-	c.cmd.Stdin = stdin
+func (c *Cmd) stdin(r io.Reader) *Cmd {
+	c.cmd.Stdin = r
 	return c
 }
 
-func (c *Cmd) stdout(stdout *os.File) *Cmd {
-	c.cmd.Stdout = stdout
+func (c *Cmd) stdout(w io.Writer) *Cmd {
+	if w == nil {
+		c.cmd.Stdout, _ = os.Open(os.DevNull)
+	}
+	c.cmd.Stdout = w
 	return c
 }
 
-func (c *Cmd) stderr(stderr *os.File) *Cmd {
-	c.cmd.Stderr = stderr
+func (c *Cmd) stderr(w io.Writer) *Cmd {
+	if w == nil {
+		c.cmd.Stderr, _ = os.Open(os.DevNull)
+	}
+	c.cmd.Stderr = w
 	return c
 }
 

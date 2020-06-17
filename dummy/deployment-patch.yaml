@@ -15,10 +15,6 @@ spec:
         volumeMounts:
           - mountPath: {{ .MountPath }}
             name: "{{ .ContainerName }}-patch-mount"
-        ports:
-          - name: delve
-            containerPort: 2345
-            protocol: TCP
       volumes:
         - name: "{{ .ContainerName }}-patch-mount"
           hostPath:
