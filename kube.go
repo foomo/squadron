@@ -76,11 +76,11 @@ func Delve(l *logrus.Entry, deployment *v1.Deployment, pod, container, input str
 	defer DelveCleanup(l, deployment, pod, container)
 	signalCapture(l)
 
-	// l.Infof("exposing deployment %v for delve", deployment.Name)
-	// out, err := exposePod(l, deployment.Namespace, pod, delvePort)
-	// if err != nil {
-	// 	return out, err
-	// }
+	l.Infof("exposing deployment %v for delve", deployment.Name)
+	out, err := exposePod(l, deployment.Namespace, pod, delvePort)
+	if err != nil {
+		return out, err
+	}
 
 	l.Infof("executing delve command on pod %v", pod)
 	cmd := []string{
