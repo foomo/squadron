@@ -344,15 +344,25 @@ func errResourceNotFound(name, resource string, available []string) error {
 }
 
 type Cmd struct {
-	timeoutSec time.Duration
-	cmd        *exec.Cmd
-	wait       bool
+	l             *logrus.Entry
+	cmd           *exec.Cmd
+	wait          bool
+	t             time.Duration
+	preStartFunc  func() error
+	postStartFunc func() error
+	postEndFunc   func() error
+	stdoutWriters []io.Writer
+	stderrWriters []io.Writer
 }
 
-func command(command ...string) *Cmd {
+func command(l *logrus.Entry, command ...string) *Cmd {
 	cmd := exec.Command(command[0], command[1:]...)
 	cmd.Env = os.Environ()
-	return &Cmd{cmd: cmd, wait: true}
+	return &Cmd{
+		l:    l,
+		cmd:  cmd,
+		wait: true,
+	}
 }
 
 func (c *Cmd) cwd(path string) *Cmd {
@@ -372,22 +382,22 @@ func (c *Cmd) stdin(r io.Reader) *Cmd {
 
 func (c *Cmd) stdout(w io.Writer) *Cmd {
 	if w == nil {
-		c.cmd.Stdout, _ = os.Open(os.DevNull)
+		w, _ = os.Open(os.DevNull)
 	}
-	c.cmd.Stdout = w
+	c.stdoutWriters = append(c.stdoutWriters, w)
 	return c
 }
 
 func (c *Cmd) stderr(w io.Writer) *Cmd {
 	if w == nil {
-		c.cmd.Stderr, _ = os.Open(os.DevNull)
+		w, _ = os.Open(os.DevNull)
 	}
-	c.cmd.Stderr = w
+	c.stderrWriters = append(c.stderrWriters, w)
 	return c
 }
 
-func (c *Cmd) timeout(sec time.Duration) *Cmd {
-	c.timeoutSec = sec * time.Second
+func (c *Cmd) timeout(t time.Duration) *Cmd {
+	c.t = t
 	return c
 }
 
@@ -396,35 +406,64 @@ func (c *Cmd) noWait() *Cmd {
 	return c
 }
 
-func (c *Cmd) run(l *logrus.Entry) (string, error) {
-	l.Tracef("executing %q from wd %q", c.cmd.String(), c.cmd.Dir)
+func (c *Cmd) preStart(f func() error) *Cmd {
+	c.preStartFunc = f
+	return c
+}
+
+func (c *Cmd) postStart(f func() error) *Cmd {
+	c.postStartFunc = f
+	return c
+}
+
+func (c *Cmd) postEnd(f func() error) *Cmd {
+	c.postEndFunc = f
+	return c
+}
+
+func (c *Cmd) run() (string, error) {
+	c.l.Tracef("executing %q", c.cmd.String())
 
 	combinedBuf := new(bytes.Buffer)
-	traceWriter := l.WriterLevel(logrus.TraceLevel)
-	errorWriter := l.WriterLevel(logrus.WarnLevel)
-	mwStdout := io.MultiWriter(traceWriter, combinedBuf)
-	mwStderr := io.MultiWriter(errorWriter, combinedBuf)
+	traceWriter := c.l.WriterLevel(logrus.TraceLevel)
+	warnWriter := c.l.WriterLevel(logrus.WarnLevel)
 
-	if c.cmd.Stdout == nil {
-		c.cmd.Stdout = mwStdout
-	}
-	if c.cmd.Stderr == nil {
-		c.cmd.Stderr = mwStderr
+	c.stdoutWriters = append(c.stdoutWriters, combinedBuf, traceWriter)
+	c.stderrWriters = append(c.stderrWriters, combinedBuf, warnWriter)
+	c.cmd.Stdout = io.MultiWriter(c.stdoutWriters...)
+	c.cmd.Stderr = io.MultiWriter(c.stderrWriters...)
+
+	if c.preStartFunc != nil {
+		if err := c.preStartFunc(); err != nil {
+			return "", err
+		}
 	}
 
 	if err := c.cmd.Start(); err != nil {
 		return "", err
 	}
+
+	if c.postStartFunc != nil {
+		if err := c.postStartFunc(); err != nil {
+			return "", err
+		}
+	}
+
 	if c.wait {
-		if c.timeoutSec != 0 {
-			timer := time.AfterFunc(c.timeoutSec, func() {
+		if c.t != 0 {
+			timer := time.AfterFunc(c.t, func() {
 				c.cmd.Process.Kill()
 			})
 			defer timer.Stop()
 		}
 
 		if err := c.cmd.Wait(); err != nil {
-			if c.timeoutSec == 0 {
+			if c.t == 0 {
+				return "", err
+			}
+		}
+		if c.postEndFunc != nil {
+			if err := c.postEndFunc(); err != nil {
 				return "", err
 			}
 		}
