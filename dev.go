@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -299,17 +300,62 @@ func ValidateDeployment(l *logrus.Entry, namespace, deployment string) error {
 	return validateResource("deployment", deployment, fmt.Sprintf("for namespace %q", namespace), available)
 }
 
-func ValidatePod(l *logrus.Entry, deployment *v1.Deployment, pod string) error {
+func ValidatePod(l *logrus.Entry, deployment *v1.Deployment, pod *string) error {
+	if *pod == "" {
+		var err error
+		*pod, err = GetMostRecentPodBySelectors(l, deployment.Spec.Selector.MatchLabels, deployment.Namespace)
+		if err != nil || *pod == "" {
+			return err
+		}
+		return nil
+	}
 	available, err := getPods(l, deployment.Namespace, deployment.Spec.Selector.MatchLabels)
 	if err != nil {
 		return err
 	}
-	return validateResource("pod", pod, fmt.Sprintf("for deployment %q", deployment.Name), available)
+	return validateResource("pod", *pod, fmt.Sprintf("for deployment %q", deployment.Name), available)
 }
 
-func ValidateContainer(l *logrus.Entry, deployment *v1.Deployment, container string) error {
+func ValidateContainer(l *logrus.Entry, deployment *v1.Deployment, container *string) error {
+	if *container == "" {
+		*container = deployment.Name
+	}
 	available := getContainers(l, deployment)
-	return validateResource("container", container, fmt.Sprintf("for deployment %q", deployment.Name), available)
+	return validateResource("container", *container, fmt.Sprintf("for deployment %q", deployment.Name), available)
+}
+
+func ValidateImage(l *logrus.Entry, deployment *v1.Deployment, container string, image, tag *string) error {
+	if *image == "" {
+		for _, c := range deployment.Spec.Template.Spec.Containers {
+			if container == c.Name {
+				pieces := strings.Split(c.Image, ":")
+				if len(pieces) != 2 {
+					return fmt.Errorf("deployment image %q has invalid format", c.Image)
+				}
+				*image = pieces[0]
+				*tag = pieces[1]
+				return nil
+			}
+		}
+	}
+	return fmt.Errorf("couldnt find deployment %q image for container %q", deployment.Name, container)
+}
+
+func ValidatePath(wd string, p *string) error {
+	if !filepath.IsAbs(*p) {
+		*p = path.Join(wd, *p)
+	}
+	absPath, err := filepath.Abs(*p)
+	if err != nil {
+		return err
+	}
+	_, err = os.Stat(absPath)
+	if err != nil {
+		return err
+	}
+	*p = absPath
+	return nil
+
 }
 
 func renderTemplate(path string, values interface{}) (string, error) {

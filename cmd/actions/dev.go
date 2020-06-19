@@ -4,19 +4,19 @@ import (
 	"github.com/foomo/configurd"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	v1 "k8s.io/api/apps/v1"
 )
 
 func init() {
-	devCmd.PersistentFlags().VarP(flagNs, "namespace", "n", "namespace name")
-	devCmd.PersistentFlags().VarP(flagContainer, "container", "c", "container name, default deployment name")
-	devPatchCmd.Flags().StringVarP(&flagImage, "image", "i", "", "Image to be used for dev pod")
-	devPatchCmd.Flags().VarP(&flagMount, "mount", "m", "host path to be mounted to dev pod")
+	devCmd.PersistentFlags().StringVarP(&flagPod, "pod", "p", "", "pod name (default most recent one)")
+	devCmd.PersistentFlags().StringVarP(&flagContainer, "container", "c", "", "container name (default deployment name)")
+	devPatchCmd.Flags().StringVarP(&flagImage, "image", "i", "", "Image to be used for patching (default deployment image)")
+	devPatchCmd.Flags().StringVarP(&flagMount, "mount", "m", "", "host path to be mounted (default cwd)")
 	devPatchCmd.Flags().BoolVar(&flagRollback, "rollback", false, "rollback deployment to a previous state")
-	devDelveCmd.Flags().Var(&flagInput, "input", "go file input")
-	devDelveCmd.Flags().Var(flagArgs, "args", "go file args")
-	devDelveCmd.Flags().VarP(flagPod, "pod", "p", "pod name, using most recent one by default")
+	devDelveCmd.Flags().StringVar(&flagInput, "input", "", "go file input (default cwd)")
 	devDelveCmd.Flags().BoolVar(&flagCleanup, "cleanup", false, "cleanup delve debug session")
 	devDelveCmd.Flags().BoolVar(&flagContinue, "continue", false, "delve --continue option")
+	devDelveCmd.Flags().Var(flagArgs, "args", "go file args")
 	devDelveCmd.Flags().Var(flagListen, "listen", "delve host:port to listen on")
 	devDelveCmd.Flags().BoolVar(&flagVscode, "vscode", false, "launch a debug configuration in vscode")
 	devCmd.AddCommand(devPatchCmd, devShellCmd, devDelveCmd)
@@ -27,22 +27,36 @@ var (
 		Use: "dev",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			l = newLogger(flagVerbose)
-			// these need to be validated after args have been parsed
-			// since they depend on args[0] and need to be ordered
-			if err := flagNs.Validate(); err != nil {
+			var err error
+			err = configurd.ValidateNamespace(l, flagNamespace)
+			if err != nil {
 				return err
 			}
-			flagDeployment.Set(args[0])
-			if err := flagDeployment.Validate(); err != nil {
+			err = configurd.ValidateDeployment(l, flagNamespace, args[0])
+			if err != nil {
 				return err
 			}
-			if err := flagPod.Validate(); err != nil {
+			deployment, err = configurd.GetDeployment(l, flagNamespace, args[0])
+			if err != nil {
 				return err
 			}
-			if err := flagContainer.Validate(); err != nil {
+			err = configurd.ValidatePod(l, deployment, &flagPod)
+			if err != nil {
 				return err
 			}
-			return nil
+			err = configurd.ValidateContainer(l, deployment, &flagContainer)
+			if err != nil {
+				return err
+			}
+			err = configurd.ValidateImage(l, deployment, flagContainer, &flagImage, &flagTag)
+			if err != nil {
+				return err
+			}
+			err = configurd.ValidatePath(flagDir, &flagMount)
+			if err != nil {
+				return err
+			}
+			return configurd.ValidatePath(flagDir, &flagInput)
 		},
 	}
 	devPatchCmd = &cobra.Command{
@@ -50,8 +64,7 @@ var (
 		Short: "applies a development patch for a deployment",
 		Args:  cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			_, err := patch(l, flagNs, flagDeployment, flagPod, flagContainer, flagImage, flagTag,
-				flagMount.String(), flagRollback)
+			_, err := patch(l, flagNamespace, deployment, flagPod, flagContainer, flagImage, flagTag, flagMount, flagRollback)
 			if err != nil {
 				log.WithError(err).Fatalf("dev mode failed")
 			}
@@ -62,7 +75,7 @@ var (
 		Short: "shell into the dev patched deployment",
 		Args:  cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			_, err := shell(l, flagDeployment, flagPod)
+			_, err := shell(l, deployment, flagPod)
 			if err != nil {
 				log.WithError(err).Fatalf("shelling into dev mode failed")
 			}
@@ -73,50 +86,41 @@ var (
 		Short: "start a headless delve debug server for .go input on a patched deployment",
 		Args:  cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			_, err := delve(l, flagDeployment, flagPod, flagContainer, flagInput.String(),
-				flagArgs.items, flagListen.Host, flagListen.Port, flagCleanup, flagContinue, flagVscode)
+			_, err := delve(l, deployment, flagPod, flagContainer, flagInput, flagArgs.items, flagListen.Host, flagListen.Port, flagCleanup, flagContinue, flagVscode)
 			if err != nil {
 				log.WithError(err).Fatalf("debug in dev mode failed")
 			}
 		},
 	}
-	l              *logrus.Entry
-	flagNs         = newNamespace("default")
-	flagDeployment = newDeployment(flagNs)
-	flagPod        = newPod(flagDeployment)
-	flagContainer  = newContainer(flagDeployment)
-	flagImage      string
-	flagMount      = newPath()
-	flagInput      = newPath()
-	flagArgs       = newStringList(" ")
-	flagCleanup    bool
-	flagRollback   bool
-	flagContinue   bool
-	flagListen     = newHostPort("127.0.0.1", 0)
-	flagVscode     bool
+	l             *logrus.Entry
+	deployment    *v1.Deployment
+	flagPod       string
+	flagContainer string
+	flagImage     string
+	flagMount     string
+	flagInput     string
+	flagArgs      = newStringList(" ")
+	flagCleanup   bool
+	flagRollback  bool
+	flagContinue  bool
+	flagListen    = newHostPort("127.0.0.1", 0)
+	flagVscode    bool
 )
 
-func patch(l *logrus.Entry, ns *Namespace, d *Deployment, p *Pod, c *Container, image, tag,
-	mountPath string, rollback bool) (string, error) {
-	if image == "" {
-		image = c.getImage()
-		tag = c.getTag()
-	}
-
+func patch(l *logrus.Entry, namespace string, deployment *v1.Deployment, pod, container, image, tag, mountPath string, rollback bool) (string, error) {
 	if rollback {
-		return configurd.Rollback(l, d.Resource())
+		return configurd.Rollback(l, deployment)
 	}
-	return configurd.Patch(l, d.Resource(), c.String(), image, tag, mountPath)
+	return configurd.Patch(l, deployment, container, image, tag, mountPath)
 }
 
-func shell(l *logrus.Entry, d *Deployment, p *Pod) (string, error) {
-	return configurd.Shell(l, d.Resource(), p.String())
+func shell(l *logrus.Entry, deployment *v1.Deployment, pod string) (string, error) {
+	return configurd.Shell(l, deployment, pod)
 }
 
-func delve(l *logrus.Entry, d *Deployment, p *Pod, c *Container, input string, args []string,
-	host string, port int, cleanup, dlvContinue, vscode bool) (string, error) {
+func delve(l *logrus.Entry, deployment *v1.Deployment, pod, container, input string, args []string, host string, port int, cleanup, dlvContinue, vscode bool) (string, error) {
 	if cleanup {
-		return configurd.DelveCleanup(l, d.Resource(), p.String(), c.String())
+		return configurd.DelveCleanup(l, deployment, pod, container)
 	}
-	return configurd.Delve(l, d.Resource(), p.String(), c.String(), input, args, dlvContinue, host, port, vscode)
+	return configurd.Delve(l, deployment, pod, container, input, args, dlvContinue, host, port, vscode)
 }

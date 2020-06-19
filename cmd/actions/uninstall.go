@@ -4,10 +4,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() {
-	uninstallCmd.Flags().StringVarP(&flagNamespace, "namespace", "n", "default", "Specifies the namespace")
-}
-
 var (
 	uninstallCmd = &cobra.Command{
 		Use:   "uninstall [GROUP] -n {NAMESPACE} -t {TAG}",

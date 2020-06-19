@@ -8,7 +8,6 @@ import (
 func init() {
 	installCmd.Flags().BoolVarP(&flagBuild, "build", "b", false, "Build service group before publishing")
 	installCmd.Flags().StringVarP(&flagOutputDir, "output", "o", "default", "Specifies output directory")
-	installCmd.Flags().StringVarP(&flagNamespace, "namespace", "n", "default", "Specifies the namespace")
 	installCmd.Flags().StringVarP(&flagService, "service", "s", "", "Specifies the service to work with")
 }
 
