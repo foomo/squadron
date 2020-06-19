@@ -10,9 +10,9 @@ func init() {
 	devCmd.PersistentFlags().VarP(flagNs, "namespace", "n", "namespace name")
 	devCmd.PersistentFlags().VarP(flagContainer, "container", "c", "container name, default deployment name")
 	devPatchCmd.Flags().StringVarP(&flagImage, "image", "i", "", "Image to be used for dev pod")
-	devPatchCmd.Flags().VarP(flagMount, "mount", "m", "host path to be mounted to dev pod")
+	devPatchCmd.Flags().VarP(&flagMount, "mount", "m", "host path to be mounted to dev pod")
 	devPatchCmd.Flags().BoolVar(&flagRollback, "rollback", false, "rollback deployment to a previous state")
-	devDelveCmd.Flags().Var(flagInput, "input", "go file input")
+	devDelveCmd.Flags().Var(&flagInput, "input", "go file input")
 	devDelveCmd.Flags().Var(flagArgs, "args", "go file args")
 	devDelveCmd.Flags().VarP(flagPod, "pod", "p", "pod name, using most recent one by default")
 	devDelveCmd.Flags().BoolVar(&flagCleanup, "cleanup", false, "cleanup delve debug session")
@@ -27,8 +27,22 @@ var (
 		Use: "dev",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			l = newLogger(flagVerbose)
-			//a custom flag is dependant on deployment name
-			return flagDeployment.Set(args[0])
+			// these need to be validated after args have been parsed
+			// since they depend on args[0] and need to be ordered
+			if err := flagNs.Validate(); err != nil {
+				return err
+			}
+			flagDeployment.Set(args[0])
+			if err := flagDeployment.Validate(); err != nil {
+				return err
+			}
+			if err := flagPod.Validate(); err != nil {
+				return err
+			}
+			if err := flagContainer.Validate(); err != nil {
+				return err
+			}
+			return nil
 		},
 	}
 	devPatchCmd = &cobra.Command{
@@ -72,8 +86,8 @@ var (
 	flagPod        = newPod(flagDeployment)
 	flagContainer  = newContainer(flagDeployment)
 	flagImage      string
-	flagMount      = new(Path)
-	flagInput      = new(Path)
+	flagMount      = newPath()
+	flagInput      = newPath()
 	flagArgs       = newStringList(" ")
 	flagCleanup    bool
 	flagRollback   bool
@@ -92,17 +106,17 @@ func patch(l *logrus.Entry, ns *Namespace, d *Deployment, p *Pod, c *Container, 
 	if rollback {
 		return configurd.Rollback(l, d.Resource())
 	}
-	return configurd.Patch(l, d.Resource(), c.Value(), image, tag, mountPath)
+	return configurd.Patch(l, d.Resource(), c.String(), image, tag, mountPath)
 }
 
 func shell(l *logrus.Entry, d *Deployment, p *Pod) (string, error) {
-	return configurd.Shell(l, d.Resource(), p.Value())
+	return configurd.Shell(l, d.Resource(), p.String())
 }
 
 func delve(l *logrus.Entry, d *Deployment, p *Pod, c *Container, input string, args []string,
 	host string, port int, cleanup, dlvContinue, vscode bool) (string, error) {
 	if cleanup {
-		return configurd.DelveCleanup(l, d.Resource(), p.Value(), c.Value())
+		return configurd.DelveCleanup(l, d.Resource(), p.String(), c.String())
 	}
-	return configurd.Delve(l, d.Resource(), p.Value(), c.Value(), input, args, dlvContinue, host, port, vscode)
+	return configurd.Delve(l, d.Resource(), p.String(), c.String(), input, args, dlvContinue, host, port, vscode)
 }

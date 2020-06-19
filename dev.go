@@ -109,14 +109,15 @@ func Delve(l *logrus.Entry, deployment *v1.Deployment, pod, container, input str
 		return "", err
 	}
 
+	defer DelveCleanup(l, deployment, pod, container)
+	signalCapture(l)
+
 	l.Infof("exposing deployment %v for delve", deployment.Name)
 	out, err := exposePod(l, deployment.Namespace, pod, host, port).run()
 	if err != nil {
 		return out, err
 
 	}
-	defer DelveCleanup(l, deployment, pod, container)
-	signalCapture(l)
 
 	l.Infof("executing delve command on pod %v", pod)
 	cmd := []string{
@@ -135,7 +136,8 @@ func Delve(l *logrus.Entry, deployment *v1.Deployment, pod, container, input str
 		}
 	}
 	if len(args) > 0 {
-		cmd = append(append(cmd, "--"), args...)
+		cmd = append(cmd, "--")
+		cmd = append(cmd, args...)
 	}
 
 	execPod(l, pod, container, deployment.Namespace, cmd).postStart(
@@ -274,9 +276,9 @@ func deploymentIsPatched(l *logrus.Entry, deployment *v1.Deployment) bool {
 	return ok
 }
 
-func validateResource(resourceType, resource string, available []string) error {
+func validateResource(resourceType, resource, suffix string, available []string) error {
 	if !stringInSlice(resource, available) {
-		return fmt.Errorf("%v %v not found, available: %v", resourceType, resource, strings.Join(available, ", "))
+		return fmt.Errorf("%v %q not found %v, available: %v", resourceType, resource, suffix, strings.Join(available, ", "))
 	}
 	return nil
 }
@@ -286,7 +288,7 @@ func ValidateNamespace(l *logrus.Entry, namespace string) error {
 	if err != nil {
 		return err
 	}
-	return validateResource("namespace", namespace, available)
+	return validateResource("namespace", namespace, "", available)
 }
 
 func ValidateDeployment(l *logrus.Entry, namespace, deployment string) error {
@@ -294,7 +296,7 @@ func ValidateDeployment(l *logrus.Entry, namespace, deployment string) error {
 	if err != nil {
 		return err
 	}
-	return validateResource("deployment", deployment, available)
+	return validateResource("deployment", deployment, fmt.Sprintf("for namespace %q", namespace), available)
 }
 
 func ValidatePod(l *logrus.Entry, deployment *v1.Deployment, pod string) error {
@@ -302,12 +304,12 @@ func ValidatePod(l *logrus.Entry, deployment *v1.Deployment, pod string) error {
 	if err != nil {
 		return err
 	}
-	return validateResource("pod", pod, available)
+	return validateResource("pod", pod, fmt.Sprintf("for deployment %q", deployment.Name), available)
 }
 
 func ValidateContainer(l *logrus.Entry, deployment *v1.Deployment, container string) error {
 	available := getContainers(l, deployment)
-	return validateResource("container", container, available)
+	return validateResource("container", container, fmt.Sprintf("for deployment %q", deployment.Name), available)
 }
 
 func renderTemplate(path string, values interface{}) (string, error) {
@@ -401,10 +403,14 @@ func checkDelveServer(l *logrus.Entry, host string, port int, timeout time.Durat
 		return err
 	}
 	defer conn.Close()
+	timer := time.AfterFunc(timeout, func() {
+		//rpc2 client tends to hang if it cannot connect
+		conn.Close()
+	})
 	client := rpc2.NewClientFromConn(conn)
-	_, err = client.GetState()
-	if err != nil {
-		return err
+	defer client.Disconnect(false)
+	if !timer.Stop() {
+		return fmt.Errorf("delve connection timed out after %s", timeout)
 	}
 	return nil
 }
@@ -425,10 +431,10 @@ func runOpen(l *logrus.Entry, path string) (string, error) {
 }
 
 func tryDelveServer(l *logrus.Entry, host string, port, tries int, sleep time.Duration) error {
-	err := tryCall(func(i int, max int) error {
-		l.Infof("checking delve connection on %v:%v (%v/%v)", host, port, i, max)
+	err := tryCall(tries, func(i int) error {
+		l.Infof("checking delve connection on %v:%v (%v/%v)", host, port, i, tries)
 		return checkDelveServer(l, host, port, 1*time.Second)
-	}, tries, sleep)
+	})
 	if err != nil {
 		return err
 	}
@@ -438,11 +444,11 @@ func tryDelveServer(l *logrus.Entry, host string, port, tries int, sleep time.Du
 
 func launchVscode(l *logrus.Entry, pod, host string, port, tries int, sleep time.Duration) error {
 	command(l, "code", ".").postEnd(func() error {
-		return tryCall(func(i, max int) error {
-			l.Infof("waiting for vscode status (%v/%v)", i, max)
+		return tryCall(tries, func(i int) error {
+			l.Infof("waiting for vscode status (%v/%v)", i, tries)
 			_, err := command(l, "code", "-s").run()
 			return err
-		}, tries, sleep)
+		})
 	}).run()
 
 	l.Infof("opening debug configuration")
@@ -457,14 +463,13 @@ func launchVscode(l *logrus.Entry, pod, host string, port, tries int, sleep time
 	return nil
 }
 
-func tryCall(f func(i, tries int) error, tries int, sleep time.Duration) error {
+func tryCall(tries int, f func(i int) error) error {
 	var err error
 	for i := 1; i < tries+1; i++ {
-		err = f(i, tries)
+		err = f(i)
 		if err == nil {
-			return err
+			return nil
 		}
-		time.Sleep(time.Second)
 	}
 	return err
 }
