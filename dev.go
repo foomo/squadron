@@ -338,7 +338,7 @@ func ValidateImage(l *logrus.Entry, deployment *v1.Deployment, container string,
 			}
 		}
 	}
-	return fmt.Errorf("couldnt find deployment %q image for container %q", deployment.Name, container)
+	return nil
 }
 
 func ValidatePath(wd string, p *string) error {
