@@ -10,8 +10,8 @@ var (
 	log     = logrus.New()
 	rootCmd = &cobra.Command{
 		Use: "configurd",
-		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
-			return configurd.ValidatePath("", &flagDir)
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			return configurd.ValidatePath(".", &flagDir)
 		},
 	}
 	flagTag       string

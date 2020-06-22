@@ -12,10 +12,18 @@ spec:
         args:
         livenessProbe:
         readinessProbe:
+        {{ if .Mounts }}
         volumeMounts:
-          - mountPath: {{ .MountPath }}
-            name: "{{ .ContainerName }}-patch-mount"
+          {{ range $i, $mount := .Mounts }}
+          - mountPath: {{ $mount.MountPath }}
+            name: "patch-mount-{{ $i }}"
+          {{ end }}
+        {{ end }}
+      {{ if .Mounts }}
       volumes:
-        - name: "{{ .ContainerName }}-patch-mount"
+        {{ range $i, $mount := .Mounts }}
+        - name: "patch-mount-{{ $i }}"
           hostPath:
-            path: {{ .HostPath }}
+            path: {{ $mount.HostPath }}
+        {{ end }}
+      {{ end }}

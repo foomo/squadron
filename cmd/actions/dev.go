@@ -10,8 +10,8 @@ import (
 func init() {
 	devCmd.PersistentFlags().StringVarP(&flagPod, "pod", "p", "", "pod name (default most recent one)")
 	devCmd.PersistentFlags().StringVarP(&flagContainer, "container", "c", "", "container name (default deployment name)")
-	devPatchCmd.Flags().StringVarP(&flagImage, "image", "i", "", "Image to be used for patching (default deployment image)")
-	devPatchCmd.Flags().StringVarP(&flagMount, "mount", "m", "", "host path to be mounted (default cwd)")
+	devPatchCmd.Flags().StringVarP(&flagImage, "image", "i", "", "image to be used for patching (default deployment image)")
+	devPatchCmd.Flags().StringArrayVarP(&flagMounts, "mount", "m", []string{}, "host path to be mounted (default none)")
 	devPatchCmd.Flags().BoolVar(&flagRollback, "rollback", false, "rollback deployment to a previous state")
 	devDelveCmd.Flags().StringVar(&flagInput, "input", "", "go file input (default cwd)")
 	devDelveCmd.Flags().BoolVar(&flagCleanup, "cleanup", false, "cleanup delve debug session")
@@ -52,10 +52,6 @@ var (
 			if err != nil {
 				return err
 			}
-			err = configurd.ValidatePath(flagDir, &flagMount)
-			if err != nil {
-				return err
-			}
 			return configurd.ValidatePath(flagDir, &flagInput)
 		},
 	}
@@ -63,11 +59,14 @@ var (
 		Use:   "patch [DEPLOYMENT] -c {CONTAINER} -n {NAMESPACE} -i {IMAGE} -t {TAG} -m {MOUNT}",
 		Short: "applies a development patch for a deployment",
 		Args:  cobra.MinimumNArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
-			_, err := patch(l, flagNamespace, deployment, flagPod, flagContainer, flagImage, flagTag, flagMount, flagRollback)
+		RunE: func(cmd *cobra.Command, args []string) error {
+			mounts, err := configurd.ValidateMounts(flagDir, flagMounts)
 			if err != nil {
-				log.WithError(err).Fatalf("dev mode failed")
+				return err
 			}
+
+			_, err = patch(l, flagNamespace, deployment, flagPod, flagContainer, flagImage, flagTag, mounts, flagRollback)
+			return err
 		},
 	}
 	devShellCmd = &cobra.Command{
@@ -97,7 +96,7 @@ var (
 	flagPod       string
 	flagContainer string
 	flagImage     string
-	flagMount     string
+	flagMounts    []string
 	flagInput     string
 	flagArgs      = newStringList(" ")
 	flagCleanup   bool
@@ -107,11 +106,11 @@ var (
 	flagVscode    bool
 )
 
-func patch(l *logrus.Entry, namespace string, deployment *v1.Deployment, pod, container, image, tag, mountPath string, rollback bool) (string, error) {
+func patch(l *logrus.Entry, namespace string, deployment *v1.Deployment, pod, container, image, tag string, mounts []configurd.Mount, rollback bool) (string, error) {
 	if rollback {
 		return configurd.Rollback(l, deployment)
 	}
-	return configurd.Patch(l, deployment, container, image, tag, mountPath)
+	return configurd.Patch(l, deployment, container, image, tag, mounts)
 }
 
 func shell(l *logrus.Entry, deployment *v1.Deployment, pod string) (string, error) {

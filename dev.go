@@ -21,20 +21,23 @@ import (
 	v1 "k8s.io/api/apps/v1"
 )
 
+type Mount struct {
+	HostPath  string
+	MountPath string
+}
+
 type patchValues struct {
 	PatchedLabelName string
 	ContainerName    string
-	MountPath        string
-	HostPath         string
+	Mounts           []Mount
 	Image            string
 }
 
-func newPatchValues(deployment, container, hostPath string) *patchValues {
+func newPatchValues(container string, mounts []Mount) *patchValues {
 	return &patchValues{
 		PatchedLabelName: defaultPatchedLabel,
 		ContainerName:    container,
-		MountPath:        getMountPath(deployment),
-		HostPath:         hostPath,
+		Mounts:           mounts,
 		Image:            "dummy:latest",
 	}
 }
@@ -157,7 +160,7 @@ func Delve(l *logrus.Entry, deployment *v1.Deployment, pod, container, input str
 	return "", nil
 }
 
-func Patch(l *logrus.Entry, deployment *v1.Deployment, container, image, tag, hostPath string) (string, error) {
+func Patch(l *logrus.Entry, deployment *v1.Deployment, container, image, tag string, mounts []Mount) (string, error) {
 	isPatched := deploymentIsPatched(l, deployment)
 	if isPatched {
 		l.Warnf("deployment already patched, running rollback first")
@@ -167,6 +170,12 @@ func Patch(l *logrus.Entry, deployment *v1.Deployment, container, image, tag, ho
 		}
 	}
 
+	l.Infof("waiting for deployment to get ready")
+	out, err := waitForRollout(l, deployment.Name, deployment.Namespace, defaultWaitTimeout).run()
+	if err != nil {
+		return out, err
+	}
+
 	l.Infof("extracting dummy files")
 	if err := bindata.RestoreAssets(os.TempDir(), "dummy"); err != nil {
 		return "", err
@@ -174,7 +183,7 @@ func Patch(l *logrus.Entry, deployment *v1.Deployment, container, image, tag, ho
 	dummyPath := path.Join(os.TempDir(), "dummy")
 
 	l.Infof("building dummy image with %v:%v", image, tag)
-	_, err := buildDummy(l, image, tag, dummyPath)
+	_, err = buildDummy(l, image, tag, dummyPath)
 	if err != nil {
 		return "", err
 	}
@@ -182,16 +191,10 @@ func Patch(l *logrus.Entry, deployment *v1.Deployment, container, image, tag, ho
 	l.Infof("rendering deployment patch template")
 	patch, err := renderTemplate(
 		path.Join(dummyPath, devDeploymentPatchFile),
-		newPatchValues(deployment.Name, container, hostPath),
+		newPatchValues(container, mounts),
 	)
 	if err != nil {
 		return "", err
-	}
-
-	l.Infof("waiting for deployment to get ready")
-	out, err := waitForRollout(l, deployment.Name, deployment.Namespace, defaultWaitTimeout).run()
-	if err != nil {
-		return out, err
 	}
 
 	l.Infof("patching deployment for development")
@@ -226,8 +229,14 @@ func Rollback(l *logrus.Entry, deployment *v1.Deployment) (string, error) {
 		return "", fmt.Errorf("deployment not patched, stopping rollback")
 	}
 
+	l.Infof("waiting for deployment to get ready")
+	out, err := waitForRollout(l, deployment.Name, deployment.Namespace, defaultWaitTimeout).run()
+	if err != nil {
+		return out, err
+	}
+
 	l.Infof("rolling back deployment %v", deployment.Name)
-	out, err := rollbackDeployment(l, deployment.Name, deployment.Namespace).run()
+	out, err = rollbackDeployment(l, deployment.Name, deployment.Namespace).run()
 	if err != nil {
 		return out, err
 	}
@@ -248,7 +257,7 @@ func Shell(l *logrus.Entry, deployment *v1.Deployment, pod string) (string, erro
 	}
 
 	l.Infof("running interactive shell for patched deployment %v", deployment.Name)
-	return execShell(l, fmt.Sprintf("pod/%v", pod), getMountPath(deployment.Name), deployment.Namespace).run()
+	return execShell(l, fmt.Sprintf("pod/%v", pod), "/", deployment.Namespace).run()
 }
 
 func FindFreePort(host string) (int, error) {
@@ -355,6 +364,26 @@ func ValidatePath(wd string, p *string) error {
 	}
 	*p = absPath
 	return nil
+}
+
+func ValidateMounts(wd string, ms []string) ([]Mount, error) {
+	var mounts []Mount
+	for _, m := range ms {
+		pieces := strings.Split(m, ":")
+		if len(pieces) != 2 {
+			return nil, fmt.Errorf("bad format for mount %q, should be %q separated", m, ":")
+		}
+		hostPath := pieces[0]
+		mountPath := pieces[1]
+		if err := ValidatePath(wd, &hostPath); err != nil {
+			return nil, fmt.Errorf("bad format for mount %q, host path bad: %s", m, err)
+		}
+		if !path.IsAbs(mountPath) {
+			return nil, fmt.Errorf("bad format for mount %q, mount path should be absolute", m)
+		}
+		mounts = append(mounts, Mount{hostPath, mountPath})
+	}
+	return mounts, nil
 
 }
 
@@ -378,10 +407,6 @@ func stringInSlice(a string, list []string) bool {
 		}
 	}
 	return false
-}
-
-func getMountPath(name string) string {
-	return fmt.Sprintf("/%v-mount", name)
 }
 
 func buildDummy(l *logrus.Entry, image, tag, path string) (string, error) {
