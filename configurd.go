@@ -471,3 +471,14 @@ func (c *Cmd) run() (string, error) {
 
 	return combinedBuf.String(), nil
 }
+
+func CheckIngressController(l *logrus.Entry, name string) error {
+	pods, err := getPodsByLabels(l, []string{fmt.Sprintf("app.kubernetes.io/name=%v", name)})
+	if err != nil {
+		return fmt.Errorf("error while checking ingress controller %q: %s", name, err)
+	}
+	if len(pods) == 0 {
+		return fmt.Errorf("ingress controller %q not present on any namespace", name)
+	}
+	return nil
+}

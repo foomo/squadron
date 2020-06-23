@@ -23,6 +23,10 @@ var (
 		Short: "installs a group of services",
 		Long:  "installs a group of services with given namespace and tag version",
 		Args:  cobra.MinimumNArgs(1),
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			log := newLogger(flagVerbose)
+			return configurd.CheckIngressController(log, "ingress-nginx")
+		},
 		Run: func(cmd *cobra.Command, args []string) {
 			_, err := install(args[0], flagNamespace, flagTag, flagDir, flagOutputDir, flagService, flagBuild, flagVerbose)
 			if err != nil {

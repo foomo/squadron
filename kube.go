@@ -40,17 +40,14 @@ func GetMostRecentPodBySelectors(l *logrus.Entry, selectors map[string]string, n
 	}
 	out, err := command(l, cmd...).run()
 	if err != nil {
-		return out, err
+		return "", err
 	}
-	pods := strings.Split(strings.TrimSuffix(out, "\n"), "\n")
-	pod := pods[0]
+
+	pods := parseResources(out, "\n", "deployment.apps/")
 	if len(pods) > 1 {
-		pod = pods[len(pods)-1]
+		return pods[len(pods)-1], nil
 	}
-	if pod == "" {
-		return "", fmt.Errorf("no pods found")
-	}
-	return strings.TrimPrefix(pod, "pod/"), nil
+	return "", fmt.Errorf("no pods found")
 }
 
 func waitForPodState(l *logrus.Entry, namepsace, pod, condition, timeout string) *Cmd {
@@ -154,11 +151,7 @@ func getNamespaces(l *logrus.Entry) ([]string, error) {
 		return nil, err
 	}
 
-	var namespaces []string
-	for _, n := range strings.Split(out, "\n") {
-		namespaces = append(namespaces, strings.TrimPrefix(n, "namespace/"))
-	}
-	return namespaces, nil
+	return parseResources(out, "\n", "namespace/"), nil
 }
 
 func getDeployments(l *logrus.Entry, namespace string) ([]string, error) {
@@ -172,11 +165,7 @@ func getDeployments(l *logrus.Entry, namespace string) ([]string, error) {
 		return nil, err
 	}
 
-	var deployments []string
-	for _, d := range strings.Split(out, "\n") {
-		deployments = append(deployments, strings.TrimPrefix(d, "deployment.apps/"))
-	}
-	return deployments, nil
+	return parseResources(out, "\n", "deployment.apps/"), nil
 }
 
 func getPods(l *logrus.Entry, namespace string, selectors map[string]string) ([]string, error) {
@@ -195,11 +184,7 @@ func getPods(l *logrus.Entry, namespace string, selectors map[string]string) ([]
 		return nil, err
 	}
 
-	var pods []string
-	for _, p := range strings.Split(out, "\n") {
-		pods = append(pods, strings.TrimPrefix(p, "pod/"))
-	}
-	return pods, nil
+	return parseResources(out, "\n", "pod/"), nil
 }
 
 func getContainers(l *logrus.Entry, deployment *v1.Deployment) []string {
@@ -208,4 +193,34 @@ func getContainers(l *logrus.Entry, deployment *v1.Deployment) []string {
 		containers = append(containers, c.Name)
 	}
 	return containers
+}
+
+func getPodsByLabels(l *logrus.Entry, labels []string) ([]string, error) {
+	var selector []string
+	for k, v := range labels {
+		selector = append(selector, fmt.Sprintf("%v=%v", k, v))
+	}
+	cmd := []string{
+		"kubectl", "get", "pods",
+		"-l", strings.Join(labels, ","),
+		"-o", "name", "-A",
+	}
+	out, err := command(l, cmd...).run()
+	if err != nil {
+		return nil, err
+	}
+
+	return parseResources(out, "\n", "pod/"), nil
+}
+
+func parseResources(out, delimiter, prefix string) []string {
+	lines := strings.Split(out, delimiter)
+	if len(lines) == 1 && lines[0] == "" {
+		return nil
+	}
+	var res []string
+	for _, line := range lines {
+		res = append(res, strings.TrimPrefix(line, prefix))
+	}
+	return res
 }
