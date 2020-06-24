@@ -13,50 +13,61 @@ var (
 	log     = logrus.New()
 	rootCmd = &cobra.Command{
 		Use: "configurd",
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			if cmd.Name() == "help" || cmd.Name() == "init" {
+				return nil
+			}
+			// flagDir
 			wdir, err := os.Getwd()
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
 			if flagDir != "" {
 				flagDir = path.Join(wdir, flagDir)
 			} else {
 				flagDir = wdir
 			}
-			if cmd.Name() == "help" || cmd.Name() == "init" {
-				return
+			// templateVars
+			templateVars, err = configurd.NewTemplateVars(flagDir, flagTemplateSlice, flagTemplateFile)
+			if err != nil {
+				return err
 			}
+			// cnf
+			cnf, err = newConfigurd(newLogger(flagVerbose), flagTag, flagDir, templateVars)
+			if err != nil {
+				return err
+			}
+			return nil
 		},
 	}
 
-	flagTag       string
-	flagDir       string
-	flagVerbose   bool
-	flagNamespace string
+	cnf               configurd.Configurd
+	templateVars      configurd.TemplateVars
+	flagTag           string
+	flagDir           string
+	flagVerbose       bool
+	flagNamespace     string
+	flagTemplateSlice []string
+	flagTemplateFile  string
 )
 
-func newConfigurd(log *logrus.Entry, tag, basePath string) (configurd.Configurd, error) {
+func newConfigurd(log *logrus.Entry, tag, basePath string, tv configurd.TemplateVars) (configurd.Configurd, error) {
 	config := configurd.Config{
-		Tag:      tag,
-		BasePath: basePath,
-		Log:      log,
+		Tag:          tag,
+		BasePath:     basePath,
+		Log:          log,
+		TemplateVars: tv,
 	}
 
 	return configurd.New(config)
-}
-
-func mustNewConfigurd(log *logrus.Entry, tag, basePath string) configurd.Configurd {
-	cnf, err := newConfigurd(log, tag, basePath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return cnf
 }
 
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&flagTag, "tag", "t", "latest", "Specifies the image tag")
 	rootCmd.PersistentFlags().StringVarP(&flagDir, "dir", "d", "", "Specifies working directory")
 	rootCmd.PersistentFlags().BoolVarP(&flagVerbose, "verbose", "v", false, "Specifies should command output be displayed")
+	rootCmd.PersistentFlags().StringSliceVar(&flagTemplateSlice, "template-vars", nil, "Specifies template vars x=y")
+	rootCmd.PersistentFlags().StringVar(&flagTemplateFile, "template-file", "", "Specifies the template file with vars")
 	rootCmd.AddCommand(buildCmd, installCmd, uninstallCmd, initCmd, versionCmd)
 }
 

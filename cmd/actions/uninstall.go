@@ -15,7 +15,7 @@ var (
 		Long:  "uninstalls a group with given namespace and tag version",
 		Args:  cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			_, err := uninstall(args[0], flagNamespace, flagTag, flagDir, flagVerbose)
+			_, err := uninstall(args[0], flagNamespace)
 			if err != nil {
 				log.WithError(err).Fatalf("Uninstallation failed")
 			}
@@ -23,10 +23,7 @@ var (
 	}
 )
 
-func uninstall(group, namespace, tag, dir string, verbose bool) (string, error) {
-	log := newLogger(verbose)
-	cnf := mustNewConfigurd(log, tag, dir)
-
+func uninstall(group, namespace string) (string, error) {
 	ns, err := cnf.Namespace(namespace)
 	if err != nil {
 		return "", err
@@ -40,5 +37,5 @@ func uninstall(group, namespace, tag, dir string, verbose bool) (string, error) 
 		return "", err
 	}
 
-	return cnf.Uninstall(sis, namespace, verbose)
+	return cnf.Uninstall(sis, namespace)
 }

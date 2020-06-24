@@ -2,15 +2,20 @@ package configurd
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
+	"text/template"
 
+	"github.com/foomo/config-bob/builder"
 	"github.com/foomo/configurd/exampledata"
 	"github.com/sirupsen/logrus"
 
@@ -43,9 +48,10 @@ type Namespace struct {
 }
 
 type Config struct {
-	Tag      string
-	BasePath string
-	Log      *logrus.Entry
+	Tag          string
+	BasePath     string
+	Log          *logrus.Entry
+	TemplateVars TemplateVars
 }
 
 type Configurd struct {
@@ -105,7 +111,7 @@ func New(config Config) (Configurd, error) {
 		return Configurd{}, err
 	}
 
-	c.Namespaces, err = loadNamespaces(log, c.Service, config.BasePath)
+	c.Namespaces, err = loadNamespaces(log, c.Service, config.BasePath, c.config.TemplateVars)
 
 	if err != nil {
 		return Configurd{}, err
@@ -114,7 +120,7 @@ func New(config Config) (Configurd, error) {
 	return c, nil
 }
 
-func loadNamespaces(log *logrus.Entry, sl serviceLoader, basePath string) ([]Namespace, error) {
+func loadNamespaces(log *logrus.Entry, sl serviceLoader, basePath string, tv TemplateVars) ([]Namespace, error) {
 	var nss []Namespace
 	namespaceDir := path.Join(basePath, defaultNamespaceDir)
 	err := filepath.Walk(namespaceDir, func(path string, info os.FileInfo, err error) error {
@@ -123,7 +129,7 @@ func loadNamespaces(log *logrus.Entry, sl serviceLoader, basePath string) ([]Nam
 		}
 		if info.IsDir() && path != namespaceDir {
 			log.Infof("Loading namespace: %v, from: %q", info.Name(), relativePath(path, basePath))
-			gs, err := loadGroups(log, sl, basePath, info.Name())
+			gs, err := loadGroups(log, sl, basePath, info.Name(), tv)
 			if err != nil {
 				return err
 			}
@@ -138,7 +144,7 @@ func loadNamespaces(log *logrus.Entry, sl serviceLoader, basePath string) ([]Nam
 	return nss, err
 }
 
-func loadGroups(log *logrus.Entry, sl serviceLoader, basePath, namespace string) ([]Group, error) {
+func loadGroups(log *logrus.Entry, sl serviceLoader, basePath, namespace string, tv TemplateVars) ([]Group, error) {
 	var gs []Group
 	groupPath := path.Join(basePath, defaultNamespaceDir, namespace)
 	err := filepath.Walk(groupPath, func(path string, info os.FileInfo, err error) error {
@@ -148,7 +154,7 @@ func loadGroups(log *logrus.Entry, sl serviceLoader, basePath, namespace string)
 		if !info.IsDir() && (strings.HasSuffix(path, defaultConfigFileExt)) {
 			name := strings.TrimSuffix(info.Name(), defaultConfigFileExt)
 			log.Infof("Loading group: %v, from: %q", name, relativePath(path, basePath))
-			g, err := loadGroup(log, sl, path, namespace, name)
+			g, err := loadGroup(log, sl, path, namespace, name, tv)
 			if err != nil {
 				return err
 			}
@@ -159,18 +165,12 @@ func loadGroups(log *logrus.Entry, sl serviceLoader, basePath, namespace string)
 	return gs, err
 }
 
-func loadGroup(log *logrus.Entry, sl serviceLoader, path, namespace, group string) (Group, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return Group{}, err
-	}
-	defer file.Close()
-
+func loadGroup(log *logrus.Entry, sl serviceLoader, path, namespace, group string, tv TemplateVars) (Group, error) {
 	var wrapper struct {
 		Group Group `yaml:"group"`
 	}
-	if err := yaml.NewDecoder(file).Decode(&wrapper); err != nil {
-		return Group{}, fmt.Errorf("could not decode group: %w", err)
+	if err := loadYamlTemplate(path, &wrapper, tv); err != nil {
+		return Group{}, err
 	}
 
 	for name := range wrapper.Group.Services {
@@ -335,4 +335,92 @@ func errResourceNotFound(name, resource string, available []string) error {
 		return fmt.Errorf("%s not provided. Available: %s", resource, strings.Join(available, ", "))
 	}
 	return fmt.Errorf("%s '%s' not found. Available: %s", resource, name, strings.Join(available, ", "))
+}
+
+func stringInSlice(str string, slice []string) bool {
+	for _, s := range slice {
+		if s == str {
+			return true
+		}
+	}
+	return false
+}
+
+func isYaml(file string) bool {
+	return stringInSlice(filepath.Ext(file), []string{"yml, yaml"})
+}
+
+func isJson(file string) bool {
+	return filepath.Ext(file) == "json"
+}
+
+type TemplateVars map[string]interface{}
+
+func (tv TemplateVars) supportedFileExt() []string {
+	return []string{"yml", "yaml", "json"}
+}
+
+func NewTemplateVars(workDir string, sourceSlice []string, sourceFile string) (TemplateVars, error) {
+	tv := TemplateVars{}
+	if err := tv.parseFile(workDir, sourceFile); err != nil {
+		return nil, err
+	}
+	if err := tv.parseSlice(sourceSlice); err != nil {
+		return nil, err
+	}
+	tv["cwd"] = workDir
+	return tv, nil
+}
+
+func (tv TemplateVars) parseSlice(source []string) error {
+	for _, item := range source {
+		pieces := strings.Split(item, "=")
+		if len(pieces) != 2 || pieces[0] == "" {
+			return fmt.Errorf("Invalid format for template var %q, use x=y", item)
+		}
+		tv[pieces[0]] = pieces[1]
+	}
+	return nil
+}
+func (tv TemplateVars) parseFile(workDir, source string) error {
+	if source == "" {
+		return nil
+	}
+	if !filepath.IsAbs(source) {
+		source = path.Join(workDir, source)
+	}
+	if !isYaml(source) && !isJson(source) {
+		return fmt.Errorf("Unable to parse %q, supported: %v", source, strings.Join(tv.supportedFileExt(), ", "))
+	}
+	file, err := ioutil.ReadFile(source)
+	if err != nil {
+		return fmt.Errorf("Error while opening template file: %s", err)
+	}
+	if isYaml(source) {
+		if err := yaml.Unmarshal(file, &tv); err != nil {
+			return fmt.Errorf("Error while unmarshalling template file: %s", err)
+		}
+	}
+	if isJson(source) {
+		if err := json.Unmarshal(file, &tv); err != nil {
+			return fmt.Errorf("Error while unmarshalling template file: %s", err)
+		}
+		return nil
+	}
+	return nil
+}
+
+func loadYamlTemplate(file string, data interface{}, templateVars interface{}) error {
+	tmp, err := template.ParseFiles(file)
+	if err != nil {
+		return err
+	}
+	out := bytes.NewBuffer([]byte{})
+	if err := tmp.Option("missingkey=error").Funcs(builder.TemplateFuncs).Execute(out, templateVars); err != nil {
+		return err
+	}
+	if err := yaml.Unmarshal(out.Bytes(), &data); err != nil {
+		return err
+	}
+	return nil
 }

@@ -34,9 +34,6 @@ var (
 )
 
 func install(group, namespace, tag, workDir, outputDir, service string, buildService, verbose bool) (string, error) {
-	log := newLogger(verbose)
-	cnf := mustNewConfigurd(log, tag, workDir)
-
 	ns, err := cnf.Namespace(namespace)
 	if err != nil {
 		return "", err
@@ -61,7 +58,7 @@ func install(group, namespace, tag, workDir, outputDir, service string, buildSer
 	if buildService {
 		log.Printf("Building services")
 		for _, si := range sis {
-			output, err := build(si.Name, tag, workDir, true, verbose)
+			output, err := build(si.Name, true)
 			if err != nil {
 				return output, err
 			}
@@ -72,6 +69,7 @@ func install(group, namespace, tag, workDir, outputDir, service string, buildSer
 		BasePath:     workDir,
 		OutputDir:    outputDir,
 		Tag:          tag,
+		TemplateVars: templateVars,
 		Verbose:      verbose,
 	})
 }

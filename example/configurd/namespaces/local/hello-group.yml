@@ -9,11 +9,11 @@ group:
           port: 80
         ingress:
           hosts:
-            - name: localhost
+            - name: {{ .host }}
               path: /services/hello
         volumes:
           - name: config
-            host: ./application
+            host: {{ .cwd }}/application
             mount: /config/
     hi-service:
       overrides:
@@ -24,6 +24,6 @@ group:
           port: 80
         ingress:
           hosts:
-            - name: localhost
+            - name: {{ .host }}
               path: /services/hi
 jobs:

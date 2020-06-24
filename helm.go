@@ -21,7 +21,7 @@ type Volume struct {
 
 type ServiceItem struct {
 	Name      string
-	Overrides map[string]interface{}
+	Overrides interface{}
 	namespace string
 	group     string
 	chart     string
@@ -91,10 +91,6 @@ func generate(log *logrus.Entry, si ServiceItem, basePath, outputDir string) err
 		return fmt.Errorf("could not copy template files: %w", err)
 	}
 
-	if _, ok := si.Overrides["volumes"]; ok {
-		si.Overrides["volumes"] = fixVolumeRelativePath(basePath, si.Overrides["volumes"])
-	}
-
 	log.Printf("Generating yaml file: %q", path.Join(outputDir, si.Name, defaultOverridesFile))
 	err = generateYaml(log, path.Join(outputPath, defaultOverridesFile), si.Overrides)
 	if err != nil {
@@ -142,6 +138,7 @@ type InstallConfiguration struct {
 	BasePath     string
 	OutputDir    string
 	Tag          string
+	TemplateVars map[string]interface{}
 	Verbose      bool
 }
 
@@ -184,7 +181,7 @@ func (c Configurd) Install(cnf InstallConfiguration) (string, error) {
 	return strings.Join(output, "\n"), nil
 }
 
-func (c Configurd) Uninstall(sis []ServiceItem, namespace string, verbose bool) (string, error) {
+func (c Configurd) Uninstall(sis []ServiceItem, namespace string) (string, error) {
 	logger := c.config.Log
 
 	var outputs []string
