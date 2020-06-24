@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/foomo/configurd/bindata"
+	"github.com/go-delve/delve/service/api"
 	"github.com/go-delve/delve/service/rpc2"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v1"
@@ -154,6 +155,19 @@ func Delve(l *logrus.Entry, deployment *v1.Deployment, pod, container, input str
 			if err := tryDelveServer(l, host, port, 5, 1*time.Second); err != nil {
 				return err
 			}
+			go func() {
+				// TODO add cancelable context
+				for {
+					time.Sleep(time.Millisecond * 500)
+					_, errState := checkDelveServer(l.WithField("task", "watch-dlv"), host, port, 1*time.Second)
+					if errState != nil {
+						l.WithError(errState).Error("dlv seems to be down")
+						DelveCleanup(l, deployment, pod, container)
+						os.Exit(1)
+					}
+				}
+			}()
+
 			if vscode {
 				if err := launchVscode(l, goModDir, pod, host, port, 5, 1*time.Second); err != nil {
 					return err
@@ -473,10 +487,10 @@ func signalCapture(l *logrus.Entry) {
 	}()
 }
 
-func checkDelveServer(l *logrus.Entry, host string, port int, timeout time.Duration) error {
+func checkDelveServer(l *logrus.Entry, host string, port int, timeout time.Duration) (*api.DebuggerState, error) {
 	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%v:%v", host, port), timeout)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer conn.Close()
 	timer := time.AfterFunc(timeout, func() {
@@ -484,11 +498,12 @@ func checkDelveServer(l *logrus.Entry, host string, port int, timeout time.Durat
 		conn.Close()
 	})
 	client := rpc2.NewClientFromConn(conn)
+	st, errSt := client.GetState()
 	defer client.Disconnect(false)
 	if !timer.Stop() {
-		return fmt.Errorf("delve connection timed out after %s", timeout)
+		return nil, fmt.Errorf("delve connection timed out after %s", timeout)
 	}
-	return nil
+	return st, errSt
 }
 
 func runOpen(l *logrus.Entry, path string) (string, error) {
@@ -507,9 +522,10 @@ func runOpen(l *logrus.Entry, path string) (string, error) {
 }
 
 func tryDelveServer(l *logrus.Entry, host string, port, tries int, sleep time.Duration) error {
-	err := tryCall(tries, func(i int) error {
+	err := tryCall(tries, sleep, func(i int) error {
 		l.Infof("checking delve connection on %v:%v (%v/%v)", host, port, i, tries)
-		return checkDelveServer(l, host, port, 1*time.Second)
+		_, errCheck := checkDelveServer(l, host, port, 1*time.Second)
+		return errCheck
 	})
 	if err != nil {
 		return err
@@ -520,7 +536,7 @@ func tryDelveServer(l *logrus.Entry, host string, port, tries int, sleep time.Du
 
 func launchVscode(l *logrus.Entry, goModDir, pod, host string, port, tries int, sleep time.Duration) error {
 	command(l, "code", goModDir).postEnd(func() error {
-		return tryCall(tries, func(i int) error {
+		return tryCall(tries, time.Millisecond*200, func(i int) error {
 			l.Infof("waiting for vscode status (%v/%v)", i, tries)
 			_, err := command(l, "code", "-s").run()
 			return err
@@ -539,13 +555,14 @@ func launchVscode(l *logrus.Entry, goModDir, pod, host string, port, tries int, 
 	return nil
 }
 
-func tryCall(tries int, f func(i int) error) error {
+func tryCall(tries int, waitBetweenAttempts time.Duration, f func(i int) error) error {
 	var err error
 	for i := 1; i < tries+1; i++ {
 		err = f(i)
 		if err == nil {
 			return nil
 		}
+		time.Sleep(waitBetweenAttempts)
 	}
 	return err
 }
