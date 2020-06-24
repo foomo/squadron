@@ -43,8 +43,11 @@ func GetMostRecentPodBySelectors(l *logrus.Entry, selectors map[string]string, n
 		return "", err
 	}
 
-	pods := parseResources(out, "\n", "deployment.apps/")
-	if len(pods) > 1 {
+	pods, err := parseResources(out, "\n", "pod/")
+	if err != nil {
+		return "", err
+	}
+	if len(pods) > 0 {
 		return pods[len(pods)-1], nil
 	}
 	return "", fmt.Errorf("no pods found")
@@ -151,7 +154,7 @@ func getNamespaces(l *logrus.Entry) ([]string, error) {
 		return nil, err
 	}
 
-	return parseResources(out, "\n", "namespace/"), nil
+	return parseResources(out, "\n", "namespace/")
 }
 
 func getDeployments(l *logrus.Entry, namespace string) ([]string, error) {
@@ -165,7 +168,7 @@ func getDeployments(l *logrus.Entry, namespace string) ([]string, error) {
 		return nil, err
 	}
 
-	return parseResources(out, "\n", "deployment.apps/"), nil
+	return parseResources(out, "\n", "deployment.apps/")
 }
 
 func getPods(l *logrus.Entry, namespace string, selectors map[string]string) ([]string, error) {
@@ -184,7 +187,7 @@ func getPods(l *logrus.Entry, namespace string, selectors map[string]string) ([]
 		return nil, err
 	}
 
-	return parseResources(out, "\n", "pod/"), nil
+	return parseResources(out, "\n", "pod/")
 }
 
 func getContainers(l *logrus.Entry, deployment *v1.Deployment) []string {
@@ -210,17 +213,24 @@ func getPodsByLabels(l *logrus.Entry, labels []string) ([]string, error) {
 		return nil, err
 	}
 
-	return parseResources(out, "\n", "pod/"), nil
+	return parseResources(out, "\n", "pod/")
 }
 
-func parseResources(out, delimiter, prefix string) []string {
+func parseResources(out, delimiter, prefix string) ([]string, error) {
 	lines := strings.Split(out, delimiter)
 	if len(lines) == 1 && lines[0] == "" {
-		return nil
+		return nil, fmt.Errorf("delimiter %q not found in %q", delimiter, out)
 	}
 	var res []string
 	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		unprefixed := strings.TrimPrefix(line, prefix)
+		if unprefixed == line {
+			return nil, fmt.Errorf("prefix %q not found in %q", prefix, line)
+		}
 		res = append(res, strings.TrimPrefix(line, prefix))
 	}
-	return res
+	return res, nil
 }
