@@ -217,11 +217,14 @@ func getPodsByLabels(l *logrus.Entry, labels []string) ([]string, error) {
 }
 
 func parseResources(out, delimiter, prefix string) ([]string, error) {
+	var res []string
+	if out == "" {
+		return res, nil
+	}
 	lines := strings.Split(out, delimiter)
 	if len(lines) == 1 && lines[0] == "" {
 		return nil, fmt.Errorf("delimiter %q not found in %q", delimiter, out)
 	}
-	var res []string
 	for _, line := range lines {
 		if line == "" {
 			continue

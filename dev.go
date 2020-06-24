@@ -99,9 +99,14 @@ func Delve(l *logrus.Entry, deployment *v1.Deployment, pod, container, input str
 		return "", fmt.Errorf("deployment not patched, stopping debug")
 	}
 
+	goModDir, err := findGoProjectRoot(input)
+	if err != nil {
+		return "", fmt.Errorf("couldnt find go.mod dir for input %q", input)
+	}
+
 	binPath := path.Join(os.TempDir(), deployment.Name)
 	l.Infof("building %q for debug", input)
-	_, err := debugBuild(l, input, binPath, []string{"GOOS=linux"})
+	_, err = debugBuild(l, input, goModDir, binPath, []string{"GOOS=linux"})
 	if err != nil {
 		return "", err
 	}
@@ -150,7 +155,7 @@ func Delve(l *logrus.Entry, deployment *v1.Deployment, pod, container, input str
 				return err
 			}
 			if vscode {
-				if err := launchVscode(l, pod, host, port, 5, 1*time.Second); err != nil {
+				if err := launchVscode(l, goModDir, pod, host, port, 5, 1*time.Second); err != nil {
 					return err
 				}
 			}
@@ -418,13 +423,13 @@ func buildDummy(l *logrus.Entry, image, tag, path string) (string, error) {
 	return command(l, cmd...).cwd(path).run()
 }
 
-func debugBuild(l *logrus.Entry, input, output string, env []string) (string, error) {
+func debugBuild(l *logrus.Entry, input, goModDir, output string, env []string) (string, error) {
 	cmd := []string{
 		"go", "build",
 		`-gcflags="all=-N -l"`,
 		"-o", output, input,
 	}
-	return command(l, cmd...).env(env).run()
+	return command(l, cmd...).cwd(goModDir).env(env).run()
 }
 
 func getArgsFromPod(l *logrus.Entry, namespace, pod, container string) ([]string, error) {
@@ -513,8 +518,8 @@ func tryDelveServer(l *logrus.Entry, host string, port, tries int, sleep time.Du
 	return nil
 }
 
-func launchVscode(l *logrus.Entry, pod, host string, port, tries int, sleep time.Duration) error {
-	command(l, "code", ".").postEnd(func() error {
+func launchVscode(l *logrus.Entry, goModDir, pod, host string, port, tries int, sleep time.Duration) error {
+	command(l, "code", goModDir).postEnd(func() error {
 		return tryCall(tries, func(i int) error {
 			l.Infof("waiting for vscode status (%v/%v)", i, tries)
 			_, err := command(l, "code", "-s").run()
@@ -543,4 +548,31 @@ func tryCall(tries int, f func(i int) error) error {
 		}
 	}
 	return err
+}
+
+func findGoProjectRoot(path string) (string, error) {
+	abs, errAbs := filepath.Abs(path)
+	if errAbs != nil {
+		return "", errAbs
+	}
+	dir := filepath.Dir(abs)
+	statDir, errStatDir := os.Stat(dir)
+	if errStatDir != nil {
+		return "", errStatDir
+	}
+	if !statDir.IsDir() {
+		return "", fmt.Errorf("%q is not a dir", dir)
+	}
+	modFile := filepath.Join(dir, "go.mod")
+	stat, errStat := os.Stat(modFile)
+	if errStat == nil {
+		if stat.IsDir() {
+			return "", fmt.Errorf("go.mod is a directory")
+		}
+		return dir, nil
+	}
+	if dir == "/" {
+		return "", fmt.Errorf("reached / without finding go.mod")
+	}
+	return findGoProjectRoot(dir)
 }
