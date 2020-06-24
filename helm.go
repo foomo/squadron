@@ -21,10 +21,24 @@ type Volume struct {
 
 type ServiceItem struct {
 	Name      string
-	Overrides interface{}
+	overrides interface{}
 	namespace string
 	group     string
 	chart     string
+}
+
+func (si ServiceItem) getOverrides(basePath string, tv TemplateVars) (interface{}, error) {
+	if si.overrides == nil {
+		path := path.Join(basePath, defaultNamespaceDir, si.namespace, si.group, defaultConfigFileExt)
+		var wrapper struct {
+			Group Group `yaml:"group"`
+		}
+		if err := loadYamlTemplate(path, &wrapper, tv, true); err != nil {
+			return nil, err
+		}
+		si.overrides = wrapper.Group.Services[si.Name].overrides
+	}
+	return si.overrides, nil
 }
 
 type JobItem struct {
@@ -61,7 +75,7 @@ func fixVolumeRelativePath(basePath string, volumes interface{}) []Volume {
 	return vs
 }
 
-func generate(log *logrus.Entry, si ServiceItem, basePath, outputDir string) error {
+func generate(log *logrus.Entry, si ServiceItem, basePath, outputDir string, tv TemplateVars) error {
 	outputPath := path.Join(basePath, defaultOutputDir, outputDir, si.Name)
 	log.Infof("Creating dir: %q", path.Join(outputDir, si.Name))
 	if err := os.MkdirAll(outputPath, 0744); err != nil {
@@ -91,8 +105,13 @@ func generate(log *logrus.Entry, si ServiceItem, basePath, outputDir string) err
 		return fmt.Errorf("could not copy template files: %w", err)
 	}
 
+	overrides, err := si.getOverrides(basePath, tv)
+	if err != nil {
+		return err
+	}
+
 	log.Printf("Generating yaml file: %q", path.Join(outputDir, si.Name, defaultOverridesFile))
-	err = generateYaml(log, path.Join(outputPath, defaultOverridesFile), si.Overrides)
+	err = generateYaml(log, path.Join(outputPath, defaultOverridesFile), overrides)
 	if err != nil {
 		return fmt.Errorf("could not generate %v: %w", defaultOverridesFile, err)
 	}
@@ -159,7 +178,7 @@ func (c Configurd) Install(cnf InstallConfiguration) (string, error) {
 		return "", fmt.Errorf("could not create a workdir directory: %w", err)
 	}
 	for _, si := range cnf.ServiceItems {
-		err := generate(logger, si, cnf.BasePath, cnf.OutputDir)
+		err := generate(logger, si, cnf.BasePath, cnf.OutputDir, cnf.TemplateVars)
 		if err != nil {
 			return "", err
 		}

@@ -111,7 +111,7 @@ func New(config Config) (Configurd, error) {
 		return Configurd{}, err
 	}
 
-	c.Namespaces, err = loadNamespaces(log, c.Service, config.BasePath, c.config.TemplateVars)
+	c.Namespaces, err = loadNamespaces(log, c.Service, config.BasePath)
 
 	if err != nil {
 		return Configurd{}, err
@@ -120,7 +120,7 @@ func New(config Config) (Configurd, error) {
 	return c, nil
 }
 
-func loadNamespaces(log *logrus.Entry, sl serviceLoader, basePath string, tv TemplateVars) ([]Namespace, error) {
+func loadNamespaces(log *logrus.Entry, sl serviceLoader, basePath string) ([]Namespace, error) {
 	var nss []Namespace
 	namespaceDir := path.Join(basePath, defaultNamespaceDir)
 	err := filepath.Walk(namespaceDir, func(path string, info os.FileInfo, err error) error {
@@ -129,7 +129,7 @@ func loadNamespaces(log *logrus.Entry, sl serviceLoader, basePath string, tv Tem
 		}
 		if info.IsDir() && path != namespaceDir {
 			log.Infof("Loading namespace: %v, from: %q", info.Name(), relativePath(path, basePath))
-			gs, err := loadGroups(log, sl, basePath, info.Name(), tv)
+			gs, err := loadGroups(log, sl, basePath, info.Name())
 			if err != nil {
 				return err
 			}
@@ -144,7 +144,7 @@ func loadNamespaces(log *logrus.Entry, sl serviceLoader, basePath string, tv Tem
 	return nss, err
 }
 
-func loadGroups(log *logrus.Entry, sl serviceLoader, basePath, namespace string, tv TemplateVars) ([]Group, error) {
+func loadGroups(log *logrus.Entry, sl serviceLoader, basePath, namespace string) ([]Group, error) {
 	var gs []Group
 	groupPath := path.Join(basePath, defaultNamespaceDir, namespace)
 	err := filepath.Walk(groupPath, func(path string, info os.FileInfo, err error) error {
@@ -154,7 +154,7 @@ func loadGroups(log *logrus.Entry, sl serviceLoader, basePath, namespace string,
 		if !info.IsDir() && (strings.HasSuffix(path, defaultConfigFileExt)) {
 			name := strings.TrimSuffix(info.Name(), defaultConfigFileExt)
 			log.Infof("Loading group: %v, from: %q", name, relativePath(path, basePath))
-			g, err := loadGroup(log, sl, path, namespace, name, tv)
+			g, err := loadGroup(log, sl, path, namespace, name)
 			if err != nil {
 				return err
 			}
@@ -165,19 +165,19 @@ func loadGroups(log *logrus.Entry, sl serviceLoader, basePath, namespace string,
 	return gs, err
 }
 
-func loadGroup(log *logrus.Entry, sl serviceLoader, path, namespace, group string, tv TemplateVars) (Group, error) {
+func loadGroup(log *logrus.Entry, sl serviceLoader, path, namespace, group string) (Group, error) {
+	var g Group
 	var wrapper struct {
 		Group Group `yaml:"group"`
 	}
-	if err := loadYamlTemplate(path, &wrapper, tv); err != nil {
-		return Group{}, err
+	if err := loadYamlTemplate(path, &wrapper, nil, false); err != nil {
+		return wrapper.Group, err
 	}
-
 	for name := range wrapper.Group.Services {
 		log.Infof("Loading group item: %v", name)
 		svc, err := sl(name)
 		if err != nil {
-			return Group{}, err
+			return g, err
 		}
 		wrapper.Group.Services[name] = loadServiceItem(wrapper.Group.Services[name], svc.Name, namespace, group, svc.Chart)
 	}
@@ -410,13 +410,16 @@ func (tv TemplateVars) parseFile(workDir, source string) error {
 	return nil
 }
 
-func loadYamlTemplate(file string, data interface{}, templateVars interface{}) error {
+func loadYamlTemplate(file string, data interface{}, templateVars interface{}, errOnMissing bool) error {
 	tmp, err := template.ParseFiles(file)
 	if err != nil {
 		return err
 	}
 	out := bytes.NewBuffer([]byte{})
-	if err := tmp.Option("missingkey=error").Funcs(builder.TemplateFuncs).Execute(out, templateVars); err != nil {
+	if errOnMissing {
+		tmp = tmp.Option("missingkey=error")
+	}
+	if err := tmp.Funcs(builder.TemplateFuncs).Execute(out, templateVars); err != nil {
 		return err
 	}
 	if err := yaml.Unmarshal(out.Bytes(), &data); err != nil {
