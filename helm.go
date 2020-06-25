@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"strings"
 
-	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
@@ -39,15 +37,12 @@ func NewChart(name string) *Chart {
 	}
 }
 
-type Image struct {
-	Repository string
-	Tag        string
-}
-
-type Volume struct {
-	Name  string
-	Host  string
-	Mount string
+type JobItem struct {
+	Name      string
+	Overrides interface{}
+	namespace string
+	group     string
+	chart     string
 }
 
 func generateYaml(_ *logrus.Entry, path string, data interface{}) error {
@@ -65,29 +60,6 @@ func generateYaml(_ *logrus.Entry, path string, data interface{}) error {
 		return writeErr
 	}
 	return nil
-}
-
-func updateVolumeOverride(basePath string, override Override) (Override, error) {
-	if _, ok := override["volumes"]; ok {
-		// if there are volume overrides, make relative paths absolute
-		var vs []Volume
-		if err := mapstructure.Decode(override["volumes"], &vs); err != nil {
-			return nil, err
-		}
-		for i := range vs {
-			vs[i].Host = strings.Replace(vs[i].Host, "./", fmt.Sprintf("%v/", basePath), 1)
-		}
-		override["volumes"] = vs
-	}
-	return override, nil
-}
-
-func updateImageOverride(image, tag string, override Override) (Override, error) {
-	if _, ok := override["image"]; !ok {
-		// if repository and tag are not in overrides, add them
-		override["image"] = Image{image, tag}
-	}
-	return override, nil
 }
 
 func helmUpdateDependency(log *logrus.Entry, group, groupChartPath string) (string, error) {
@@ -117,24 +89,25 @@ func helmUninstall(log *logrus.Entry, group, namespace string) (string, error) {
 	return runCommand(log, "", nil, cmd...)
 }
 
-type InstallConfiguration struct {
-	ServiceOverrides map[string]Override
-	BasePath         string
-	OutputDir        string
-	Tag              string
-	Verbose          bool
-	Group            string
-	Namespace        string
+func updateImageOverride(image, tag string, override Override) (Override, error) {
+	if _, ok := override["image"]; !ok {
+		// if repository and tag are not in overrides, add them
+		override["image"] = map[string]string{
+			"repository": image,
+			"tag":        tag,
+		}
+	}
+	return override, nil
 }
 
-func (c Configurd) Install(cnf InstallConfiguration) (string, error) {
+func (c Configurd) Install(ors map[string]Override, basePath, outputDir, namespace, group, tag string) (string, error) {
 	logger := c.config.Log
 
 	logger.Infof("Installing services")
-	groupChartPath := path.Join(cnf.BasePath, defaultOutputDir, cnf.OutputDir, cnf.Group)
+	groupChartPath := path.Join(basePath, defaultOutputDir, outputDir, group)
 
-	logger.Infof("Entering dir: %q", path.Join(cnf.BasePath, defaultOutputDir))
-	logger.Printf("Creating dir: %q", cnf.OutputDir)
+	logger.Infof("Entering dir: %q", path.Join(basePath, defaultOutputDir))
+	logger.Printf("Creating dir: %q", outputDir)
 	if _, err := os.Stat(groupChartPath); os.IsNotExist(err) {
 		if err := os.MkdirAll(groupChartPath, 0744); err != nil {
 			return "", fmt.Errorf("could not create a workdir directory: %w", err)
@@ -152,39 +125,35 @@ func (c Configurd) Install(cnf InstallConfiguration) (string, error) {
 		return "", fmt.Errorf("could not clean workdir directory: %w", err)
 	}
 
-	groupChart := NewChart(cnf.Group)
-	for name, override := range cnf.ServiceOverrides {
+	groupChart := NewChart(group)
+	for name, override := range ors {
 		s, err := c.Service(name)
 		if err != nil {
 			return "", err
 		}
-		override, err = updateVolumeOverride(cnf.BasePath, override)
+		ors[name], err = updateImageOverride(s.Image, s.Tag, override)
 		if err != nil {
 			return "", err
 		}
-		override, err = updateImageOverride(s.Image, s.Tag, override)
-		if err != nil {
-			return "", err
-		}
-		cnf.ServiceOverrides[name] = override
 		groupChart.Dependencies = append(groupChart.Dependencies, s.Chart)
 	}
 
 	if err := generateYaml(logger, path.Join(groupChartPath, chartFile), groupChart); err != nil {
 		return "", err
 	}
-	if err := generateYaml(logger, path.Join(groupChartPath, valuesFile), cnf.ServiceOverrides); err != nil {
+	if err := generateYaml(logger, path.Join(groupChartPath, valuesFile), ors); err != nil {
 		return "", err
 	}
 
-	output, err := helmUpdateDependency(logger, cnf.Group, groupChartPath)
+	output, err := helmUpdateDependency(logger, group, groupChartPath)
 	if err != nil {
 		return output, err
 	}
-	return helmInstall(logger, cnf.Group, cnf.Namespace, groupChartPath)
+
+	return helmInstall(logger, group, namespace, groupChartPath)
 }
 
-func (c Configurd) Uninstall(group, namespace string, verbose bool) (string, error) {
+func (c Configurd) Uninstall(group, namespace string) (string, error) {
 	logger := c.config.Log
 
 	output, err := helmUninstall(logger, group, namespace)

@@ -2,15 +2,20 @@ package configurd
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
+	"text/template"
 
+	"github.com/foomo/config-bob/builder"
 	"github.com/foomo/configurd/exampledata"
 	"github.com/sirupsen/logrus"
 
@@ -168,19 +173,23 @@ func loadGroups(log *logrus.Entry, sl serviceLoader, basePath, namespace string)
 }
 
 func loadGroup(log *logrus.Entry, sl serviceLoader, path, namespace, group string) (Group, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return Group{}, err
-	}
-	defer file.Close()
-
 	var wrapper struct {
 		Group Group `yaml:"group"`
 	}
-	if err := yaml.NewDecoder(file).Decode(&wrapper); err != nil {
-		return Group{}, fmt.Errorf("could not decode group: %w", err)
+	bs, err := parseTemplate(path, nil, false)
+	if err != nil {
+		return wrapper.Group, err
+	}
+	if err := yaml.Unmarshal(bs, &wrapper); err != nil {
+		return wrapper.Group, err
 	}
 	wrapper.Group.name = group
+	for name := range wrapper.Group.Services {
+		// the overrides have not been parsed with templates
+		// we only need this on install
+		// so use nil instead of wrong values
+		wrapper.Group.Services[name] = nil
+	}
 	return wrapper.Group, nil
 }
 
@@ -217,22 +226,19 @@ func (ns Namespace) Group(name string) (Group, error) {
 	return Group{}, errResourceNotFound(name, "group", available)
 }
 
-func (g Group) ServiceOverride(name string) (Override, error) {
-	var available []string
-	for n, v := range g.Services {
-		if name == n {
-			return v, nil
-		}
-		available = append(available, name)
+func (g Group) Overrides(basePath, namespace string, tv TemplateVars) (map[string]Override, error) {
+	path := path.Join(basePath, defaultNamespaceDir, namespace, g.name+defaultConfigFileExt)
+	var wrapper struct {
+		Group Group `yaml:"group"`
 	}
-	return nil, errResourceNotFound(name, "serviceOverride", available)
-}
-
-func (g Group) ServiceOverrides() (map[string]Override, error) {
-	if len(g.Services) == 0 {
-		return nil, fmt.Errorf("could not find any service for group: %v", g.name)
+	bs, err := parseTemplate(path, tv, true)
+	if err != nil {
+		return nil, err
 	}
-	return g.Services, nil
+	if err := yaml.Unmarshal(bs, &wrapper); err != nil {
+		return nil, err
+	}
+	return wrapper.Group.Services, nil
 }
 
 func (c Configurd) Build(s Service) (string, error) {
@@ -326,4 +332,92 @@ func errResourceNotFound(name, resource string, available []string) error {
 		return fmt.Errorf("%s not provided. Available: %s", resource, strings.Join(available, ", "))
 	}
 	return fmt.Errorf("%s '%s' not found. Available: %s", resource, name, strings.Join(available, ", "))
+}
+
+func stringInSlice(str string, slice []string) bool {
+	for _, s := range slice {
+		if s == str {
+			return true
+		}
+	}
+	return false
+}
+
+func isYaml(file string) bool {
+	return stringInSlice(filepath.Ext(file), []string{".yml, .yaml"})
+}
+
+func isJson(file string) bool {
+	return filepath.Ext(file) == ".json"
+}
+
+type TemplateVars map[string]interface{}
+
+func (tv TemplateVars) supportedFileExt() []string {
+	return []string{"yml", "yaml", "json"}
+}
+
+func NewTemplateVars(workDir string, sourceSlice []string, sourceFile string) (TemplateVars, error) {
+	tv := TemplateVars{}
+	if err := tv.parseFile(workDir, sourceFile); err != nil {
+		return nil, err
+	}
+	if err := tv.parseSlice(sourceSlice); err != nil {
+		return nil, err
+	}
+	tv["cwd"] = workDir
+	return tv, nil
+}
+
+func (tv TemplateVars) parseSlice(source []string) error {
+	for _, item := range source {
+		pieces := strings.Split(item, "=")
+		if len(pieces) != 2 || pieces[0] == "" {
+			return fmt.Errorf("Invalid format for template var %q, use x=y", item)
+		}
+		tv[pieces[0]] = pieces[1]
+	}
+	return nil
+}
+func (tv TemplateVars) parseFile(workDir, source string) error {
+	if source == "" {
+		return nil
+	}
+	if !filepath.IsAbs(source) {
+		source = path.Join(workDir, source)
+	}
+	if !isYaml(source) && !isJson(source) {
+		return fmt.Errorf("Unable to parse %q, supported: %v", source, strings.Join(tv.supportedFileExt(), ", "))
+	}
+	file, err := ioutil.ReadFile(source)
+	if err != nil {
+		return fmt.Errorf("Error while opening template file: %s", err)
+	}
+	if isYaml(source) {
+		if err := yaml.Unmarshal(file, &tv); err != nil {
+			return fmt.Errorf("Error while unmarshalling template file: %s", err)
+		}
+	}
+	if isJson(source) {
+		if err := json.Unmarshal(file, &tv); err != nil {
+			return fmt.Errorf("Error while unmarshalling template file: %s", err)
+		}
+		return nil
+	}
+	return nil
+}
+
+func parseTemplate(file string, templateVars interface{}, errOnMissing bool) ([]byte, error) {
+	tmp, err := template.ParseFiles(file)
+	if err != nil {
+		return nil, err
+	}
+	out := bytes.NewBuffer([]byte{})
+	if errOnMissing {
+		tmp = tmp.Option("missingkey=error")
+	}
+	if err := tmp.Funcs(builder.TemplateFuncs).Execute(out, templateVars); err != nil {
+		return nil, err
+	}
+	return out.Bytes(), nil
 }

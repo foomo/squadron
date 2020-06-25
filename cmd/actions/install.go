@@ -25,7 +25,7 @@ var (
 		Long:  "installs a group of services with given namespace and tag version",
 		Args:  cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			_, err := install(args[0], flagNamespace, flagTag, flagDir, flagOutputDir, flagService, flagBuild, flagVerbose)
+			_, err := install(args[0], flagNamespace, flagTag, flagDir, flagOutputDir, flagService, flagBuild, templateVars)
 			if err != nil {
 				log.WithError(err).Fatalf("Installation failed")
 			}
@@ -33,10 +33,7 @@ var (
 	}
 )
 
-func install(group, namespace, tag, workDir, outputDir, service string, buildService, verbose bool) (string, error) {
-	log := newLogger(verbose)
-	cnf := mustNewConfigurd(log, tag, workDir)
-
+func install(group, namespace, tag, workDir, outputDir, service string, buildService bool, tv configurd.TemplateVars) (string, error) {
 	ns, err := cnf.Namespace(namespace)
 	if err != nil {
 		return "", err
@@ -45,37 +42,25 @@ func install(group, namespace, tag, workDir, outputDir, service string, buildSer
 	if err != nil {
 		return "", err
 	}
-	sos, err := g.ServiceOverrides()
+	overrides, err := g.Overrides(workDir, namespace, tv)
 	if err != nil {
 		return "", err
 	}
 
 	if service != "" {
-		so, err := g.ServiceOverride(service)
-		if err != nil {
-			return "", err
-		}
-		sos = map[string]configurd.Override{
-			service: so,
+		overrides = map[string]configurd.Override{
+			service: overrides[service],
 		}
 	}
 
 	if buildService {
 		log.Printf("Building services")
-		for name := range sos {
-			output, err := build(name, tag, workDir, false, verbose)
+		for name := range overrides {
+			output, err := build(name, true)
 			if err != nil {
 				return output, err
 			}
 		}
 	}
-	return cnf.Install(configurd.InstallConfiguration{
-		ServiceOverrides: sos,
-		BasePath:         workDir,
-		OutputDir:        outputDir,
-		Tag:              tag,
-		Verbose:          verbose,
-		Group:            group,
-		Namespace:        namespace,
-	})
+	return cnf.Install(overrides, workDir, outputDir, namespace, group, tag)
 }
