@@ -255,7 +255,7 @@ func (c Squadron) Build(s Service) (string, error) {
 	env := []string{
 		fmt.Sprintf("TAG=%s", s.Tag),
 	}
-	return command(l, args...).cwd(c.config.BasePath).env(env).run()
+	return Command(l, args...).Cwd(c.config.BasePath).Env(env).Run()
 }
 
 func (c Squadron) Push(name string) (string, error) {
@@ -268,7 +268,7 @@ func (c Squadron) Push(name string) (string, error) {
 
 	l.Infof("Pushing service %v to %s", s.Name, image)
 
-	return command(l, "docker", "push", image).cwd(c.config.BasePath).run()
+	return Command(l, "docker", "push", image).Cwd(c.config.BasePath).Run()
 }
 
 func loadService(reader io.Reader, name, defaultTag, basePath string) (Service, error) {
@@ -402,7 +402,7 @@ type Cmd struct {
 	stderrWriters []io.Writer
 }
 
-func command(l *logrus.Entry, command ...string) *Cmd {
+func Command(l *logrus.Entry, command ...string) *Cmd {
 	cmd := exec.Command(command[0], command[1:]...)
 	cmd.Env = os.Environ()
 	return &Cmd{
@@ -412,22 +412,22 @@ func command(l *logrus.Entry, command ...string) *Cmd {
 	}
 }
 
-func (c *Cmd) cwd(path string) *Cmd {
+func (c *Cmd) Cwd(path string) *Cmd {
 	c.cmd.Dir = path
 	return c
 }
 
-func (c *Cmd) env(env []string) *Cmd {
+func (c *Cmd) Env(env []string) *Cmd {
 	c.cmd.Env = append(c.cmd.Env, env...)
 	return c
 }
 
-func (c *Cmd) stdin(r io.Reader) *Cmd {
+func (c *Cmd) Stdin(r io.Reader) *Cmd {
 	c.cmd.Stdin = r
 	return c
 }
 
-func (c *Cmd) stdout(w io.Writer) *Cmd {
+func (c *Cmd) Stdout(w io.Writer) *Cmd {
 	if w == nil {
 		w, _ = os.Open(os.DevNull)
 	}
@@ -435,7 +435,7 @@ func (c *Cmd) stdout(w io.Writer) *Cmd {
 	return c
 }
 
-func (c *Cmd) stderr(w io.Writer) *Cmd {
+func (c *Cmd) Stderr(w io.Writer) *Cmd {
 	if w == nil {
 		w, _ = os.Open(os.DevNull)
 	}
@@ -443,32 +443,32 @@ func (c *Cmd) stderr(w io.Writer) *Cmd {
 	return c
 }
 
-func (c *Cmd) timeout(t time.Duration) *Cmd {
+func (c *Cmd) Timeout(t time.Duration) *Cmd {
 	c.t = t
 	return c
 }
 
-func (c *Cmd) noWait() *Cmd {
+func (c *Cmd) NoWait() *Cmd {
 	c.wait = false
 	return c
 }
 
-func (c *Cmd) preStart(f func() error) *Cmd {
+func (c *Cmd) PreStart(f func() error) *Cmd {
 	c.preStartFunc = f
 	return c
 }
 
-func (c *Cmd) postStart(f func() error) *Cmd {
+func (c *Cmd) PostStart(f func() error) *Cmd {
 	c.postStartFunc = f
 	return c
 }
 
-func (c *Cmd) postEnd(f func() error) *Cmd {
+func (c *Cmd) PostEnd(f func() error) *Cmd {
 	c.postEndFunc = f
 	return c
 }
 
-func (c *Cmd) run() (string, error) {
+func (c *Cmd) Run() (string, error) {
 	c.l.Tracef("executing %q", c.cmd.String())
 
 	combinedBuf := new(bytes.Buffer)

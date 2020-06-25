@@ -65,7 +65,7 @@ func generateYaml(_ *logrus.Entry, path string, data interface{}) error {
 func helmUpdateDependency(l *logrus.Entry, group, groupChartPath string) (string, error) {
 	l.Infof("Running helm dependency update for group: %v", group)
 	cmd := []string{"helm", "dependency", "update", groupChartPath}
-	return command(l, cmd...).run()
+	return Command(l, cmd...).Run()
 }
 
 func helmInstall(l *logrus.Entry, group, namespace, groupChartPath string) (string, error) {
@@ -75,7 +75,7 @@ func helmInstall(l *logrus.Entry, group, namespace, groupChartPath string) (stri
 		"-n", namespace,
 		"--install",
 	}
-	return command(l, cmd...).run()
+	return Command(l, cmd...).Run()
 }
 
 func helmUninstall(l *logrus.Entry, group, namespace string) (string, error) {
@@ -86,7 +86,7 @@ func helmUninstall(l *logrus.Entry, group, namespace string) (string, error) {
 		"-n", namespace,
 		group,
 	}
-	return command(l, cmd...).run()
+	return Command(l, cmd...).Run()
 }
 
 func updateImageOverride(image, tag string, override Override) (Override, error) {
