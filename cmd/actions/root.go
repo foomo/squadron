@@ -33,7 +33,7 @@ var (
 				return err
 			}
 			// cnf
-			cnf, err = newConfigurd(newLogger(flagVerbose), flagTag, flagDir, templateVars)
+			cnf, err = newConfigurd(newLogger(flagVerbose), flagTag, flagDir)
 			if err != nil {
 				return err
 			}
@@ -51,12 +51,11 @@ var (
 	flagTemplateFile  string
 )
 
-func newConfigurd(log *logrus.Entry, tag, basePath string, tv configurd.TemplateVars) (configurd.Configurd, error) {
+func newConfigurd(log *logrus.Entry, tag, basePath string) (configurd.Configurd, error) {
 	config := configurd.Config{
 		Tag:          tag,
 		BasePath:     basePath,
 		Log:          log,
-		TemplateVars: tv,
 	}
 
 	return configurd.New(config)

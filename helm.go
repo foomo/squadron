@@ -21,24 +21,25 @@ type Volume struct {
 
 type ServiceItem struct {
 	Name      string
-	overrides interface{}
+	Overrides interface{}
 	namespace string
 	group     string
 	chart     string
 }
 
 func (si ServiceItem) getOverrides(basePath string, tv TemplateVars) (interface{}, error) {
-	if si.overrides == nil {
-		path := path.Join(basePath, defaultNamespaceDir, si.namespace, si.group, defaultConfigFileExt)
-		var wrapper struct {
-			Group Group `yaml:"group"`
-		}
-		if err := loadYamlTemplate(path, &wrapper, tv, true); err != nil {
-			return nil, err
-		}
-		si.overrides = wrapper.Group.Services[si.Name].overrides
+	path := path.Join(basePath, defaultNamespaceDir, si.namespace, fmt.Sprintf("%v%v", si.group, defaultConfigFileExt))
+	var wrapper struct {
+		Group Group `yaml:"group"`
 	}
-	return si.overrides, nil
+	bs, err := parseTemplate(path, tv, true)
+	if err != nil {
+		return nil, err
+	}
+	if err := yaml.Unmarshal(bs, &wrapper); err != nil {
+		return nil, err
+	}
+	return wrapper.Group.Services[si.Name].Overrides, nil
 }
 
 type JobItem struct {
@@ -157,7 +158,7 @@ type InstallConfiguration struct {
 	BasePath     string
 	OutputDir    string
 	Tag          string
-	TemplateVars map[string]interface{}
+	TemplateVars TemplateVars
 	Verbose      bool
 }
 

@@ -48,10 +48,9 @@ type Namespace struct {
 }
 
 type Config struct {
-	Tag          string
-	BasePath     string
-	Log          *logrus.Entry
-	TemplateVars TemplateVars
+	Tag      string
+	BasePath string
+	Log      *logrus.Entry
 }
 
 type Configurd struct {
@@ -166,18 +165,21 @@ func loadGroups(log *logrus.Entry, sl serviceLoader, basePath, namespace string)
 }
 
 func loadGroup(log *logrus.Entry, sl serviceLoader, path, namespace, group string) (Group, error) {
-	var g Group
 	var wrapper struct {
 		Group Group `yaml:"group"`
 	}
-	if err := loadYamlTemplate(path, &wrapper, nil, false); err != nil {
+	bs, err := parseTemplate(path, nil, false)
+	if err != nil {
+		return wrapper.Group, err
+	}
+	if err := yaml.Unmarshal(bs, &wrapper); err != nil {
 		return wrapper.Group, err
 	}
 	for name := range wrapper.Group.Services {
 		log.Infof("Loading group item: %v", name)
 		svc, err := sl(name)
 		if err != nil {
-			return g, err
+			return Group{}, err
 		}
 		wrapper.Group.Services[name] = loadServiceItem(wrapper.Group.Services[name], svc.Name, namespace, group, svc.Chart)
 	}
@@ -347,11 +349,11 @@ func stringInSlice(str string, slice []string) bool {
 }
 
 func isYaml(file string) bool {
-	return stringInSlice(filepath.Ext(file), []string{"yml, yaml"})
+	return stringInSlice(filepath.Ext(file), []string{".yml, .yaml"})
 }
 
 func isJson(file string) bool {
-	return filepath.Ext(file) == "json"
+	return filepath.Ext(file) == ".json"
 }
 
 type TemplateVars map[string]interface{}
@@ -410,20 +412,17 @@ func (tv TemplateVars) parseFile(workDir, source string) error {
 	return nil
 }
 
-func loadYamlTemplate(file string, data interface{}, templateVars interface{}, errOnMissing bool) error {
+func parseTemplate(file string, templateVars interface{}, errOnMissing bool) ([]byte, error) {
 	tmp, err := template.ParseFiles(file)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	out := bytes.NewBuffer([]byte{})
 	if errOnMissing {
 		tmp = tmp.Option("missingkey=error")
 	}
 	if err := tmp.Funcs(builder.TemplateFuncs).Execute(out, templateVars); err != nil {
-		return err
+		return nil, err
 	}
-	if err := yaml.Unmarshal(out.Bytes(), &data); err != nil {
-		return err
-	}
-	return nil
+	return out.Bytes(), nil
 }

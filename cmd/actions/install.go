@@ -25,7 +25,7 @@ var (
 		Long:  "installs a group of services with given namespace and tag version",
 		Args:  cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			_, err := install(args[0], flagNamespace, flagTag, flagDir, flagOutputDir, flagService, flagBuild, flagVerbose)
+			_, err := install(args[0], flagNamespace, flagTag, flagDir, flagOutputDir, flagService, flagBuild, templateVars)
 			if err != nil {
 				log.WithError(err).Fatalf("Installation failed")
 			}
@@ -33,7 +33,7 @@ var (
 	}
 )
 
-func install(group, namespace, tag, workDir, outputDir, service string, buildService, verbose bool) (string, error) {
+func install(group, namespace, tag, workDir, outputDir, service string, buildService bool, tv configurd.TemplateVars) (string, error) {
 	ns, err := cnf.Namespace(namespace)
 	if err != nil {
 		return "", err
@@ -69,7 +69,6 @@ func install(group, namespace, tag, workDir, outputDir, service string, buildSer
 		BasePath:     workDir,
 		OutputDir:    outputDir,
 		Tag:          tag,
-		TemplateVars: templateVars,
-		Verbose:      verbose,
+		TemplateVars: tv,
 	})
 }

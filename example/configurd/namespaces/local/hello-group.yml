@@ -26,4 +26,3 @@ group:
           hosts:
             - name: {{ .host }}
               path: /services/hi
-jobs:
