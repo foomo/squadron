@@ -6,7 +6,6 @@ import (
 	"path"
 
 	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
 )
 
 type ChartDependency struct {
@@ -43,23 +42,6 @@ type JobItem struct {
 	namespace string
 	group     string
 	chart     string
-}
-
-func generateYaml(_ *logrus.Entry, path string, data interface{}) error {
-	out, marshalErr := yaml.Marshal(data)
-	if marshalErr != nil {
-		return marshalErr
-	}
-	file, crateErr := os.Create(path)
-	if crateErr != nil {
-		return crateErr
-	}
-	defer file.Close()
-	_, writeErr := file.Write(out)
-	if writeErr != nil {
-		return writeErr
-	}
-	return nil
 }
 
 func helmUpdateDependency(l *logrus.Entry, group, groupChartPath string) (string, error) {
@@ -138,10 +120,10 @@ func (c Squadron) Install(ors map[string]Override, basePath, outputDir, namespac
 		groupChart.Dependencies = append(groupChart.Dependencies, s.Chart)
 	}
 
-	if err := generateYaml(logger, path.Join(groupChartPath, chartFile), groupChart); err != nil {
+	if err := GenerateYaml(path.Join(groupChartPath, chartFile), groupChart); err != nil {
 		return "", err
 	}
-	if err := generateYaml(logger, path.Join(groupChartPath, valuesFile), ors); err != nil {
+	if err := GenerateYaml(path.Join(groupChartPath, valuesFile), ors); err != nil {
 		return "", err
 	}
 

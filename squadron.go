@@ -518,3 +518,20 @@ func (c *Cmd) Run() (string, error) {
 
 	return combinedBuf.String(), nil
 }
+
+func GenerateYaml(path string, data interface{}) error {
+	out, marshalErr := yaml.Marshal(data)
+	if marshalErr != nil {
+		return marshalErr
+	}
+	file, crateErr := os.Create(path)
+	if crateErr != nil {
+		return crateErr
+	}
+	defer file.Close()
+	_, writeErr := file.Write(out)
+	if writeErr != nil {
+		return writeErr
+	}
+	return nil
+}
