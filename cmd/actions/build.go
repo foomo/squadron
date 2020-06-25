@@ -18,11 +18,9 @@ var buildCmd = &cobra.Command{
 	Use:   "build [SERVICE]",
 	Short: "Build a service with a given tag",
 	Args:  cobra.MinimumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		out, err := build(args[0], flagPush)
-		if err != nil {
-			log.WithError(err).WithField("output", out).Fatal("Build failed")
-		}
+	RunE: func(cmd *cobra.Command, args []string) error {
+		_, err := build(args[0], flagPush)
+		return err
 	},
 }
 

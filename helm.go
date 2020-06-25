@@ -62,31 +62,31 @@ func generateYaml(_ *logrus.Entry, path string, data interface{}) error {
 	return nil
 }
 
-func helmUpdateDependency(log *logrus.Entry, group, groupChartPath string) (string, error) {
-	log.Infof("Running helm dependency update for group: %v", group)
+func helmUpdateDependency(l *logrus.Entry, group, groupChartPath string) (string, error) {
+	l.Infof("Running helm dependency update for group: %v", group)
 	cmd := []string{"helm", "dependency", "update", groupChartPath}
-	return runCommand(log, "", nil, cmd...)
+	return command(l, cmd...).run()
 }
 
-func helmInstall(log *logrus.Entry, group, namespace, groupChartPath string) (string, error) {
-	log.Infof("Running helm install for group: %v", group)
+func helmInstall(l *logrus.Entry, group, namespace, groupChartPath string) (string, error) {
+	l.Infof("Running helm install for group: %v", group)
 	cmd := []string{
 		"helm", "upgrade", group, groupChartPath,
 		"-n", namespace,
 		"--install",
 	}
-	return runCommand(log, "", nil, cmd...)
+	return command(l, cmd...).run()
 }
 
-func helmUninstall(log *logrus.Entry, group, namespace string) (string, error) {
-	log.Infof("Running helm uninstall for group: %v", group)
+func helmUninstall(l *logrus.Entry, group, namespace string) (string, error) {
+	l.Infof("Running helm uninstall for group: %v", group)
 	cmd := []string{
 		"helm",
 		"uninstall",
 		"-n", namespace,
 		group,
 	}
-	return runCommand(log, "", nil, cmd...)
+	return command(l, cmd...).run()
 }
 
 func updateImageOverride(image, tag string, override Override) (Override, error) {

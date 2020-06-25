@@ -1,31 +1,23 @@
 package actions
 
 import (
-	"os"
-	"path"
-
 	"github.com/foomo/configurd"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
 var (
-	log     = logrus.New()
 	rootCmd = &cobra.Command{
 		Use: "configurd",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			if cmd.Name() == "help" || cmd.Name() == "init" {
 				return nil
 			}
+			log = newLogger(flagVerbose)
+			var err error
 			// flagDir
-			wdir, err := os.Getwd()
-			if err != nil {
+			if err := ValidatePath(".", &flagDir); err != nil {
 				return err
-			}
-			if flagDir != "" {
-				flagDir = path.Join(wdir, flagDir)
-			} else {
-				flagDir = wdir
 			}
 			// templateVars
 			templateVars, err = configurd.NewTemplateVars(flagDir, flagTemplateSlice, flagTemplateFile)
@@ -33,7 +25,7 @@ var (
 				return err
 			}
 			// cnf
-			cnf, err = newConfigurd(newLogger(flagVerbose), flagTag, flagDir)
+			cnf, err = newConfigurd(log, flagTag, flagDir)
 			if err != nil {
 				return err
 			}
@@ -41,6 +33,7 @@ var (
 		},
 	}
 
+	log               *logrus.Entry
 	cnf               configurd.Configurd
 	templateVars      configurd.TemplateVars
 	flagTag           string
@@ -53,9 +46,9 @@ var (
 
 func newConfigurd(log *logrus.Entry, tag, basePath string) (configurd.Configurd, error) {
 	config := configurd.Config{
-		Tag:          tag,
-		BasePath:     basePath,
-		Log:          log,
+		Tag:      tag,
+		BasePath: basePath,
+		Log:      log,
 	}
 
 	return configurd.New(config)

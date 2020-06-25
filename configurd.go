@@ -1,7 +1,6 @@
 package configurd
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -14,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+	"time"
 
 	"github.com/foomo/config-bob/builder"
 	"github.com/foomo/configurd/exampledata"
@@ -83,9 +83,9 @@ func relativePath(path, basePath string) string {
 }
 
 func New(config Config) (Configurd, error) {
-	log := config.Log
-	log.Infof("Parsing configuration files")
-	log.Infof("Entering dir: %q", config.BasePath)
+	l := config.Log
+	l.Infof("Parsing configuration files")
+	l.Infof("Entering dir: %q", config.BasePath)
 
 	c := Configurd{
 		config: config,
@@ -104,7 +104,7 @@ func New(config Config) (Configurd, error) {
 			defer file.Close()
 
 			name := strings.TrimSuffix(info.Name(), defaultConfigFileExt)
-			log.Infof("Loading service: %v, from: %q", name, relativePath(path, config.BasePath))
+			l.Infof("Loading service: %v, from: %q", name, relativePath(path, config.BasePath))
 			svc, err := loadService(file, name, config.Tag, config.BasePath)
 			if err != nil {
 				return err
@@ -118,7 +118,7 @@ func New(config Config) (Configurd, error) {
 		return Configurd{}, err
 	}
 
-	c.Namespaces, err = loadNamespaces(log, c.Service, config.BasePath)
+	c.Namespaces, err = loadNamespaces(l, c.Service, config.BasePath)
 
 	if err != nil {
 		return Configurd{}, err
@@ -127,7 +127,7 @@ func New(config Config) (Configurd, error) {
 	return c, nil
 }
 
-func loadNamespaces(log *logrus.Entry, sl serviceLoader, basePath string) ([]Namespace, error) {
+func loadNamespaces(l *logrus.Entry, sl serviceLoader, basePath string) ([]Namespace, error) {
 	var nss []Namespace
 	namespaceDir := path.Join(basePath, defaultNamespaceDir)
 	err := filepath.Walk(namespaceDir, func(path string, info os.FileInfo, err error) error {
@@ -135,8 +135,8 @@ func loadNamespaces(log *logrus.Entry, sl serviceLoader, basePath string) ([]Nam
 			return err
 		}
 		if info.IsDir() && path != namespaceDir {
-			log.Infof("Loading namespace: %v, from: %q", info.Name(), relativePath(path, basePath))
-			gs, err := loadGroups(log, sl, basePath, info.Name())
+			l.Infof("Loading namespace: %v, from: %q", info.Name(), relativePath(path, basePath))
+			gs, err := loadGroups(l, sl, basePath, info.Name())
 			if err != nil {
 				return err
 			}
@@ -151,7 +151,7 @@ func loadNamespaces(log *logrus.Entry, sl serviceLoader, basePath string) ([]Nam
 	return nss, err
 }
 
-func loadGroups(log *logrus.Entry, sl serviceLoader, basePath, namespace string) ([]Group, error) {
+func loadGroups(l *logrus.Entry, sl serviceLoader, basePath, namespace string) ([]Group, error) {
 	var gs []Group
 	groupPath := path.Join(basePath, defaultNamespaceDir, namespace)
 	err := filepath.Walk(groupPath, func(path string, info os.FileInfo, err error) error {
@@ -160,8 +160,8 @@ func loadGroups(log *logrus.Entry, sl serviceLoader, basePath, namespace string)
 		}
 		if !info.IsDir() && (strings.HasSuffix(path, defaultConfigFileExt)) {
 			name := strings.TrimSuffix(info.Name(), defaultConfigFileExt)
-			log.Infof("Loading group: %v, from: %q", name, relativePath(path, basePath))
-			g, err := loadGroup(log, sl, path, namespace, name)
+			l.Infof("Loading group: %v, from: %q", name, relativePath(path, basePath))
+			g, err := loadGroup(l, sl, path, namespace, name)
 			if err != nil {
 				return err
 			}
@@ -172,7 +172,7 @@ func loadGroups(log *logrus.Entry, sl serviceLoader, basePath, namespace string)
 	return gs, err
 }
 
-func loadGroup(log *logrus.Entry, sl serviceLoader, path, namespace, group string) (Group, error) {
+func loadGroup(l *logrus.Entry, sl serviceLoader, path, namespace, group string) (Group, error) {
 	var wrapper struct {
 		Group Group `yaml:"group"`
 	}
@@ -255,8 +255,7 @@ func (c Configurd) Build(s Service) (string, error) {
 	env := []string{
 		fmt.Sprintf("TAG=%s", s.Tag),
 	}
-
-	return runCommand(l, c.config.BasePath, env, args...)
+	return command(l, args...).cwd(c.config.BasePath).env(env).run()
 }
 
 func (c Configurd) Push(name string) (string, error) {
@@ -268,7 +267,8 @@ func (c Configurd) Push(name string) (string, error) {
 	image := fmt.Sprintf("%s:%s", s.Image, s.Tag)
 
 	l.Infof("Pushing service %v to %s", s.Name, image)
-	return runCommand(l, c.config.BasePath, nil, "docker", "push", image)
+
+	return command(l, "docker", "push", image).cwd(c.config.BasePath).run()
 }
 
 func loadService(reader io.Reader, name, defaultTag, basePath string) (Service, error) {
@@ -289,42 +289,9 @@ func loadService(reader io.Reader, name, defaultTag, basePath string) (Service, 
 	return wrapper.Service, nil
 }
 
-func Init(log *logrus.Logger, dir string) (string, error) {
-	log.Infof("Downloading example configuration into dir: %q", dir)
+func Init(l *logrus.Entry, dir string) (string, error) {
+	l.Infof("Downloading example configuration into dir: %q", dir)
 	return "", exampledata.RestoreAssets(dir, "")
-}
-
-func runCommand(log *logrus.Entry, cwd string, env []string, command ...string) (string, error) {
-	cmd := exec.Command(command[0], command[1:]...)
-	cmd.Dir = cwd
-	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, env...)
-
-	log.Tracef("executing %q from wd %q", cmd.String(), cmd.Dir)
-
-	cmdReader, err := cmd.StdoutPipe()
-	if err != nil {
-		return "", err
-	}
-	cmd.Stderr = cmd.Stdout
-
-	if err := cmd.Start(); err != nil {
-		return "", err
-	}
-
-	var out []string
-	scanner := bufio.NewScanner(cmdReader)
-	for scanner.Scan() {
-		line := scanner.Text()
-		log.Trace(line)
-		out = append(out, line)
-	}
-	output := strings.Join(out, "\n")
-	if err := cmd.Wait(); err != nil {
-		return output, fmt.Errorf("%s, %s", err.Error(), output)
-	}
-
-	return output, err
 }
 
 func errResourceNotFound(name, resource string, available []string) error {
@@ -420,4 +387,133 @@ func parseTemplate(file string, templateVars interface{}, errOnMissing bool) ([]
 		return nil, err
 	}
 	return out.Bytes(), nil
+}
+
+type Cmd struct {
+	l             *logrus.Entry
+	cmd           *exec.Cmd
+	wait          bool
+	t             time.Duration
+	preStartFunc  func() error
+	postStartFunc func() error
+	postEndFunc   func() error
+	stdoutWriters []io.Writer
+	stderrWriters []io.Writer
+}
+
+func command(l *logrus.Entry, command ...string) *Cmd {
+	cmd := exec.Command(command[0], command[1:]...)
+	cmd.Env = os.Environ()
+	return &Cmd{
+		l:    l,
+		cmd:  cmd,
+		wait: true,
+	}
+}
+
+func (c *Cmd) cwd(path string) *Cmd {
+	c.cmd.Dir = path
+	return c
+}
+
+func (c *Cmd) env(env []string) *Cmd {
+	c.cmd.Env = append(c.cmd.Env, env...)
+	return c
+}
+
+func (c *Cmd) stdin(r io.Reader) *Cmd {
+	c.cmd.Stdin = r
+	return c
+}
+
+func (c *Cmd) stdout(w io.Writer) *Cmd {
+	if w == nil {
+		w, _ = os.Open(os.DevNull)
+	}
+	c.stdoutWriters = append(c.stdoutWriters, w)
+	return c
+}
+
+func (c *Cmd) stderr(w io.Writer) *Cmd {
+	if w == nil {
+		w, _ = os.Open(os.DevNull)
+	}
+	c.stderrWriters = append(c.stderrWriters, w)
+	return c
+}
+
+func (c *Cmd) timeout(t time.Duration) *Cmd {
+	c.t = t
+	return c
+}
+
+func (c *Cmd) noWait() *Cmd {
+	c.wait = false
+	return c
+}
+
+func (c *Cmd) preStart(f func() error) *Cmd {
+	c.preStartFunc = f
+	return c
+}
+
+func (c *Cmd) postStart(f func() error) *Cmd {
+	c.postStartFunc = f
+	return c
+}
+
+func (c *Cmd) postEnd(f func() error) *Cmd {
+	c.postEndFunc = f
+	return c
+}
+
+func (c *Cmd) run() (string, error) {
+	c.l.Tracef("executing %q", c.cmd.String())
+
+	combinedBuf := new(bytes.Buffer)
+	traceWriter := c.l.WriterLevel(logrus.TraceLevel)
+	warnWriter := c.l.WriterLevel(logrus.WarnLevel)
+
+	c.stdoutWriters = append(c.stdoutWriters, combinedBuf, traceWriter)
+	c.stderrWriters = append(c.stderrWriters, combinedBuf, warnWriter)
+	c.cmd.Stdout = io.MultiWriter(c.stdoutWriters...)
+	c.cmd.Stderr = io.MultiWriter(c.stderrWriters...)
+
+	if c.preStartFunc != nil {
+		if err := c.preStartFunc(); err != nil {
+			return "", err
+		}
+	}
+
+	if err := c.cmd.Start(); err != nil {
+		return "", err
+	}
+
+	if c.postStartFunc != nil {
+		if err := c.postStartFunc(); err != nil {
+			return "", err
+		}
+	}
+
+	if c.wait {
+		if c.t != 0 {
+			timer := time.AfterFunc(c.t, func() {
+				c.cmd.Process.Kill()
+			})
+			defer timer.Stop()
+		}
+
+		if err := c.cmd.Wait(); err != nil {
+			if c.t == 0 {
+				return "", err
+			}
+		}
+		if c.postEndFunc != nil {
+			if err := c.postEndFunc(); err != nil {
+				return "", err
+			}
+		}
+	}
+
+	return combinedBuf.String(), nil
 }

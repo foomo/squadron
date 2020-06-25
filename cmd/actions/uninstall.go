@@ -14,11 +14,9 @@ var (
 		Short: "uninstalls a group",
 		Long:  "uninstalls a group with given namespace and tag version",
 		Args:  cobra.MinimumNArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			_, err := uninstall(args[0], flagNamespace)
-			if err != nil {
-				log.WithError(err).Fatalf("Uninstallation failed")
-			}
+			return err
 		},
 	}
 )

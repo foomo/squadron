@@ -12,11 +12,9 @@ var initCmd = &cobra.Command{
 	Short: "initializes an example",
 	Long:  "initializes an example project with configurd",
 	Args:  cobra.MinimumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		_, err := initialize(args[0], flagDir, flagVerbose)
-		if err != nil {
-			log.WithError(err).Fatalf("Initialization failed")
-		}
+		return err
 	},
 }
 

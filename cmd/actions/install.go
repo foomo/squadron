@@ -24,11 +24,12 @@ var (
 		Short: "installs a group of services",
 		Long:  "installs a group of services with given namespace and tag version",
 		Args:  cobra.MinimumNArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
-			_, err := install(args[0], flagNamespace, flagTag, flagDir, flagOutputDir, flagService, flagBuild, templateVars)
-			if err != nil {
-				log.WithError(err).Fatalf("Installation failed")
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := CheckIngressController(log, "ingress-nginx"); err != nil {
+				return err
 			}
+			_, err := install(args[0], flagNamespace, flagTag, flagDir, flagOutputDir, flagService, flagBuild, templateVars)
+			return err
 		},
 	}
 )
