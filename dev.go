@@ -3,6 +3,7 @@ package configurd
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"net"
@@ -12,6 +13,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/foomo/configurd/bindata"
@@ -119,7 +121,28 @@ func Delve(l *logrus.Entry, deployment *v1.Deployment, pod, container, input str
 		return "", err
 	}
 
-	defer DelveCleanup(l, deployment, pod, container)
+	// one locked point / helper to clean up
+	cleanupLock := sync.Mutex{}
+	cleanupStarted := false
+	cleanup := func(reason string) {
+		cleanupLock.Lock()
+		defer cleanupLock.Unlock()
+		cl := l.WithField("reason", reason)
+		if cleanupStarted {
+			cl.Warning("aborting cleanup already started")
+			return
+		}
+		cleanupStarted = true
+		cl.Info("cleaning up")
+		out, errDelveCleanup := DelveCleanup(cl, deployment, pod, container)
+		if errDelveCleanup != nil {
+			cl.WithError(errDelveCleanup).Error(out)
+		} else {
+			cl.Info(out)
+		}
+	}
+	defer cleanup("termination")
+
 	signalCapture(l)
 
 	l.Infof("exposing deployment %v for delve", deployment.Name)
@@ -152,19 +175,35 @@ func Delve(l *logrus.Entry, deployment *v1.Deployment, pod, container, input str
 
 	execPod(l, pod, container, deployment.Namespace, cmd).postStart(
 		func() error {
-			if err := tryDelveServer(l, host, port, 5, 1*time.Second); err != nil {
-				return err
+			client, errTryDelveServer := tryDelveServer(l, host, port, 5, 1*time.Second)
+			if errTryDelveServer != nil {
+				return errTryDelveServer
 			}
 			go func() {
 				// TODO add cancelable context
+				i := 0
 				for {
 					time.Sleep(time.Millisecond * 500)
-					_, errState := checkDelveServer(l.WithField("task", "watch-dlv"), host, port, 1*time.Second)
+					_, state, errState := checkDelveServer(l.WithField("task", "watch-dlv"), host, port, 3*time.Second, client)
+
 					if errState != nil {
-						l.WithError(errState).Error("dlv seems to be down")
-						DelveCleanup(l, deployment, pod, container)
+						l.WithError(errState).Error("dlv seems to be down on", host, ":", port)
+						cleanup("dlv is down")
 						os.Exit(1)
+					} else {
+						if i%20 == 0 {
+							l.WithField("pid", client.ProcessPid()).Info("dlv is up")
+						}
+						if state.Exited {
+							cleanup("dlv state.Exited == true")
+							os.Exit(1)
+						} else if !state.Running {
+							// there still is the case, when you are in a breakpoint on a zombie process
+							// dlv will not handle that gracefully
+							l.WithField("pid", client.ProcessPid()).Info("dlv is up - process is not running - is it a zombie ?!")
+						}
 					}
+					i++
 				}
 			}()
 
@@ -487,23 +526,42 @@ func signalCapture(l *logrus.Entry) {
 	}()
 }
 
-func checkDelveServer(l *logrus.Entry, host string, port int, timeout time.Duration) (*api.DebuggerState, error) {
-	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%v:%v", host, port), timeout)
-	if err != nil {
-		return nil, err
+func checkDelveServer(
+	l *logrus.Entry, host string, port int, timeout time.Duration,
+	client *rpc2.RPCClient,
+) (
+	*rpc2.RPCClient, *api.DebuggerState, error,
+) {
+	var conn net.Conn
+
+	if client == nil {
+		// get a tcp connection for the rpc dlv rpc client
+		conn, err := net.DialTimeout("tcp", fmt.Sprintf("%v:%v", host, port), timeout)
+		if err != nil {
+			return nil, nil, err
+		}
+		timer := time.AfterFunc(timeout, func() {
+			errClose := conn.Close()
+			if errClose != nil {
+				l.WithError(errClose).Error("could not close stale connection")
+			}
+			l.Warn("stale connection timeout")
+		})
+		// rpc2.NewClientFromConn(conn) will implicitly call setAPIVersion on the dlv server
+		// while there might be a connection to a socket, that was created with
+		// kubctl expose it still might happen, that dlv will not answer
+		// for this reason we are creating this hack
+		client = rpc2.NewClientFromConn(conn)
+		if !timer.Stop() {
+			// we ripped out the underlying connection
+			return nil, nil, errors.New("stale connection to dlv, aborting after timeout")
+		}
 	}
-	defer conn.Close()
-	timer := time.AfterFunc(timeout, func() {
-		//rpc2 client tends to hang if it cannot connect
-		conn.Close()
-	})
-	client := rpc2.NewClientFromConn(conn)
-	st, errSt := client.GetState()
-	defer client.Disconnect(false)
-	if !timer.Stop() {
-		return nil, fmt.Errorf("delve connection timed out after %s", timeout)
+	st, errState := client.GetStateNonBlocking()
+	if errState == nil && conn != nil {
+		conn.SetDeadline(time.Now().Add(time.Second * 3600))
 	}
-	return st, errSt
+	return client, st, errState
 }
 
 func runOpen(l *logrus.Entry, path string) (string, error) {
@@ -521,17 +579,18 @@ func runOpen(l *logrus.Entry, path string) (string, error) {
 	return command(l, cmd...).run()
 }
 
-func tryDelveServer(l *logrus.Entry, host string, port, tries int, sleep time.Duration) error {
-	err := tryCall(tries, sleep, func(i int) error {
+func tryDelveServer(l *logrus.Entry, host string, port, tries int, sleep time.Duration) (client *rpc2.RPCClient, err error) {
+	errTryCall := tryCall(tries, sleep, func(i int) error {
 		l.Infof("checking delve connection on %v:%v (%v/%v)", host, port, i, tries)
-		_, errCheck := checkDelveServer(l, host, port, 1*time.Second)
+		newClient, _, errCheck := checkDelveServer(l, host, port, 1*time.Second, nil)
+		client = newClient
 		return errCheck
 	})
-	if err != nil {
-		return err
+	if errTryCall != nil {
+		return nil, errTryCall
 	}
 	l.Infof("delve server listening on %v:%v", host, port)
-	return nil
+	return client, nil
 }
 
 func launchVscode(l *logrus.Entry, goModDir, pod, host string, port, tries int, sleep time.Duration) error {
