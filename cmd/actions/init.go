@@ -3,14 +3,14 @@ package actions
 import (
 	"path"
 
-	"github.com/foomo/configurd"
+	"github.com/foomo/squadron"
 	"github.com/spf13/cobra"
 )
 
 var initCmd = &cobra.Command{
 	Use:   "init [NAME]",
 	Short: "initializes an example",
-	Long:  "initializes an example project with configurd",
+	Long:  "initializes an example project with squadron",
 	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		_, err := initialize(args[0], flagDir, flagVerbose)
@@ -19,5 +19,5 @@ var initCmd = &cobra.Command{
 }
 
 func initialize(name, dir string, flagVerbose bool) (string, error) {
-	return configurd.Init(log, path.Join(dir, name))
+	return squadron.Init(log, path.Join(dir, name))
 }

@@ -1,7 +1,7 @@
 package actions
 
 import (
-	"github.com/foomo/configurd"
+	"github.com/foomo/squadron"
 	"github.com/spf13/cobra"
 )
 
@@ -34,7 +34,7 @@ var (
 	}
 )
 
-func install(group, namespace, tag, workDir, outputDir, service string, buildService bool, tv configurd.TemplateVars) (string, error) {
+func install(group, namespace, tag, workDir, outputDir, service string, buildService bool, tv squadron.TemplateVars) (string, error) {
 	ns, err := cnf.Namespace(namespace)
 	if err != nil {
 		return "", err
@@ -49,7 +49,7 @@ func install(group, namespace, tag, workDir, outputDir, service string, buildSer
 	}
 
 	if service != "" {
-		overrides = map[string]configurd.Override{
+		overrides = map[string]squadron.Override{
 			service: overrides[service],
 		}
 	}

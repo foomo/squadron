@@ -1,4 +1,4 @@
-package configurd
+package squadron
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ import (
 
 type ChartDependency struct {
 	Name       string
-	Repository string
+	Repository string `yaml:"repository,omitempty"`
 	Version    string
 	Alias      string
 }
@@ -100,7 +100,7 @@ func updateImageOverride(image, tag string, override Override) (Override, error)
 	return override, nil
 }
 
-func (c Configurd) Install(ors map[string]Override, basePath, outputDir, namespace, group, tag string) (string, error) {
+func (c Squadron) Install(ors map[string]Override, basePath, outputDir, namespace, group, tag string) (string, error) {
 	logger := c.config.Log
 
 	logger.Infof("Installing services")
@@ -153,7 +153,7 @@ func (c Configurd) Install(ors map[string]Override, basePath, outputDir, namespa
 	return helmInstall(logger, group, namespace, groupChartPath)
 }
 
-func (c Configurd) Uninstall(group, namespace string) (string, error) {
+func (c Squadron) Uninstall(group, namespace string) (string, error) {
 	logger := c.config.Log
 
 	output, err := helmUninstall(logger, group, namespace)

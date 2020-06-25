@@ -1,6 +1,6 @@
 package main
 
-import "github.com/foomo/configurd/cmd/actions"
+import "github.com/foomo/squadron/cmd/actions"
 
 func main() {
 	actions.Execute()

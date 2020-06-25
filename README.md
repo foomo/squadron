@@ -1,33 +1,33 @@
-<a href="https://travis-ci.org/foomo/configurd">
-    <img src="https://travis-ci.org/foomo/configurd.svg?branch=master" alt="Travis CI: build status">
+<a href="https://travis-ci.org/foomo/squadron">
+    <img src="https://travis-ci.org/foomo/squadron.svg?branch=master" alt="Travis CI: build status">
 </a>
-<a href="https://goreportcard.com/report/github.com/foomo/configurd">
-    <img src="https://goreportcard.com/badge/github.com/foomo/configurd" alt="GoReportCard">
+<a href="https://goreportcard.com/report/github.com/foomo/squadron">
+    <img src="https://goreportcard.com/badge/github.com/foomo/squadron" alt="GoReportCard">
 </a>
-<a href="https://godoc.org/github.com/foomo/configurd">
-    <img src="https://godoc.org/github.com/foomo/configurd?status.svg" alt="GoDoc">
+<a href="https://godoc.org/github.com/foomo/squadron">
+    <img src="https://godoc.org/github.com/foomo/squadron?status.svg" alt="GoDoc">
 </a>
 
-# Configurd
+# Squadron
 
 Application for managing kubernetes microservice environment
 
 ## Quickstart
 
 ```text
-# Create a new folder with an example application with configurd:
-$ configurd init [NAME]
+# Create a new folder with an example application with squadron:
+$ squadron init [NAME]
 
 $ cd [NAME]/
 
 # Run install for predefined group and namespace:
-$ configurd install [GROUP] -n [NAMESPACE]
+$ squadron install [GROUP] -n [NAMESPACE]
 ```
 
 ## Structure
 
 ```text
-/configurd
+/squadron
     /charts (Helm Charts)
         /<chart name>
     /services
@@ -44,5 +44,5 @@ $ configurd install [GROUP] -n [NAMESPACE]
 
 ```text
 # See:
-$ configurd help
+$ squadron help
 ```

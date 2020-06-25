@@ -1,7 +1,7 @@
 # .goreleaser.yml
 # Build customization
 builds:
-  - binary: configurd
+  - binary: squadron
     main:   ./cmd/main.go
     env:
       - CGO_ENABLED=0
@@ -25,7 +25,7 @@ brews:
   # Reporitory to push the tap to.
   - github:
       owner: foomo
-      name: homebrew-configurd
-    caveats: "configurd -h"
-    homepage: "https://github.com/foomo/configurd"
+      name: homebrew-squadron
+    caveats: "squadron -h"
+    homepage: "https://github.com/foomo/squadron"
     description: "CLI utility manage infrastructure as code with helm"

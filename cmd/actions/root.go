@@ -1,31 +1,32 @@
 package actions
 
 import (
-	"github.com/foomo/configurd"
+	"github.com/foomo/squadron"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
 var (
+	log     = newLogger(flagVerbose)
 	rootCmd = &cobra.Command{
-		Use: "configurd",
+		Use: "squadron",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			if cmd.Name() == "help" || cmd.Name() == "init" {
 				return nil
 			}
-			log = newLogger(flagVerbose)
+
 			var err error
 			// flagDir
 			if err := ValidatePath(".", &flagDir); err != nil {
 				return err
 			}
 			// templateVars
-			templateVars, err = configurd.NewTemplateVars(flagDir, flagTemplateSlice, flagTemplateFile)
+			templateVars, err = squadron.NewTemplateVars(flagDir, flagTemplateSlice, flagTemplateFile)
 			if err != nil {
 				return err
 			}
 			// cnf
-			cnf, err = newConfigurd(log, flagTag, flagDir)
+			cnf, err = newSquadron(log, flagTag, flagDir)
 			if err != nil {
 				return err
 			}
@@ -33,9 +34,9 @@ var (
 		},
 	}
 
-	log               *logrus.Entry
-	cnf               configurd.Configurd
-	templateVars      configurd.TemplateVars
+	//log               *logrus.Entry
+	cnf               squadron.Squadron
+	templateVars      squadron.TemplateVars
 	flagTag           string
 	flagDir           string
 	flagVerbose       bool
@@ -44,14 +45,13 @@ var (
 	flagTemplateFile  string
 )
 
-func newConfigurd(log *logrus.Entry, tag, basePath string) (configurd.Configurd, error) {
-	config := configurd.Config{
+func newSquadron(log *logrus.Entry, tag, basePath string) (squadron.Squadron, error) {
+	config := squadron.Config{
 		Tag:      tag,
 		BasePath: basePath,
 		Log:      log,
 	}
-
-	return configurd.New(config)
+	return squadron.New(config)
 }
 
 func init() {
@@ -67,7 +67,6 @@ func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatal(err)
 	}
-
 }
 
 func newLogger(verbose bool) *logrus.Entry {

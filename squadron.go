@@ -1,4 +1,4 @@
-package configurd
+package squadron
 
 import (
 	"bytes"
@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/foomo/config-bob/builder"
-	"github.com/foomo/configurd/exampledata"
+	"github.com/foomo/squadron/exampledata"
 	"github.com/sirupsen/logrus"
 
 	"gopkg.in/yaml.v2"
@@ -24,9 +24,9 @@ import (
 
 const (
 	defaultConfigFileExt   = ".yml"
-	defaultServiceDir      = "configurd/services"
-	defaultNamespaceDir    = "configurd/namespaces"
-	defaultOutputDir       = "configurd/.workdir"
+	defaultServiceDir      = "squadron/services"
+	defaultNamespaceDir    = "squadron/namespaces"
+	defaultOutputDir       = "squadron/.workdir"
 	chartsDir              = "charts"
 	chartLockFile          = "Chart.lock"
 	chartFile              = "Chart.yaml"
@@ -61,7 +61,7 @@ type Config struct {
 	Log      *logrus.Entry
 }
 
-type Configurd struct {
+type Squadron struct {
 	config     Config
 	Services   []Service
 	Templates  []string
@@ -82,12 +82,12 @@ func relativePath(path, basePath string) string {
 	return strings.Replace(path, basePath+"/", "", -1)
 }
 
-func New(config Config) (Configurd, error) {
+func New(config Config) (Squadron, error) {
 	l := config.Log
 	l.Infof("Parsing configuration files")
 	l.Infof("Entering dir: %q", config.BasePath)
 
-	c := Configurd{
+	c := Squadron{
 		config: config,
 	}
 
@@ -115,13 +115,13 @@ func New(config Config) (Configurd, error) {
 	})
 
 	if err != nil {
-		return Configurd{}, err
+		return Squadron{}, err
 	}
 
 	c.Namespaces, err = loadNamespaces(l, c.Service, config.BasePath)
 
 	if err != nil {
-		return Configurd{}, err
+		return Squadron{}, err
 	}
 
 	return c, nil
@@ -193,7 +193,7 @@ func loadGroup(l *logrus.Entry, sl serviceLoader, path, namespace, group string)
 	return wrapper.Group, nil
 }
 
-func (c Configurd) Service(name string) (Service, error) {
+func (c Squadron) Service(name string) (Service, error) {
 	var available []string
 	for _, s := range c.Services {
 		if s.Name == name {
@@ -204,7 +204,7 @@ func (c Configurd) Service(name string) (Service, error) {
 	return Service{}, errResourceNotFound(name, "service", available)
 }
 
-func (c Configurd) Namespace(name string) (Namespace, error) {
+func (c Squadron) Namespace(name string) (Namespace, error) {
 	var available []string
 	for _, ns := range c.Namespaces {
 		if ns.name == name {
@@ -241,7 +241,7 @@ func (g Group) Overrides(basePath, namespace string, tv TemplateVars) (map[strin
 	return wrapper.Group.Services, nil
 }
 
-func (c Configurd) Build(s Service) (string, error) {
+func (c Squadron) Build(s Service) (string, error) {
 	l := c.config.Log
 	if s.Build == "" {
 		return "", ErrBuildNotConfigured
@@ -258,7 +258,7 @@ func (c Configurd) Build(s Service) (string, error) {
 	return command(l, args...).cwd(c.config.BasePath).env(env).run()
 }
 
-func (c Configurd) Push(name string) (string, error) {
+func (c Squadron) Push(name string) (string, error) {
 	l := c.config.Log
 	s, err := c.Service(name)
 	if err != nil {
@@ -282,9 +282,10 @@ func loadService(reader io.Reader, name, defaultTag, basePath string) (Service, 
 	if wrapper.Service.Tag == "" {
 		wrapper.Service.Tag = defaultTag
 	}
+	// correct the relative path for the file:// chart repository
 	wrapper.Service.Chart.Repository =
 		strings.Replace(wrapper.Service.Chart.Repository, "file://./", fmt.Sprintf("file://%v/", basePath), 1)
-	// correct the relative path for the file:// chart repository
+
 	wrapper.Service.Chart.Alias = name
 	return wrapper.Service, nil
 }

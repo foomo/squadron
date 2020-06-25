@@ -23,7 +23,7 @@ before_script:
 
 script:
   # Run all the tests with the race detector enabled
-  - overalls -project=github.com/foomo/configurd -covermode=atomic -debug -- -race -v -coverpkg=./...
+  - overalls -project=github.com/foomo/squadron -covermode=atomic -debug -- -race -v -coverpkg=./...
 
 after_success:
   # Run linter
