@@ -25,18 +25,18 @@ var buildCmd = &cobra.Command{
 }
 
 func build(service string, push bool) (string, error) {
-	svc, err := cnf.Service(service)
+	svc, err := sq.Service(service)
 	if err != nil {
 		return "", fmt.Errorf("could not find service: %w", err)
 	}
 
-	out, err := cnf.Build(svc)
+	out, err := sq.Build(svc)
 	if err != nil {
 		return out, err
 	}
 
 	if push {
-		return cnf.Push(service)
+		return sq.Push(service)
 	}
 
 	return out, nil

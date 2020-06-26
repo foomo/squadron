@@ -22,7 +22,7 @@ var (
 )
 
 func uninstall(group, namespace string) (string, error) {
-	ns, err := cnf.Namespace(namespace)
+	ns, err := sq.Namespace(namespace)
 	if err != nil {
 		return "", err
 	}
@@ -31,5 +31,5 @@ func uninstall(group, namespace string) (string, error) {
 		return "", err
 	}
 
-	return cnf.Uninstall(group, namespace)
+	return sq.Uninstall(group, namespace)
 }

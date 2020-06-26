@@ -62,7 +62,9 @@ type Config struct {
 }
 
 type Squadron struct {
-	config     Config
+	l          *logrus.Entry
+	basePath   string
+	tag        string
 	Services   []Service
 	Templates  []string
 	Namespaces []Namespace
@@ -82,16 +84,12 @@ func relativePath(path, basePath string) string {
 	return strings.Replace(path, basePath+"/", "", -1)
 }
 
-func New(config Config) (Squadron, error) {
-	l := config.Log
+func New(l *logrus.Entry, tag, basePath string) (*Squadron, error) {
+	c := Squadron{l: l, basePath: basePath, tag: tag}
+
 	l.Infof("Parsing configuration files")
-	l.Infof("Entering dir: %q", config.BasePath)
-
-	c := Squadron{
-		config: config,
-	}
-
-	serviceDir := path.Join(config.BasePath, defaultServiceDir)
+	l.Infof("Entering dir: %q", basePath)
+	serviceDir := path.Join(basePath, defaultServiceDir)
 	err := filepath.Walk(serviceDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -104,8 +102,8 @@ func New(config Config) (Squadron, error) {
 			defer file.Close()
 
 			name := strings.TrimSuffix(info.Name(), defaultConfigFileExt)
-			l.Infof("Loading service: %v, from: %q", name, relativePath(path, config.BasePath))
-			svc, err := loadService(file, name, config.Tag, config.BasePath)
+			l.Infof("Loading service: %v, from: %q", name, relativePath(path, basePath))
+			svc, err := loadService(file, name, tag, basePath)
 			if err != nil {
 				return err
 			}
@@ -115,16 +113,16 @@ func New(config Config) (Squadron, error) {
 	})
 
 	if err != nil {
-		return Squadron{}, err
+		return nil, err
 	}
 
-	c.Namespaces, err = loadNamespaces(l, c.Service, config.BasePath)
+	c.Namespaces, err = loadNamespaces(l, c.Service, basePath)
 
 	if err != nil {
-		return Squadron{}, err
+		return nil, err
 	}
 
-	return c, nil
+	return &c, nil
 }
 
 func loadNamespaces(l *logrus.Entry, sl serviceLoader, basePath string) ([]Namespace, error) {
@@ -242,7 +240,6 @@ func (g Group) Overrides(basePath, namespace string, tv TemplateVars) (map[strin
 }
 
 func (c Squadron) Build(s Service) (string, error) {
-	l := c.config.Log
 	if s.Build == "" {
 		return "", ErrBuildNotConfigured
 	}
@@ -251,24 +248,23 @@ func (c Squadron) Build(s Service) (string, error) {
 	if args[0] == "docker" {
 		args = append(strings.Split(s.Build, " "), "-t", fmt.Sprintf("%v:%v", s.Image, s.Tag))
 	}
-	l.Infof("Building service: %v", s.Name)
+	c.l.Infof("Building service: %v", s.Name)
 	env := []string{
 		fmt.Sprintf("TAG=%s", s.Tag),
 	}
-	return Command(l, args...).Cwd(c.config.BasePath).Env(env).Run()
+	return Command(c.l, args...).Cwd(c.basePath).Env(env).Run()
 }
 
 func (c Squadron) Push(name string) (string, error) {
-	l := c.config.Log
 	s, err := c.Service(name)
 	if err != nil {
 		return "", fmt.Errorf("could not find service: %w", err)
 	}
 	image := fmt.Sprintf("%s:%s", s.Image, s.Tag)
 
-	l.Infof("Pushing service %v to %s", s.Name, image)
+	c.l.Infof("Pushing service %v to %s", s.Name, image)
 
-	return Command(l, "docker", "push", image).Cwd(c.config.BasePath).Run()
+	return Command(c.l, "docker", "push", image).Cwd(c.basePath).Run()
 }
 
 func loadService(reader io.Reader, name, defaultTag, basePath string) (Service, error) {
@@ -291,7 +287,7 @@ func loadService(reader io.Reader, name, defaultTag, basePath string) (Service, 
 }
 
 func Init(l *logrus.Entry, dir string) (string, error) {
-	l.Infof("Downloading example configuration into dir: %q", dir)
+	l.Infof("Copying example configuration into dir: %q", dir)
 	return "", exampledata.RestoreAssets(dir, "")
 }
 

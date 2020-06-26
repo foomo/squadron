@@ -7,11 +7,12 @@ import (
 )
 
 var (
-	log     = newLogger(flagVerbose)
 	rootCmd = &cobra.Command{
 		Use: "squadron",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			if cmd.Name() == "help" || cmd.Name() == "init" {
+
+			log = newLogger(flagVerbose)
+			if cmd.Name() == "help" || cmd.Name() == "init" || cmd.Name() == "version" {
 				return nil
 			}
 
@@ -26,7 +27,7 @@ var (
 				return err
 			}
 			// cnf
-			cnf, err = newSquadron(log, flagTag, flagDir)
+			sq, err = squadron.New(log, flagTag, flagDir)
 			if err != nil {
 				return err
 			}
@@ -34,8 +35,8 @@ var (
 		},
 	}
 
-	//log               *logrus.Entry
-	cnf               squadron.Squadron
+	log               *logrus.Entry
+	sq                *squadron.Squadron
 	templateVars      squadron.TemplateVars
 	flagTag           string
 	flagDir           string
@@ -44,15 +45,6 @@ var (
 	flagTemplateSlice []string
 	flagTemplateFile  string
 )
-
-func newSquadron(log *logrus.Entry, tag, basePath string) (squadron.Squadron, error) {
-	config := squadron.Config{
-		Tag:      tag,
-		BasePath: basePath,
-		Log:      log,
-	}
-	return squadron.New(config)
-}
 
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&flagTag, "tag", "t", "latest", "Specifies the image tag")

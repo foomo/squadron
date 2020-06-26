@@ -35,7 +35,7 @@ var (
 )
 
 func install(group, namespace, tag, workDir, outputDir, service string, buildService bool, tv squadron.TemplateVars) (string, error) {
-	ns, err := cnf.Namespace(namespace)
+	ns, err := sq.Namespace(namespace)
 	if err != nil {
 		return "", err
 	}
@@ -63,5 +63,5 @@ func install(group, namespace, tag, workDir, outputDir, service string, buildSer
 			}
 		}
 	}
-	return cnf.Install(overrides, workDir, outputDir, namespace, group, tag)
+	return sq.Install(overrides, workDir, outputDir, namespace, group, tag)
 }

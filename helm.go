@@ -83,13 +83,11 @@ func updateImageOverride(image, tag string, override Override) (Override, error)
 }
 
 func (c Squadron) Install(ors map[string]Override, basePath, outputDir, namespace, group, tag string) (string, error) {
-	logger := c.config.Log
-
-	logger.Infof("Installing services")
+	c.l.Infof("Installing services")
 	groupChartPath := path.Join(basePath, defaultOutputDir, outputDir, group)
 
-	logger.Infof("Entering dir: %q", path.Join(basePath, defaultOutputDir))
-	logger.Printf("Creating dir: %q", outputDir)
+	c.l.Infof("Entering dir: %q", path.Join(basePath, defaultOutputDir))
+	c.l.Printf("Creating dir: %q", outputDir)
 	if _, err := os.Stat(groupChartPath); os.IsNotExist(err) {
 		if err := os.MkdirAll(groupChartPath, 0744); err != nil {
 			return "", fmt.Errorf("could not create a workdir directory: %w", err)
@@ -97,12 +95,12 @@ func (c Squadron) Install(ors map[string]Override, basePath, outputDir, namespac
 	}
 
 	chartsPath := path.Join(groupChartPath, chartsDir)
-	logger.Infof("Removing dir: %q", chartsPath)
+	c.l.Infof("Removing dir: %q", chartsPath)
 	if err := os.RemoveAll(chartsPath); err != nil {
 		return "", fmt.Errorf("could not clean charts directory: %w", err)
 	}
 	groupChartLockPath := path.Join(groupChartPath, chartLockFile)
-	logger.Infof("Removing file: %q", groupChartLockPath)
+	c.l.Infof("Removing file: %q", groupChartLockPath)
 	if err := os.RemoveAll(groupChartLockPath); err != nil {
 		return "", fmt.Errorf("could not clean workdir directory: %w", err)
 	}
@@ -127,18 +125,16 @@ func (c Squadron) Install(ors map[string]Override, basePath, outputDir, namespac
 		return "", err
 	}
 
-	output, err := helmUpdateDependency(logger, group, groupChartPath)
+	output, err := helmUpdateDependency(c.l, group, groupChartPath)
 	if err != nil {
 		return output, err
 	}
 
-	return helmInstall(logger, group, namespace, groupChartPath)
+	return helmInstall(c.l, group, namespace, groupChartPath)
 }
 
 func (c Squadron) Uninstall(group, namespace string) (string, error) {
-	logger := c.config.Log
-
-	output, err := helmUninstall(logger, group, namespace)
+	output, err := helmUninstall(c.l, group, namespace)
 	if err != nil {
 		return output, err
 	}
