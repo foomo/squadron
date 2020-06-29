@@ -10,7 +10,9 @@
 
 # Squadron
 
-Application for managing kubernetes microservice environment
+Application for managing kubernetes microservice environments. 
+
+Use it, if a helm chart is not enough in order to organize multiple services into a effective squadron.
 
 ## Quickstart
 
@@ -46,3 +48,7 @@ $ squadron install [GROUP] -n [NAMESPACE]
 # See:
 $ squadron help
 ```
+
+## See also
+
+Sometimes as a sailor or a pirate you might need to get a grapple : go get [github.com/foomo/gograpple/...](https//:github.com/foomo/gograpple)
