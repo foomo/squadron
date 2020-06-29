@@ -1,4 +1,5 @@
 group:
+  version: 0.0.1
   services:
     hello-service:
       image:

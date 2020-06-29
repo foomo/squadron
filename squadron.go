@@ -42,7 +42,8 @@ var (
 type Override map[string]interface{}
 
 type Group struct {
-	name             string
+	Name             string `yaml:"-"`
+	Version          string
 	ServiceOverrides map[string]Override `yaml:"services"`
 	JobOverrides     map[string]Override `yaml:"jobs"`
 }
@@ -107,18 +108,16 @@ type Chart struct {
 	Description  string
 	Type         string
 	Version      string
-	AppVersion   string `yaml:"appVersion"`
 	Dependencies []ChartDependency
 }
 
-func newChart(name string) *Chart {
+func newChart(name, version string) *Chart {
 	return &Chart{
 		APIVersion:  defaultChartAPIVersion,
 		Name:        name,
 		Description: fmt.Sprintf("A helm parent chart for group %v", name),
 		Type:        defaultChartType,
-		Version:     defaultChartVersion,
-		AppVersion:  defaultChartAppVersion,
+		Version:     version,
 	}
 }
 
@@ -265,10 +264,10 @@ func (sq Squadron) Namespace(name string) (Namespace, error) {
 func (ns Namespace) Group(name string) (Group, error) {
 	var available []string
 	for _, g := range ns.groups {
-		if g.name == name {
+		if g.Name == name {
 			return g, nil
 		}
-		available = append(available, g.name)
+		available = append(available, g.Name)
 	}
 	return Group{}, errResourceNotFound(name, "group", available)
 }
@@ -294,6 +293,7 @@ func (sq Squadron) getOverrides(namespace, group string, services []string, tv T
 }
 
 func (sq Squadron) Build(s Service) (string, error) {
+	sq.l.Infof("Building service: %v", s.Name)
 	if s.Build.Command == "" {
 		return "", ErrBuildNotConfigured
 	}
@@ -303,7 +303,6 @@ func (sq Squadron) Build(s Service) (string, error) {
 		image := fmt.Sprintf("%v:%v", s.Build.Image, s.Build.Tag)
 		args = append(strings.Split(s.Build.Command, " "), "-t", image)
 	}
-	sq.l.Infof("Building service: %v", s.Name)
 	env := []string{
 		fmt.Sprintf("TAG=%s", s.Build.Tag),
 	}
@@ -335,7 +334,7 @@ func (sq Squadron) CheckIngressController(name string) error {
 	return nil
 }
 
-func (sq Squadron) Install(namespace, group string, services []string, tv TemplateVars, outputDir string) (string, error) {
+func (sq Squadron) Install(namespace, group, groupVersion string, services []string, tv TemplateVars, outputDir string) (string, error) {
 	sq.l.Infof("Installing services")
 	groupChartPath := path.Join(sq.basePath, defaultOutputDir, outputDir, group)
 
@@ -358,7 +357,7 @@ func (sq Squadron) Install(namespace, group string, services []string, tv Templa
 		return "", fmt.Errorf("could not clean workdir directory: %w", err)
 	}
 
-	groupChart := newChart(group)
+	groupChart := newChart(group, groupVersion)
 	for _, service := range services {
 		s, err := sq.Service(service)
 		if err != nil {
@@ -483,7 +482,7 @@ func loadGroup(l *logrus.Entry, sl serviceLoader, path, namespace, group string)
 	if err := yaml.Unmarshal(bs, &wrapper); err != nil {
 		return wrapper.Group, err
 	}
-	wrapper.Group.name = group
+	wrapper.Group.Name = group
 	for name := range wrapper.Group.ServiceOverrides {
 		// the overrides have not been parsed with templates
 		// we only need this on install

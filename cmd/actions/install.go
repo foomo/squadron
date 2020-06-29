@@ -54,7 +54,7 @@ func install(group, namespace, outputDir string, buildService bool, tv squadron.
 			out, err := build(service, flagPush)
 			if err != nil {
 				if err == squadron.ErrBuildNotConfigured {
-					log.Warnf("skipping, build command not set for service %q", service)
+					log.Warnf("Build command not set for service %q, skipping", service)
 				} else {
 					return out, err
 				}
@@ -64,5 +64,5 @@ func install(group, namespace, outputDir string, buildService bool, tv squadron.
 	if err := sq.CheckIngressController("ingress-nginx"); err != nil {
 		return "", err
 	}
-	return sq.Install(namespace, group, services, tv, outputDir)
+	return sq.Install(namespace, g.Name, g.Version, services, tv, outputDir)
 }
