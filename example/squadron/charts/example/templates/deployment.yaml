@@ -35,12 +35,14 @@ spec:
             - name: container-port
               containerPort: {{ .Values.service.containerPort }}
               protocol: TCP
+          {{- with .Values.service.livenessProbe }}
           livenessProbe:
-            tcpSocket:
-              port: container-port
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.service.readinessProbe }}
           readinessProbe:
-            tcpSocket:
-              port: container-port
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
