@@ -1,8 +1,10 @@
 service:
-  image: image-name # specifies the image name that will be used when addressing this service
-  tag: 1.12.0 # optional. if not specified, it's overriden by -t parameter. specific tag to use with this service if it needs to be hard coded
-  build: "docker build ." # command used to build this image (if needed)
+  build:
+    image: image-name # specifies the image name that will be used when building this service
+    tag: 1.12.0 # optional. if not specified, it's overriden by -t parameter
+    command: "docker build ." # command used to build this image (if needed), if omitted, build is skipped
   chart:
-    name: nginx-ingress # name of the chart
-    repository: https://helm.nginx.com/stable # repository of the chart
-    version: 0.4.1 # available version of the chart on the repository
+    name: nginx-ingress # name of the chart, required
+    repository: https://helm.nginx.com/stable # repository of the chart, url or file, if omitted helms stable repo is used
+    # repository: file://./squadron/charts/example # path to the chart dir relative to the base path (example/)
+    version: 0.4.1 # available version of the chart on the repository, required

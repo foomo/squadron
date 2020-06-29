@@ -1,6 +1,7 @@
 service:
-  image: foomo/squadron-hi
-  build: "docker build application/"
+  build:
+    image: foomo/squadron-hi
+    command: "docker build application/"
   chart:
     name: example
     repository: file://./squadron/charts/example
