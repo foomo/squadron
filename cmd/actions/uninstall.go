@@ -31,5 +31,5 @@ func uninstall(group, namespace string) (string, error) {
 		return "", err
 	}
 
-	return sq.Uninstall(group, namespace)
+	return sq.Uninstall(group)
 }

@@ -8,33 +8,36 @@ import (
 func init() {
 	installCmd.Flags().BoolVarP(&flagBuild, "build", "b", false, "Build service group before publishing")
 	installCmd.Flags().StringVarP(&flagOutputDir, "output", "o", "default", "Specifies output directory")
-	installCmd.Flags().StringVarP(&flagNamespace, "namespace", "n", "default", "Specifies the namespace")
-	installCmd.Flags().StringVarP(&flagService, "service", "s", "", "Specifies the service to work with")
+	installCmd.Flags().BoolVarP(&flagPush, "push", "p", false, "Pushes the built service to the registry")
+	installCmd.Flags().StringSliceVar(&flagTemplateSlice, "template-vars", nil, "Specifies template vars x=y")
+	installCmd.Flags().StringVar(&flagTemplateFile, "template-file", "", "Specifies the template file with vars")
 }
 
 var (
-	flagBuild     bool
-	flagOutputDir string
-	flagService   string
+	flagBuild         bool
+	flagOutputDir     string
+	flagTemplateSlice []string
+	flagTemplateFile  string
 )
 
 var (
 	installCmd = &cobra.Command{
-		Use:   "install [GROUP] -n {NAMESPACE} -t {TAG} -s {SERVICE}",
+		Use:   "install [GROUP] -n {NAMESPACE} -t {TAG}",
 		Short: "installs a group of services",
 		Long:  "installs a group of services with given namespace and tag version",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := CheckIngressController(log, "ingress-nginx"); err != nil {
+			templateVars, err := squadron.NewTemplateVars(flagDir, flagTemplateSlice, flagTemplateFile)
+			if err != nil {
 				return err
 			}
-			_, err := install(args[0], flagNamespace, flagTag, flagDir, flagOutputDir, flagService, flagBuild, templateVars)
+			_, err = install(args[0], flagNamespace, flagOutputDir, flagBuild, templateVars)
 			return err
 		},
 	}
 )
 
-func install(group, namespace, tag, workDir, outputDir, service string, buildService bool, tv squadron.TemplateVars) (string, error) {
+func install(group, namespace, outputDir string, buildService bool, tv squadron.TemplateVars) (string, error) {
 	ns, err := sq.Namespace(namespace)
 	if err != nil {
 		return "", err
@@ -43,25 +46,23 @@ func install(group, namespace, tag, workDir, outputDir, service string, buildSer
 	if err != nil {
 		return "", err
 	}
-	overrides, err := g.Overrides(workDir, namespace, tv)
-	if err != nil {
-		return "", err
-	}
-
-	if service != "" {
-		overrides = map[string]squadron.Override{
-			service: overrides[service],
-		}
-	}
+	services := g.Services()
 
 	if buildService {
-		log.Printf("Building services")
-		for name := range overrides {
-			output, err := build(name, true)
+		log.Infof("Building services")
+		for _, service := range services {
+			out, err := build(service, flagPush)
 			if err != nil {
-				return output, err
+				if err == squadron.ErrBuildNotConfigured {
+					log.Warnf("skipping, build command not set for service %q", service)
+				} else {
+					return out, err
+				}
 			}
 		}
 	}
-	return sq.Install(overrides, workDir, outputDir, namespace, group, tag)
+	if err := sq.CheckIngressController("ingress-nginx"); err != nil {
+		return "", err
+	}
+	return sq.Install(namespace, group, services, tv, outputDir)
 }

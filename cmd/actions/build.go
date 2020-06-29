@@ -7,12 +7,10 @@ import (
 )
 
 func init() {
-	buildCmd.Flags().BoolVarP(&flagPush, "push", "p", false, "Pushes the service to the registry")
+	buildCmd.Flags().BoolVarP(&flagPush, "push", "p", false, "Pushes the built service to the registry")
 }
 
-var (
-	flagPush bool
-)
+var flagPush bool
 
 var buildCmd = &cobra.Command{
 	Use:   "build [SERVICE]",
@@ -36,7 +34,7 @@ func build(service string, push bool) (string, error) {
 	}
 
 	if push {
-		return sq.Push(service)
+		return sq.Push(svc)
 	}
 
 	return out, nil

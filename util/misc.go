@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -199,4 +200,20 @@ func IsYaml(file string) bool {
 
 func IsJson(file string) bool {
 	return filepath.Ext(file) == ".json"
+}
+
+func ValidatePath(wd string, p *string) error {
+	if !filepath.IsAbs(*p) {
+		*p = path.Join(wd, *p)
+	}
+	absPath, err := filepath.Abs(*p)
+	if err != nil {
+		return err
+	}
+	_, err = os.Stat(absPath)
+	if err != nil {
+		return err
+	}
+	*p = absPath
+	return nil
 }
