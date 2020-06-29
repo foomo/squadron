@@ -1,6 +1,5 @@
 {{- if .Values.ingress.hosts }}
 {{ $serviceName := .Chart.Name }}
-{{ $servicePort := .Values.service.containerPort }}
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
@@ -31,6 +30,6 @@ spec:
           - path: {{ .path }}
             backend:
               serviceName: {{ $serviceName }}
-              servicePort: {{ $servicePort }}
+              servicePort: {{ .port }}
     {{ end }}
 {{- end }}

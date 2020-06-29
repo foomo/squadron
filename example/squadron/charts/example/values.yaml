@@ -36,7 +36,8 @@ securityContext: {}
 service:
   type: ClusterIP
   port: 80
-  containerPort: 3000
+  ports:
+    - 3000
   livenessProbe: {}
   readinessProbe: {}
 

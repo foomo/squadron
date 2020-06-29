@@ -32,9 +32,10 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           ports:
-            - name: container-port
-              containerPort: {{ .Values.service.containerPort }}
+          {{- range .Values.service.ports }}
+            - containerPort: {{ . }}
               protocol: TCP
+          {{- end }}
           {{- with .Values.service.livenessProbe }}
           livenessProbe:
             {{- toYaml . | nindent 12 }}

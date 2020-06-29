@@ -8,12 +8,14 @@ group:
       args:
         - "--greeting=hehe"
       service:
-        containerPort: 80
-        port: 80
+        ports:
+          - 80
+          - 8080
       ingress:
         hosts:
           - name: {{ .host }}
             path: /services/hello
+            port: 80
       volumes:
         - name: config
           host: {{ .cwd }}/application
@@ -26,8 +28,10 @@ group:
         - "--greeting=hai"
       service:
         containerPort: 80
-        port: 80
+        ports:
+          - 80
       ingress:
         hosts:
           - name: {{ .host }}
             path: /services/hi
+            port: 80

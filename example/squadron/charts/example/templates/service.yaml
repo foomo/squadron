@@ -12,5 +12,8 @@ spec:
     app.kubernetes.io/name: {{ .Chart.Name }}
   type: {{ .Values.service.type }}
   ports:
-    - port: {{ .Values.service.containerPort }}
+    {{ range .Values.service.ports }}
+    - name: "{{ . }}"
+      port: {{ . }}
       protocol: TCP
+    {{ end }}
