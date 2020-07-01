@@ -16,28 +16,6 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type CliCommand struct {
-	l       *logrus.Entry
-	command []string
-}
-
-func NewCliCommand(l *logrus.Entry, name string) (*CliCommand, error) {
-	_, err := exec.LookPath(name)
-	if err != nil {
-		return nil, err
-	}
-	return &CliCommand{l, []string{name}}, nil
-}
-
-func (cc *CliCommand) Args(args ...string) *CliCommand {
-	cc.command = append(cc.command, args...)
-	return cc
-}
-
-func (cc CliCommand) GetCommand() []string {
-	return cc.command
-}
-
 func RelativePath(path, basePath string) string {
 	return strings.Replace(path, basePath+"/", "", -1)
 }
@@ -58,39 +36,51 @@ func ParseTemplate(file string, templateVars interface{}, errOnMissing bool) ([]
 }
 
 type Cmd struct {
-	l             *logrus.Entry
-	cmd           *exec.Cmd
+	l *logrus.Entry
+	// cmd           *exec.Cmd
+	command       []string
+	cwd           string
+	env           []string
+	stdin         io.Reader
+	stdoutWriters []io.Writer
+	stderrWriters []io.Writer
 	wait          bool
 	t             time.Duration
 	preStartFunc  func() error
 	postStartFunc func() error
 	postEndFunc   func() error
-	stdoutWriters []io.Writer
-	stderrWriters []io.Writer
 }
 
-func Command(l *logrus.Entry, command ...string) *Cmd {
-	cmd := exec.Command(command[0], command[1:]...)
-	cmd.Env = os.Environ()
+func NewCommand(l *logrus.Entry, name string) *Cmd {
 	return &Cmd{
-		l:    l,
-		cmd:  cmd,
-		wait: true,
+		l:       l,
+		command: []string{name},
+		wait:    true,
+		env:     os.Environ(),
 	}
 }
 
-func (c *Cmd) Cwd(path string) *Cmd {
-	c.cmd.Dir = path
+func (c Cmd) Command() []string {
+	return c.command
+}
+
+func (c *Cmd) Args(args ...string) *Cmd {
+	c.command = append(c.command, args...)
 	return c
 }
 
-func (c *Cmd) Env(env []string) *Cmd {
-	c.cmd.Env = append(c.cmd.Env, env...)
+func (c *Cmd) Cwd(path string) *Cmd {
+	c.cwd = path
+	return c
+}
+
+func (c *Cmd) Env(env ...string) *Cmd {
+	c.env = append(c.env, env...)
 	return c
 }
 
 func (c *Cmd) Stdin(r io.Reader) *Cmd {
-	c.cmd.Stdin = r
+	c.stdin = r
 	return c
 }
 
@@ -136,7 +126,9 @@ func (c *Cmd) PostEnd(f func() error) *Cmd {
 }
 
 func (c *Cmd) Run() (string, error) {
-	c.l.Tracef("executing %q", c.cmd.String())
+	cmd := exec.Command(c.command[0], c.command[1:]...)
+	cmd.Env = c.env
+	c.l.Tracef("executing %q", cmd.String())
 
 	combinedBuf := new(bytes.Buffer)
 	traceWriter := c.l.WriterLevel(logrus.TraceLevel)
@@ -144,8 +136,8 @@ func (c *Cmd) Run() (string, error) {
 
 	c.stdoutWriters = append(c.stdoutWriters, combinedBuf, traceWriter)
 	c.stderrWriters = append(c.stderrWriters, combinedBuf, warnWriter)
-	c.cmd.Stdout = io.MultiWriter(c.stdoutWriters...)
-	c.cmd.Stderr = io.MultiWriter(c.stderrWriters...)
+	cmd.Stdout = io.MultiWriter(c.stdoutWriters...)
+	cmd.Stderr = io.MultiWriter(c.stderrWriters...)
 
 	if c.preStartFunc != nil {
 		if err := c.preStartFunc(); err != nil {
@@ -153,7 +145,7 @@ func (c *Cmd) Run() (string, error) {
 		}
 	}
 
-	if err := c.cmd.Start(); err != nil {
+	if err := cmd.Start(); err != nil {
 		return "", err
 	}
 
@@ -166,12 +158,12 @@ func (c *Cmd) Run() (string, error) {
 	if c.wait {
 		if c.t != 0 {
 			timer := time.AfterFunc(c.t, func() {
-				c.cmd.Process.Kill()
+				cmd.Process.Kill()
 			})
 			defer timer.Stop()
 		}
 
-		if err := c.cmd.Wait(); err != nil {
+		if err := cmd.Wait(); err != nil {
 			if c.t == 0 {
 				return "", err
 			}

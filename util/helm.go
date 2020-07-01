@@ -2,27 +2,25 @@ package util
 
 import "github.com/sirupsen/logrus"
 
-func NewHelmCommand(l *logrus.Entry) (*CliCommand, error) {
-	return NewCliCommand(l, "helm")
+type HelmCmd struct {
+	*Cmd
 }
 
-func (cc CliCommand) UpdateDependency(chart, chartPath string) (string, error) {
-	cc.l.Infof("Running helm dependency update for chart: %v", chart)
-	cmd := append(cc.GetCommand(), "dependency", "update", chartPath)
-	return Command(cc.l, cmd...).Run()
+func NewHelmCommand(l *logrus.Entry) *HelmCmd {
+	return &HelmCmd{NewCommand(l, "helm")}
 }
 
-func (cc CliCommand) Install(chart, chartPath string) (string, error) {
-	cc.l.Infof("Running helm install for chart: %v", chart)
-	cmd := append(cc.GetCommand(),
-		"upgrade", chart, chartPath,
-		"--install")
-	return Command(cc.l, cmd...).Run()
+func (c HelmCmd) UpdateDependency(chart, chartPath string) (string, error) {
+	c.l.Infof("Running helm dependency update for chart: %v", chart)
+	return c.Args("dependency", "update", chartPath).Run()
 }
 
-func (cc CliCommand) Uninstall(chart string) (string, error) {
-	cc.l.Infof("Running helm uninstall for chart: %v", chart)
-	cmd := append(cc.GetCommand(),
-		"uninstall", chart)
-	return Command(cc.l, cmd...).Run()
+func (c HelmCmd) Install(chart, chartPath string) (string, error) {
+	c.l.Infof("Running helm install for chart: %v", chart)
+	return c.Args("upgrade", chart, chartPath, "--install").Run()
+}
+
+func (c HelmCmd) Uninstall(chart string) (string, error) {
+	c.l.Infof("Running helm uninstall for chart: %v", chart)
+	return c.Args("uninstall", chart).Run()
 }

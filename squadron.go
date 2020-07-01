@@ -194,28 +194,23 @@ type Squadron struct {
 	Services   []Service
 	Templates  []string
 	Namespaces []Namespace
-	helmCmd    *util.CliCommand
-	kubeCmd    *util.CliCommand
+	helmCmd    *util.HelmCmd
+	kubeCmd    *util.KubeCmd
+	dockerCmd  *util.DockerCmd
 }
 
 func New(l *logrus.Entry, tag, basePath, namespace string) (*Squadron, error) {
 	sq := Squadron{l: l, basePath: basePath, tag: tag}
-	hc, err := util.NewHelmCommand(l)
-	if err != nil {
-		return nil, err
-	}
-	sq.helmCmd = hc.Args("-n", namespace)
-
-	kc, err := util.NewKubeCommand(l)
-	if err != nil {
-		return nil, err
-	}
-	sq.kubeCmd = kc.Args("-n", namespace)
+	sq.helmCmd = util.NewHelmCommand(l)
+	sq.kubeCmd = util.NewKubeCommand(l)
+	sq.dockerCmd = util.NewDockerCommand(l)
+	sq.helmCmd.Args("-n", namespace)
+	sq.kubeCmd.Args("-n", namespace)
 
 	l.Infof("Parsing configuration files")
 	l.Infof("Entering dir: %q", basePath)
 	serviceDir := path.Join(basePath, defaultServiceDir)
-	err = filepath.Walk(serviceDir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(serviceDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -312,10 +307,7 @@ func (sq Squadron) Build(s Service) (string, error) {
 		image := fmt.Sprintf("%v:%v", s.Build.Image, s.Build.Tag)
 		args = append(strings.Split(s.Build.Command, " "), "-t", image)
 	}
-	env := []string{
-		fmt.Sprintf("TAG=%s", s.Build.Tag),
-	}
-	return util.Command(sq.l, args...).Cwd(sq.basePath).Env(env).Run()
+	return util.NewCommand(sq.l, args[0]).Args(args[1:]...).Cwd(sq.basePath).Env(fmt.Sprintf("TAG=%s", s.Build.Tag)).Run()
 }
 
 func (sq Squadron) Push(s Service) (string, error) {
@@ -324,7 +316,7 @@ func (sq Squadron) Push(s Service) (string, error) {
 		return "", fmt.Errorf("invalid image %q to build service %q", image, s.Name)
 	}
 	sq.l.Infof("Pushing service %v to %s", s.Name, image)
-	return util.Command(sq.l, "docker", "push", image).Cwd(sq.basePath).Run()
+	return sq.dockerCmd.Push(s.Build.Image, s.Build.Tag)
 }
 
 func Init(l *logrus.Entry, dir string) (string, error) {

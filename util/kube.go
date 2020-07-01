@@ -10,33 +10,30 @@ import (
 	v1 "k8s.io/api/apps/v1"
 )
 
-func NewKubeCommand(l *logrus.Entry) (*CliCommand, error) {
-	return NewCliCommand(l, "kubectl")
+type KubeCmd struct {
+	*Cmd
 }
 
-func (cc CliCommand) RollbackDeployment(deployment string) *Cmd {
-	cmd := append(cc.GetCommand(), "rollout", "undo", fmt.Sprintf("deployment/%v", deployment))
-	return Command(cc.l, cmd...)
+func NewKubeCommand(l *logrus.Entry) *KubeCmd {
+	return &KubeCmd{NewCommand(l, "helm")}
 }
 
-func (cc CliCommand) WaitForRollout(deployment, timeout string) *Cmd {
-	cmd := append(cc.GetCommand(),
-		"rollout", "status",
-		fmt.Sprintf("deployment/%v", deployment),
+func (c KubeCmd) RollbackDeployment(deployment string) *Cmd {
+	return c.Args("rollout", "undo", fmt.Sprintf("deployment/%v", deployment))
+}
+
+func (c KubeCmd) WaitForRollout(deployment, timeout string) *Cmd {
+	return c.Args("rollout", "status", fmt.Sprintf("deployment/%v", deployment),
 		"-w", "--timeout", timeout)
-	return Command(cc.l, cmd...)
 }
 
-func (cc CliCommand) GetMostRecentPodBySelectors(selectors map[string]string) (string, error) {
+func (c KubeCmd) GetMostRecentPodBySelectors(selectors map[string]string) (string, error) {
 	var selector []string
 	for k, v := range selectors {
 		selector = append(selector, fmt.Sprintf("%v=%v", k, v))
 	}
-	cmd := append(cc.GetCommand(),
-		"--selector", strings.Join(selector, ","),
-		"get", "pods", "--sort-by=.status.startTime",
-		"-o", "name")
-	out, err := Command(cc.l, cmd...).Run()
+	out, err := c.Args("--selector", strings.Join(selector, ","),
+		"get", "pods", "--sort-by=.status.startTime", "-o", "name").Run()
 	if err != nil {
 		return "", err
 	}
@@ -51,67 +48,45 @@ func (cc CliCommand) GetMostRecentPodBySelectors(selectors map[string]string) (s
 	return "", fmt.Errorf("no pods found")
 }
 
-func (cc CliCommand) WaitForPodState(pod, condition, timeout string) *Cmd {
-	cmd := append(cc.GetCommand(),
-		"wait", fmt.Sprintf("pod/%v", pod),
+func (c KubeCmd) WaitForPodState(pod, condition, timeout string) *Cmd {
+	return c.Args("wait", fmt.Sprintf("pod/%v", pod),
 		fmt.Sprintf("--for=%v", condition),
 		fmt.Sprintf("--timeout=%v", timeout))
-	return Command(cc.l, cmd...)
 }
 
-func (cc CliCommand) ExecShell(resource, path string) *Cmd {
-	cmd := append(cc.GetCommand(),
-		"exec", "-it", resource,
+func (c KubeCmd) ExecShell(resource, path string) *Cmd {
+	return c.Args("exec", "-it", resource,
 		"--", "/bin/sh", "-c",
-		fmt.Sprintf("cd %v && /bin/sh", path))
-	return Command(cc.l, cmd...).Stdin(os.Stdin).Stdout(os.Stdout).Stderr(os.Stdout)
+		fmt.Sprintf("cd %v && /bin/sh", path),
+	).Stdin(os.Stdin).Stdout(os.Stdout).Stderr(os.Stdout)
 }
 
-func (cc CliCommand) PatchDeployment(patch, deployment string) *Cmd {
-	cmd := append(cc.GetCommand(),
-		"patch", "deployment", deployment,
-		"--patch", patch)
-	return Command(cc.l, cmd...)
+func (c KubeCmd) PatchDeployment(patch, deployment string) *Cmd {
+	return c.Args("patch", "deployment", deployment, "--patch", patch)
 }
 
-func (cc CliCommand) CopyToPod(pod, container, source, destination string) *Cmd {
-	cmd := append(cc.GetCommand(),
-		"cp", source, fmt.Sprintf("%v:%v", pod, destination),
-		"-c", container)
-	return Command(cc.l, cmd...)
+func (c KubeCmd) CopyToPod(pod, container, source, destination string) *Cmd {
+	return c.Args("cp", source, fmt.Sprintf("%v:%v", pod, destination), "-c", container)
 }
 
-func (cc CliCommand) ExecPod(pod, container string, cmd []string) *Cmd {
-	c := append(cc.GetCommand(),
-		"exec", pod,
-		"-c", container, "--")
-	c = append(c, cmd...)
-	return Command(cc.l, c...)
+func (c KubeCmd) ExecPod(pod, container string, cmd []string) *Cmd {
+	return c.Args("exec", pod, "-c", container, "--").Args(cmd...)
 }
 
-func (cc CliCommand) ExposePod(pod string, host string, port int) *Cmd {
+func (c KubeCmd) ExposePod(pod string, host string, port int) *Cmd {
 	if host == "127.0.0.1" {
 		host = ""
 	}
-	cmd := append(cc.GetCommand(),
-		"expose", "pod", pod,
-		"--type=LoadBalancer",
-		fmt.Sprintf("--port=%v", port),
-		fmt.Sprintf("--external-ip=%v", host))
-	return Command(cc.l, cmd...)
+	return c.Args("expose", "pod", pod, "--type=LoadBalancer",
+		fmt.Sprintf("--port=%v", port), fmt.Sprintf("--external-ip=%v", host))
 }
 
-func (cc CliCommand) DeleteService(service string) *Cmd {
-	cmd := append(cc.GetCommand(),
-		"delete", "service", service)
-	return Command(cc.l, cmd...)
+func (c KubeCmd) DeleteService(service string) *Cmd {
+	return c.Args("delete", "service", service)
 }
 
-func (cc CliCommand) GetDeployment(deployment string) (*v1.Deployment, error) {
-	cmd := append(cc.GetCommand(),
-		"get", "deployment", deployment,
-		"-o", "json")
-	out, err := Command(cc.l, cmd...).Run()
+func (c KubeCmd) GetDeployment(deployment string) (*v1.Deployment, error) {
+	out, err := c.Args("get", "deployment", deployment, "-o", "json").Run()
 	if err != nil {
 		return nil, err
 	}
@@ -122,45 +97,37 @@ func (cc CliCommand) GetDeployment(deployment string) (*v1.Deployment, error) {
 	return &d, nil
 }
 
-func (cc CliCommand) GetNamespaces() ([]string, error) {
-	cmd := append(cc.GetCommand(),
-		"get", "namespace",
-		"-o", "name")
-	out, err := Command(cc.l, cmd...).Run()
+func (c KubeCmd) GetNamespaces() ([]string, error) {
+	out, err := c.Args("get", "namespace", "-o", "name").Run()
 	if err != nil {
 		return nil, err
 	}
 	return parseResources(out, "\n", "namespace/")
 }
 
-func (cc CliCommand) GetDeployments() ([]string, error) {
-	cmd := append(cc.GetCommand(),
-		"get", "deployment",
-		"-o", "name")
-	out, err := Command(cc.l, cmd...).Run()
+func (c KubeCmd) GetDeployments() ([]string, error) {
+	out, err := c.Args("get", "deployment", "-o", "name").Run()
 	if err != nil {
 		return nil, err
 	}
 	return parseResources(out, "\n", "deployment.apps/")
 }
 
-func (cc CliCommand) GetPods(selectors map[string]string) ([]string, error) {
+func (c KubeCmd) GetPods(selectors map[string]string) ([]string, error) {
 	var selector []string
 	for k, v := range selectors {
 		selector = append(selector, fmt.Sprintf("%v=%v", k, v))
 	}
-	cmd := append(cc.GetCommand(),
-		"--selector", strings.Join(selector, ","),
+	out, err := c.Args("--selector", strings.Join(selector, ","),
 		"get", "pods", "--sort-by=.status.startTime",
-		"-o", "name")
-	out, err := Command(cc.l, cmd...).Run()
+		"-o", "name").Run()
 	if err != nil {
 		return nil, err
 	}
 	return parseResources(out, "\n", "pod/")
 }
 
-func (cc CliCommand) GetContainers(deployment v1.Deployment) []string {
+func (c KubeCmd) GetContainers(deployment v1.Deployment) []string {
 	var containers []string
 	for _, c := range deployment.Spec.Template.Spec.Containers {
 		containers = append(containers, c.Name)
@@ -168,22 +135,46 @@ func (cc CliCommand) GetContainers(deployment v1.Deployment) []string {
 	return containers
 }
 
-func (cc CliCommand) GetPodsByLabels(labels []string) ([]string, error) {
-	cmd := append(cc.GetCommand(),
-		"get", "pods",
-		"-l", strings.Join(labels, ","),
-		"-o", "name", "-A")
-	out, err := Command(cc.l, cmd...).Run()
+func (c KubeCmd) GetPodsByLabels(labels []string) ([]string, error) {
+	out, err := c.Args("get", "pods", "-l", strings.Join(labels, ","), "-o", "name", "-A").Run()
 	if err != nil {
 		return nil, err
 	}
 	return parseResources(out, "\n", "pod/")
 }
 
-func (cc CliCommand) RestartDeployment(deployment string) *Cmd {
-	cmd := append(cc.GetCommand(),
-		"rollout", "restart", fmt.Sprintf("deployment/%v", deployment))
-	return Command(cc.l, cmd...)
+func (c KubeCmd) RestartDeployment(deployment string) *Cmd {
+	return c.Args("rollout", "restart", fmt.Sprintf("deployment/%v", deployment))
+}
+
+func (c KubeCmd) CreateConfigMapFromFile(name, path string) (string, error) {
+	return c.Args("create", "configmap", name, "--from-file", path).Run()
+}
+
+func (c KubeCmd) CreateConfigMap(name string, keyMap map[string]string) (string, error) {
+	c.Args("create", "configmap", name)
+	for key, value := range keyMap {
+		c.Args(fmt.Sprintf("--from-literal=%v=%v", key, value))
+	}
+	return c.Run()
+}
+
+func (c KubeCmd) DeleteConfigMap(name string) (string, error) {
+	return c.Args("delete", "configmap", name).Run()
+}
+
+func (c KubeCmd) GetConfigMapKey(name, key string) (string, error) {
+	key = strings.ReplaceAll(key, ".", "\\.")
+	// jsonpath map key is not very fond of dots
+	out, err := c.Args("get", "configmap", name, "-o",
+		fmt.Sprintf("jsonpath={.data.%v}", key)).Run()
+	if err != nil {
+		return out, err
+	}
+	if out == "" {
+		return out, fmt.Errorf("no key %q found in ConfigMap %q", key, name)
+	}
+	return out, nil
 }
 
 func parseResources(out, delimiter, prefix string) ([]string, error) {
@@ -206,42 +197,4 @@ func parseResources(out, delimiter, prefix string) ([]string, error) {
 		res = append(res, strings.TrimPrefix(line, prefix))
 	}
 	return res, nil
-}
-
-func (cc CliCommand) CreateConfigMapFromFile(name, path string) (string, error) {
-	cmd := append(cc.GetCommand(),
-		"create", "configmap", name,
-		"--from-file", path)
-	return Command(cc.l, cmd...).Run()
-}
-
-func (cc CliCommand) CreateConfigMap(name string, keyMap map[string]string) (string, error) {
-	cmd := append(cc.GetCommand(),
-		"create", "configmap", name)
-	for key, value := range keyMap {
-		cmd = append(cmd, fmt.Sprintf("--from-literal=%v=%v", key, value))
-	}
-	return Command(cc.l, cmd...).Run()
-}
-
-func (cc CliCommand) DeleteConfigMap(name string) (string, error) {
-	cmd := append(cc.GetCommand(),
-		"delete", "configmap", name)
-	return Command(cc.l, cmd...).Run()
-}
-
-func (cc CliCommand) GetConfigMapKey(name, key string) (string, error) {
-	key = strings.ReplaceAll(key, ".", "\\.")
-	// jsonpath map key is not very fond of dots
-	cmd := append(cc.GetCommand(),
-		"get", "configmap", name,
-		"-o", fmt.Sprintf("jsonpath={.data.%v}", key))
-	out, err := Command(cc.l, cmd...).Run()
-	if err != nil {
-		return out, err
-	}
-	if out == "" {
-		return out, fmt.Errorf("no key %q found in ConfigMap %q", key, name)
-	}
-	return out, nil
 }
