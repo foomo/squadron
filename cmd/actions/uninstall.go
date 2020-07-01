@@ -10,9 +10,9 @@ func init() {
 
 var (
 	uninstallCmd = &cobra.Command{
-		Use:   "uninstall [GROUP] -n {NAMESPACE} -t {TAG}",
-		Short: "uninstalls a group",
-		Long:  "uninstalls a group with given namespace and tag version",
+		Use:   "uninstall [SQUADRON] -n {NAMESPACE} -t {TAG}",
+		Short: "uninstalls a squadron",
+		Long:  "uninstalls a squadron with given namespace and tag version",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			_, err := uninstall(args[0], flagNamespace)

@@ -115,7 +115,7 @@ func newChart(name, version string) *Chart {
 	return &Chart{
 		APIVersion:  defaultChartAPIVersion,
 		Name:        name,
-		Description: fmt.Sprintf("A helm parent chart for group %v", name),
+		Description: fmt.Sprintf("A helm parent chart for squadron %v", name),
 		Type:        defaultChartType,
 		Version:     version,
 	}
@@ -269,13 +269,13 @@ func (ns Namespace) Group(name string) (Group, error) {
 		}
 		available = append(available, g.Name)
 	}
-	return Group{}, errResourceNotFound(name, "group", available)
+	return Group{}, errResourceNotFound(name, "squadron", available)
 }
 
 func (sq Squadron) getOverrides(namespace, group string, services []string, tv TemplateVars) (map[string]Override, error) {
 	path := path.Join(sq.basePath, defaultNamespaceDir, namespace, group+defaultConfigFileExt)
 	var wrapper struct {
-		Group Group `yaml:"group"`
+		Group Group `yaml:"squadron"`
 	}
 	bs, err := util.ParseTemplate(path, tv, true)
 	if err != nil {
@@ -459,7 +459,7 @@ func loadGroups(l *logrus.Entry, sl serviceLoader, basePath, namespace string) (
 		}
 		if !info.IsDir() && (strings.HasSuffix(path, defaultConfigFileExt)) {
 			name := strings.TrimSuffix(info.Name(), defaultConfigFileExt)
-			l.Infof("Loading group: %v, from: %q", name, util.RelativePath(path, basePath))
+			l.Infof("Loading squadron: %v, from: %q", name, util.RelativePath(path, basePath))
 			g, err := loadGroup(l, sl, path, namespace, name)
 			if err != nil {
 				return err
@@ -473,7 +473,7 @@ func loadGroups(l *logrus.Entry, sl serviceLoader, basePath, namespace string) (
 
 func loadGroup(l *logrus.Entry, sl serviceLoader, path, namespace, group string) (Group, error) {
 	var wrapper struct {
-		Group Group `yaml:"group"`
+		Group Group `yaml:"squadron"`
 	}
 	bs, err := util.ParseTemplate(path, nil, false)
 	if err != nil {

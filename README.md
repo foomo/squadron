@@ -22,8 +22,8 @@ $ squadron init [NAME]
 
 $ cd [NAME]/
 
-# Run install for predefined group and namespace:
-$ squadron install [GROUP] -n [NAMESPACE]
+# Run install for predefined squadron and namespace:
+$ squadron install [SQUADRON] -n [NAMESPACE]
 ```
 
 ## Structure
@@ -37,10 +37,10 @@ $ squadron install [GROUP] -n [NAMESPACE]
         service-b.yaml
     /namespaces
         /local (reserved, local)
-            group-a.yaml
-            group-b.yaml
+            squadron-a.yaml
+            squadron-b.yaml
         /node-a (remote)
-            groub-c.yaml
+            squadron-c.yaml
 ```
 ## Commands
 

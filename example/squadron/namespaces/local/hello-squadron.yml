@@ -1,10 +1,8 @@
-group:
+squadron:
   version: 0.0.1
   services:
     hello-service:
-      image:
-        repository: foomo/squadron-hello
-        tag: latest
+      image: foomo/squadron-hello:latest
       args:
         - "--greeting=hehe"
       service:
@@ -21,9 +19,7 @@ group:
           host: {{ .cwd }}/application
           mount: /config/
     hi-service:
-      image:
-        repository: foomo/squadron-hi
-        tag: latest
+      image: foomo/squadron-hi:latest
       args:
         - "--greeting=hai"
       service:

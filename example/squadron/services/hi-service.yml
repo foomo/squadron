@@ -6,4 +6,4 @@ service:
     name: example
     repository: file://./squadron/charts/example
     # path to the chart dir relative to the base path (example/)
-    version: 0.2.2
+    version: 0.2.3

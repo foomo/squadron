@@ -6,7 +6,7 @@ import (
 )
 
 func init() {
-	installCmd.Flags().BoolVarP(&flagBuild, "build", "b", false, "Build service group before publishing")
+	installCmd.Flags().BoolVarP(&flagBuild, "build", "b", false, "Build service squadron before publishing")
 	installCmd.Flags().StringVarP(&flagOutputDir, "output", "o", "default", "Specifies output directory")
 	installCmd.Flags().BoolVarP(&flagPush, "push", "p", false, "Pushes the built service to the registry")
 	installCmd.Flags().StringSliceVar(&flagTemplateSlice, "template-vars", nil, "Specifies template vars x=y")
@@ -22,9 +22,9 @@ var (
 
 var (
 	installCmd = &cobra.Command{
-		Use:   "install [GROUP] -n {NAMESPACE} -t {TAG}",
-		Short: "installs a group of services",
-		Long:  "installs a group of services with given namespace and tag version",
+		Use:   "install [SQUADRON] -n {NAMESPACE} -t {TAG}",
+		Short: "installs a squadron of services",
+		Long:  "installs a squadron of services with given namespace and tag version",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			templateVars, err := squadron.NewTemplateVars(flagDir, flagTemplateSlice, flagTemplateFile)
