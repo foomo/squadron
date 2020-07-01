@@ -17,7 +17,25 @@ import (
 )
 
 type CliCommand struct {
-	name string
+	l       *logrus.Entry
+	command []string
+}
+
+func NewCliCommand(l *logrus.Entry, name string) (*CliCommand, error) {
+	_, err := exec.LookPath(name)
+	if err != nil {
+		return nil, err
+	}
+	return &CliCommand{l, []string{name}}, nil
+}
+
+func (cc *CliCommand) Args(args ...string) *CliCommand {
+	cc.command = append(cc.command, args...)
+	return cc
+}
+
+func (cc CliCommand) GetCommand() []string {
+	return cc.command
 }
 
 func RelativePath(path, basePath string) string {

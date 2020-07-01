@@ -194,19 +194,28 @@ type Squadron struct {
 	Services   []Service
 	Templates  []string
 	Namespaces []Namespace
-	helmCmd    *util.HelmCommand
-	kubeCmd    *util.KubeCommand
+	helmCmd    *util.CliCommand
+	kubeCmd    *util.CliCommand
 }
 
 func New(l *logrus.Entry, tag, basePath, namespace string) (*Squadron, error) {
 	sq := Squadron{l: l, basePath: basePath, tag: tag}
-	sq.helmCmd = util.NewHelmCommand(l, namespace)
-	sq.kubeCmd = util.NewKubeCommand(l, namespace)
+	hc, err := util.NewHelmCommand(l)
+	if err != nil {
+		return nil, err
+	}
+	sq.helmCmd = hc.Args("-n", namespace)
+
+	kc, err := util.NewKubeCommand(l)
+	if err != nil {
+		return nil, err
+	}
+	sq.kubeCmd = kc.Args("-n", namespace)
 
 	l.Infof("Parsing configuration files")
 	l.Infof("Entering dir: %q", basePath)
 	serviceDir := path.Join(basePath, defaultServiceDir)
-	err := filepath.Walk(serviceDir, func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(serviceDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}

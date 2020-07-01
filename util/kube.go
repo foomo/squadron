@@ -10,45 +10,33 @@ import (
 	v1 "k8s.io/api/apps/v1"
 )
 
-type KubeCommand struct {
-	*CliCommand
-	l         *logrus.Entry
-	namespace string
+func NewKubeCommand(l *logrus.Entry) (*CliCommand, error) {
+	return NewCliCommand(l, "kubectl")
 }
 
-func NewKubeCommand(l *logrus.Entry, namespace string) *KubeCommand {
-	return &KubeCommand{&CliCommand{"kubectl"}, l, namespace}
+func (cc CliCommand) RollbackDeployment(deployment string) *Cmd {
+	cmd := append(cc.GetCommand(), "rollout", "undo", fmt.Sprintf("deployment/%v", deployment))
+	return Command(cc.l, cmd...)
 }
 
-func (kc KubeCommand) RollbackDeployment(deployment string) *Cmd {
-	cmd := []string{
-		kc.name, "-n", kc.namespace,
-		"rollout", "undo", fmt.Sprintf("deployment/%v", deployment),
-	}
-	return Command(kc.l, cmd...)
+func (cc CliCommand) WaitForRollout(deployment, timeout string) *Cmd {
+	cmd := append(cc.GetCommand(),
+		"rollout", "status",
+		fmt.Sprintf("deployment/%v", deployment),
+		"-w", "--timeout", timeout)
+	return Command(cc.l, cmd...)
 }
 
-func (kc KubeCommand) WaitForRollout(deployment, timeout string) *Cmd {
-	cmd := []string{
-		kc.name, "-n", kc.namespace,
-		"rollout", "status", fmt.Sprintf("deployment/%v", deployment),
-		"-w", "--timeout", timeout,
-	}
-	return Command(kc.l, cmd...)
-}
-
-func (kc KubeCommand) GetMostRecentPodBySelectors(selectors map[string]string) (string, error) {
+func (cc CliCommand) GetMostRecentPodBySelectors(selectors map[string]string) (string, error) {
 	var selector []string
 	for k, v := range selectors {
 		selector = append(selector, fmt.Sprintf("%v=%v", k, v))
 	}
-	cmd := []string{
-		kc.name, "-n", kc.namespace,
+	cmd := append(cc.GetCommand(),
 		"--selector", strings.Join(selector, ","),
 		"get", "pods", "--sort-by=.status.startTime",
-		"-o", "name",
-	}
-	out, err := Command(kc.l, cmd...).Run()
+		"-o", "name")
+	out, err := Command(cc.l, cmd...).Run()
 	if err != nil {
 		return "", err
 	}
@@ -63,86 +51,67 @@ func (kc KubeCommand) GetMostRecentPodBySelectors(selectors map[string]string) (
 	return "", fmt.Errorf("no pods found")
 }
 
-func (kc KubeCommand) WaitForPodState(pod, condition, timeout string) *Cmd {
-	cmd := []string{
-		kc.name, "-n", kc.namespace,
+func (cc CliCommand) WaitForPodState(pod, condition, timeout string) *Cmd {
+	cmd := append(cc.GetCommand(),
 		"wait", fmt.Sprintf("pod/%v", pod),
 		fmt.Sprintf("--for=%v", condition),
-		fmt.Sprintf("--timeout=%v", timeout),
-	}
-	return Command(kc.l, cmd...)
+		fmt.Sprintf("--timeout=%v", timeout))
+	return Command(cc.l, cmd...)
 }
 
-func (kc KubeCommand) ExecShell(resource, path string) *Cmd {
-	cmdArgs := []string{
-		kc.name, "-n", kc.namespace,
+func (cc CliCommand) ExecShell(resource, path string) *Cmd {
+	cmd := append(cc.GetCommand(),
 		"exec", "-it", resource,
 		"--", "/bin/sh", "-c",
-		fmt.Sprintf("cd %v && /bin/sh", path),
-	}
-
-	return Command(kc.l, cmdArgs...).Stdin(os.Stdin).Stdout(os.Stdout).Stderr(os.Stdout)
+		fmt.Sprintf("cd %v && /bin/sh", path))
+	return Command(cc.l, cmd...).Stdin(os.Stdin).Stdout(os.Stdout).Stderr(os.Stdout)
 }
 
-func (kc KubeCommand) PatchDeployment(patch, deployment string) *Cmd {
-	cmd := []string{
-		kc.name, "-n", kc.namespace,
+func (cc CliCommand) PatchDeployment(patch, deployment string) *Cmd {
+	cmd := append(cc.GetCommand(),
 		"patch", "deployment", deployment,
-		"--patch", patch,
-	}
-	return Command(kc.l, cmd...)
+		"--patch", patch)
+	return Command(cc.l, cmd...)
 }
 
-func (kc KubeCommand) CopyToPod(pod, container, source, destination string) *Cmd {
-	cmd := []string{
-		kc.name, "-n", kc.namespace,
+func (cc CliCommand) CopyToPod(pod, container, source, destination string) *Cmd {
+	cmd := append(cc.GetCommand(),
 		"cp", source, fmt.Sprintf("%v:%v", pod, destination),
-		"-c", container,
-	}
-	return Command(kc.l, cmd...)
+		"-c", container)
+	return Command(cc.l, cmd...)
 }
 
-func (kc KubeCommand) ExecPod(pod, container string, cmd []string) *Cmd {
-	c := []string{
-		kc.name, "-n", kc.namespace,
+func (cc CliCommand) ExecPod(pod, container string, cmd []string) *Cmd {
+	c := append(cc.GetCommand(),
 		"exec", pod,
-		"-c", container,
-		"--",
-	}
+		"-c", container, "--")
 	c = append(c, cmd...)
-	return Command(kc.l, c...)
+	return Command(cc.l, c...)
 }
 
-func (kc KubeCommand) ExposePod(pod string, host string, port int) *Cmd {
+func (cc CliCommand) ExposePod(pod string, host string, port int) *Cmd {
 	if host == "127.0.0.1" {
 		host = ""
 	}
-	cmd := []string{
-		kc.name, "-n", kc.namespace,
+	cmd := append(cc.GetCommand(),
 		"expose", "pod", pod,
 		"--type=LoadBalancer",
 		fmt.Sprintf("--port=%v", port),
-		fmt.Sprintf("--external-ip=%v", host),
-		// fmt.Sprintf("--name=%v-%v", pod, port),
-	}
-	return Command(kc.l, cmd...)
+		fmt.Sprintf("--external-ip=%v", host))
+	return Command(cc.l, cmd...)
 }
 
-func (kc KubeCommand) DeleteService(service string) *Cmd {
-	cmd := []string{
-		kc.name, "-n", kc.namespace,
-		"delete", "service", service,
-	}
-	return Command(kc.l, cmd...)
+func (cc CliCommand) DeleteService(service string) *Cmd {
+	cmd := append(cc.GetCommand(),
+		"delete", "service", service)
+	return Command(cc.l, cmd...)
 }
 
-func (kc KubeCommand) GetDeployment(deployment string) (*v1.Deployment, error) {
-	cmd := []string{
-		kc.name, "-n", kc.namespace,
+func (cc CliCommand) GetDeployment(deployment string) (*v1.Deployment, error) {
+	cmd := append(cc.GetCommand(),
 		"get", "deployment", deployment,
-		"-o", "json",
-	}
-	out, err := Command(kc.l, cmd...).Run()
+		"-o", "json")
+	out, err := Command(cc.l, cmd...).Run()
 	if err != nil {
 		return nil, err
 	}
@@ -153,54 +122,45 @@ func (kc KubeCommand) GetDeployment(deployment string) (*v1.Deployment, error) {
 	return &d, nil
 }
 
-func (kc KubeCommand) GetNamespaces() ([]string, error) {
-	cmd := []string{
-		kc.name,
+func (cc CliCommand) GetNamespaces() ([]string, error) {
+	cmd := append(cc.GetCommand(),
 		"get", "namespace",
-		"-o", "name",
-	}
-	out, err := Command(kc.l, cmd...).Run()
+		"-o", "name")
+	out, err := Command(cc.l, cmd...).Run()
 	if err != nil {
 		return nil, err
 	}
-
 	return parseResources(out, "\n", "namespace/")
 }
 
-func (kc KubeCommand) GetDeployments() ([]string, error) {
-	cmd := []string{
-		kc.name, "-n", kc.namespace,
+func (cc CliCommand) GetDeployments() ([]string, error) {
+	cmd := append(cc.GetCommand(),
 		"get", "deployment",
-		"-o", "name",
-	}
-	out, err := Command(kc.l, cmd...).Run()
+		"-o", "name")
+	out, err := Command(cc.l, cmd...).Run()
 	if err != nil {
 		return nil, err
 	}
-
 	return parseResources(out, "\n", "deployment.apps/")
 }
 
-func (kc KubeCommand) GetPods(selectors map[string]string) ([]string, error) {
+func (cc CliCommand) GetPods(selectors map[string]string) ([]string, error) {
 	var selector []string
 	for k, v := range selectors {
 		selector = append(selector, fmt.Sprintf("%v=%v", k, v))
 	}
-	cmd := []string{
-		kc.name, "-n", kc.namespace,
+	cmd := append(cc.GetCommand(),
 		"--selector", strings.Join(selector, ","),
 		"get", "pods", "--sort-by=.status.startTime",
-		"-o", "name",
-	}
-	out, err := Command(kc.l, cmd...).Run()
+		"-o", "name")
+	out, err := Command(cc.l, cmd...).Run()
 	if err != nil {
 		return nil, err
 	}
-
 	return parseResources(out, "\n", "pod/")
 }
 
-func (kc KubeCommand) GetContainers(deployment v1.Deployment) []string {
+func (cc CliCommand) GetContainers(deployment v1.Deployment) []string {
 	var containers []string
 	for _, c := range deployment.Spec.Template.Spec.Containers {
 		containers = append(containers, c.Name)
@@ -208,26 +168,22 @@ func (kc KubeCommand) GetContainers(deployment v1.Deployment) []string {
 	return containers
 }
 
-func (kc KubeCommand) GetPodsByLabels(labels []string) ([]string, error) {
-	cmd := []string{
-		kc.name, "get", "pods",
+func (cc CliCommand) GetPodsByLabels(labels []string) ([]string, error) {
+	cmd := append(cc.GetCommand(),
+		"get", "pods",
 		"-l", strings.Join(labels, ","),
-		"-o", "name", "-A",
-	}
-	out, err := Command(kc.l, cmd...).Run()
+		"-o", "name", "-A")
+	out, err := Command(cc.l, cmd...).Run()
 	if err != nil {
 		return nil, err
 	}
-
 	return parseResources(out, "\n", "pod/")
 }
 
-func (kc KubeCommand) RestartDeployment(deployment string) *Cmd {
-	cmd := []string{
-		kc.name, "-n", kc.namespace,
-		"rollout", "restart", fmt.Sprintf("deployment/%v", deployment),
-	}
-	return Command(kc.l, cmd...)
+func (cc CliCommand) RestartDeployment(deployment string) *Cmd {
+	cmd := append(cc.GetCommand(),
+		"rollout", "restart", fmt.Sprintf("deployment/%v", deployment))
+	return Command(cc.l, cmd...)
 }
 
 func parseResources(out, delimiter, prefix string) ([]string, error) {
@@ -252,43 +208,35 @@ func parseResources(out, delimiter, prefix string) ([]string, error) {
 	return res, nil
 }
 
-func (kc KubeCommand) CreateConfigMapFromFile(name, path string) (string, error) {
-	cmd := []string{
-		kc.name, "-n", kc.namespace,
+func (cc CliCommand) CreateConfigMapFromFile(name, path string) (string, error) {
+	cmd := append(cc.GetCommand(),
 		"create", "configmap", name,
-		"--from-file", path,
-	}
-	return Command(kc.l, cmd...).Run()
+		"--from-file", path)
+	return Command(cc.l, cmd...).Run()
 }
 
-func (kc KubeCommand) CreateConfigMap(name string, keyMap map[string]string) (string, error) {
-	cmd := []string{
-		kc.name, "-n", kc.namespace,
-		"create", "configmap", name,
-	}
+func (cc CliCommand) CreateConfigMap(name string, keyMap map[string]string) (string, error) {
+	cmd := append(cc.GetCommand(),
+		"create", "configmap", name)
 	for key, value := range keyMap {
 		cmd = append(cmd, fmt.Sprintf("--from-literal=%v=%v", key, value))
 	}
-	return Command(kc.l, cmd...).Run()
+	return Command(cc.l, cmd...).Run()
 }
 
-func (kc KubeCommand) DeleteConfigMap(name string) (string, error) {
-	cmd := []string{
-		kc.name, "-n", kc.namespace,
-		"delete", "configmap", name,
-	}
-	return Command(kc.l, cmd...).Run()
+func (cc CliCommand) DeleteConfigMap(name string) (string, error) {
+	cmd := append(cc.GetCommand(),
+		"delete", "configmap", name)
+	return Command(cc.l, cmd...).Run()
 }
 
-func (kc KubeCommand) GetConfigMapKey(name, key string) (string, error) {
+func (cc CliCommand) GetConfigMapKey(name, key string) (string, error) {
 	key = strings.ReplaceAll(key, ".", "\\.")
 	// jsonpath map key is not very fond of dots
-	cmd := []string{
-		kc.name, "-n", kc.namespace,
+	cmd := append(cc.GetCommand(),
 		"get", "configmap", name,
-		"-o", fmt.Sprintf("jsonpath={.data.%v}", key),
-	}
-	out, err := Command(kc.l, cmd...).Run()
+		"-o", fmt.Sprintf("jsonpath={.data.%v}", key))
+	out, err := Command(cc.l, cmd...).Run()
 	if err != nil {
 		return out, err
 	}
