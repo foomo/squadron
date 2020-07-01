@@ -251,3 +251,49 @@ func parseResources(out, delimiter, prefix string) ([]string, error) {
 	}
 	return res, nil
 }
+
+func (kc KubeCommand) CreateConfigMapFromFile(name, path string) (string, error) {
+	cmd := []string{
+		kc.name, "-n", kc.namespace,
+		"create", "configmap", name,
+		"--from-file", path,
+	}
+	return Command(kc.l, cmd...).Run()
+}
+
+func (kc KubeCommand) CreateConfigMap(name string, keyMap map[string]string) (string, error) {
+	cmd := []string{
+		kc.name, "-n", kc.namespace,
+		"create", "configmap", name,
+	}
+	for key, value := range keyMap {
+		cmd = append(cmd, fmt.Sprintf("--from-literal=%v=%v", key, value))
+	}
+	return Command(kc.l, cmd...).Run()
+}
+
+func (kc KubeCommand) DeleteConfigMap(name string) (string, error) {
+	cmd := []string{
+		kc.name, "-n", kc.namespace,
+		"delete", "configmap", name,
+	}
+	return Command(kc.l, cmd...).Run()
+}
+
+func (kc KubeCommand) GetConfigMapKey(name, key string) (string, error) {
+	key = strings.ReplaceAll(key, ".", "\\.")
+	// jsonpath map key is not very fond of dots
+	cmd := []string{
+		kc.name, "-n", kc.namespace,
+		"get", "configmap", name,
+		"-o", fmt.Sprintf("jsonpath={.data.%v}", key),
+	}
+	out, err := Command(kc.l, cmd...).Run()
+	if err != nil {
+		return out, err
+	}
+	if out == "" {
+		return out, fmt.Errorf("no key %q found in ConfigMap %q", key, name)
+	}
+	return out, nil
+}
