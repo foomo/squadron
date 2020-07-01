@@ -155,7 +155,7 @@ func (kc KubeCommand) GetDeployment(deployment string) (*v1.Deployment, error) {
 
 func (kc KubeCommand) GetNamespaces() ([]string, error) {
 	cmd := []string{
-		"kubectl",
+		kc.name,
 		"get", "namespace",
 		"-o", "name",
 	}
@@ -200,7 +200,7 @@ func (kc KubeCommand) GetPods(selectors map[string]string) ([]string, error) {
 	return parseResources(out, "\n", "pod/")
 }
 
-func (kc KubeCommand) GetContainers(deployment *v1.Deployment) []string {
+func (kc KubeCommand) GetContainers(deployment v1.Deployment) []string {
 	var containers []string
 	for _, c := range deployment.Spec.Template.Spec.Containers {
 		containers = append(containers, c.Name)
