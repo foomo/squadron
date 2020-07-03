@@ -1,12 +1,4 @@
-<a href="https://travis-ci.org/foomo/squadron">
-    <img src="https://travis-ci.org/foomo/squadron.svg?branch=master" alt="Travis CI: build status">
-</a>
-<a href="https://goreportcard.com/report/github.com/foomo/squadron">
-    <img src="https://goreportcard.com/badge/github.com/foomo/squadron" alt="GoReportCard">
-</a>
-<a href="https://godoc.org/github.com/foomo/squadron">
-    <img src="https://godoc.org/github.com/foomo/squadron?status.svg" alt="GoDoc">
-</a>
+![Travis CI: build status](https://travis-ci.org/foomo/squadron.svg?branch=master) ![GoReportCard](https://goreportcard.com/badge/github.com/foomo/squadron) ![godoc](https://godoc.org/github.com/foomo/squadron?status.svg) ![goreleaser](https://github.com/foomo/squadron/workflows/goreleaser/badge.svg)
 
 # Squadron
 
