@@ -11,6 +11,7 @@ func init() {
 	installCmd.Flags().BoolVarP(&flagPush, "push", "p", false, "Pushes the built service to the registry")
 	installCmd.Flags().StringSliceVar(&flagTemplateSlice, "template-vars", nil, "Specifies template vars x=y")
 	installCmd.Flags().StringVar(&flagTemplateFile, "template-file", "", "Specifies the template file with vars")
+	installCmd.Flags().BoolVar(&flagChartApiV1, "chart-api-v1", false, "Use chart API v1 when creating chart")
 }
 
 var (
@@ -18,6 +19,7 @@ var (
 	flagOutputDir     string
 	flagTemplateSlice []string
 	flagTemplateFile  string
+	flagChartApiV1    bool
 )
 
 var (
@@ -31,13 +33,13 @@ var (
 			if err != nil {
 				return err
 			}
-			_, err = install(args[0], flagNamespace, flagOutputDir, flagBuild, templateVars)
+			_, err = install(args[0], flagNamespace, flagOutputDir, flagBuild, templateVars, flagChartApiV1)
 			return err
 		},
 	}
 )
 
-func install(group, namespace, outputDir string, buildService bool, tv squadron.TemplateVars) (string, error) {
+func install(group, namespace, outputDir string, buildService bool, tv squadron.TemplateVars, useChartApiV1 bool) (string, error) {
 	ns, err := sq.Namespace(namespace)
 	if err != nil {
 		return "", err
@@ -64,5 +66,5 @@ func install(group, namespace, outputDir string, buildService bool, tv squadron.
 	if err := sq.CheckIngressController("ingress-nginx"); err != nil {
 		return "", err
 	}
-	return sq.Install(namespace, g.Name, g.Version, services, tv, outputDir)
+	return sq.Install(namespace, g.Name, g.Version, services, tv, outputDir, useChartApiV1)
 }

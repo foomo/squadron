@@ -27,7 +27,9 @@ const (
 	chartLockFile          = "Chart.lock"
 	chartFile              = "Chart.yaml"
 	valuesFile             = "values.yaml"
-	defaultChartAPIVersion = "v2"
+	requirementsFile       = "requirements.yaml"
+	chartAPIVersionV2      = "v2"
+	chartAPIVersionV1      = "v1"
 	defaultChartType       = "application" // application or library
 	defaultChartVersion    = "0.2.0"
 	defaultChartAppVersion = "1.16.0"
@@ -108,17 +110,46 @@ type Chart struct {
 	Description  string
 	Type         string
 	Version      string
-	Dependencies []ChartDependency
+	Dependencies []ChartDependency `yaml:"dependencies,omitempty"`
+	useApiV1     bool
 }
 
-func newChart(name, version string) *Chart {
+func newChart(name, version string, useApiV1 bool) *Chart {
+	apiVersion := chartAPIVersionV2
+	if useApiV1 {
+		apiVersion = chartAPIVersionV1
+	}
 	return &Chart{
-		APIVersion:  defaultChartAPIVersion,
+		APIVersion:  apiVersion,
 		Name:        name,
 		Description: fmt.Sprintf("A helm parent chart for squadron %v", name),
 		Type:        defaultChartType,
 		Version:     version,
 	}
+}
+
+func (c Chart) generateChartFiles(chartPath string, overrides interface{}) error {
+	if c.useApiV1 {
+		// for chart APIVersion v1 dependencies are defined outside Chart.yaml, in requirements.yaml
+		var wrapper struct {
+			Dependencies []ChartDependency
+		}
+		wrapper.Dependencies = c.Dependencies
+		c.Dependencies = nil
+		// generate requirements.yaml
+		if err := util.GenerateYaml(path.Join(chartPath, requirementsFile), wrapper); err != nil {
+			return err
+		}
+	}
+	// generate Chart.yaml
+	if err := util.GenerateYaml(path.Join(chartPath, chartFile), c); err != nil {
+		return err
+	}
+	// generate values.yaml with overrides
+	if err := util.GenerateYaml(path.Join(chartPath, valuesFile), overrides); err != nil {
+		return err
+	}
+	return nil
 }
 
 type JobItem struct {
@@ -335,7 +366,7 @@ func (sq Squadron) CheckIngressController(name string) error {
 	return nil
 }
 
-func (sq Squadron) Install(namespace, group, groupVersion string, services []string, tv TemplateVars, outputDir string) (string, error) {
+func (sq Squadron) Install(namespace, group, groupVersion string, services []string, tv TemplateVars, outputDir string, useChartApiV1 bool) (string, error) {
 	sq.l.Infof("Installing services")
 	groupChartPath := path.Join(sq.basePath, defaultOutputDir, outputDir, group)
 
@@ -358,7 +389,7 @@ func (sq Squadron) Install(namespace, group, groupVersion string, services []str
 		return "", fmt.Errorf("could not clean workdir directory: %w", err)
 	}
 
-	groupChart := newChart(group, groupVersion)
+	groupChart := newChart(group, groupVersion, useChartApiV1)
 	for _, service := range services {
 		s, err := sq.Service(service)
 		if err != nil {
@@ -371,10 +402,8 @@ func (sq Squadron) Install(namespace, group, groupVersion string, services []str
 	if err != nil {
 		return "", err
 	}
-	if err := util.GenerateYaml(path.Join(groupChartPath, chartFile), groupChart); err != nil {
-		return "", err
-	}
-	if err := util.GenerateYaml(path.Join(groupChartPath, valuesFile), overrides); err != nil {
+
+	if err := groupChart.generateChartFiles(groupChartPath, overrides); err != nil {
 		return "", err
 	}
 
