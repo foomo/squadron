@@ -11,11 +11,11 @@ import (
 )
 
 type KubeCmd struct {
-	*Cmd
+	Cmd
 }
 
 func NewKubeCommand(l *logrus.Entry) *KubeCmd {
-	return &KubeCmd{NewCommand(l, "helm")}
+	return &KubeCmd{*NewCommand(l, "kubectl")}
 }
 
 func (c KubeCmd) RollbackDeployment(deployment string) *Cmd {

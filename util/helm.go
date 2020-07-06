@@ -3,11 +3,11 @@ package util
 import "github.com/sirupsen/logrus"
 
 type HelmCmd struct {
-	*Cmd
+	Cmd
 }
 
 func NewHelmCommand(l *logrus.Entry) *HelmCmd {
-	return &HelmCmd{NewCommand(l, "helm")}
+	return &HelmCmd{*NewCommand(l, "helm")}
 }
 
 func (c HelmCmd) UpdateDependency(chart, chartPath string) (string, error) {

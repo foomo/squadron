@@ -7,11 +7,11 @@ import (
 )
 
 type DockerCmd struct {
-	*Cmd
+	Cmd
 }
 
 func NewDockerCommand(l *logrus.Entry) *DockerCmd {
-	return &DockerCmd{NewCommand(l, "helm")}
+	return &DockerCmd{*NewCommand(l, "helm")}
 }
 
 func (c DockerCmd) Build(workDir string, options ...string) *Cmd {
