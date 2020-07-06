@@ -205,7 +205,7 @@ func StringInSlice(str string, slice []string) bool {
 }
 
 func IsYaml(file string) bool {
-	return StringInSlice(filepath.Ext(file), []string{".yml, .yaml"})
+	return StringInSlice(filepath.Ext(file), []string{".yml", ".yaml"})
 }
 
 func IsJson(file string) bool {
