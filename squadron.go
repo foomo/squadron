@@ -27,7 +27,9 @@ const (
 	chartLockFile          = "Chart.lock"
 	chartFile              = "Chart.yaml"
 	valuesFile             = "values.yaml"
-	defaultChartAPIVersion = "v2"
+	requirementsFile       = "requirements.yaml"
+	chartApiVersionV2      = "v2"
+	chartApiVersionV1      = "v1"
 	defaultChartType       = "application" // application or library
 	defaultChartVersion    = "0.2.0"
 	defaultChartAppVersion = "1.16.0"
@@ -44,6 +46,7 @@ type Override map[string]interface{}
 type Group struct {
 	Name             string `yaml:"-"`
 	Version          string
+	ChartApiVersion  string              `yaml:"chartApiVersion"`
 	ServiceOverrides map[string]Override `yaml:"services"`
 	JobOverrides     map[string]Override `yaml:"jobs"`
 }
@@ -58,7 +61,7 @@ func (g Group) Services() []string {
 
 type Namespace struct {
 	name   string
-	groups []Group
+	groups []string
 }
 
 type Config struct {
@@ -108,17 +111,41 @@ type Chart struct {
 	Description  string
 	Type         string
 	Version      string
-	Dependencies []ChartDependency
+	Dependencies []ChartDependency `yaml:"dependencies,omitempty"`
 }
 
-func newChart(name, version string) *Chart {
+func newChart(name, version, apiVersion string) *Chart {
 	return &Chart{
-		APIVersion:  defaultChartAPIVersion,
+		APIVersion:  apiVersion,
 		Name:        name,
 		Description: fmt.Sprintf("A helm parent chart for squadron %v", name),
 		Type:        defaultChartType,
 		Version:     version,
 	}
+}
+
+func (c Chart) generateChartFiles(chartPath string, overrides interface{}) error {
+	if c.APIVersion == chartApiVersionV1 {
+		// for chart APIVersion v1 dependencies are defined outside Chart.yaml, in requirements.yaml
+		var wrapper struct {
+			Dependencies []ChartDependency
+		}
+		wrapper.Dependencies = c.Dependencies
+		c.Dependencies = nil
+		// generate requirements.yaml
+		if err := util.GenerateYaml(path.Join(chartPath, requirementsFile), wrapper); err != nil {
+			return err
+		}
+	}
+	// generate Chart.yaml
+	if err := util.GenerateYaml(path.Join(chartPath, chartFile), c); err != nil {
+		return err
+	}
+	// generate values.yaml with overrides
+	if err := util.GenerateYaml(path.Join(chartPath, valuesFile), overrides); err != nil {
+		return err
+	}
+	return nil
 }
 
 type JobItem struct {
@@ -194,14 +221,18 @@ type Squadron struct {
 	Services   []Service
 	Templates  []string
 	Namespaces []Namespace
-	helmCmd    *util.HelmCommand
-	kubeCmd    *util.KubeCommand
+	helmCmd    *util.HelmCmd
+	kubeCmd    *util.KubeCmd
+	dockerCmd  *util.DockerCmd
 }
 
 func New(l *logrus.Entry, tag, basePath, namespace string) (*Squadron, error) {
 	sq := Squadron{l: l, basePath: basePath, tag: tag}
-	sq.helmCmd = util.NewHelmCommand(l, namespace)
-	sq.kubeCmd = util.NewKubeCommand(l, namespace)
+	sq.helmCmd = util.NewHelmCommand(l)
+	sq.kubeCmd = util.NewKubeCommand(l)
+	sq.dockerCmd = util.NewDockerCommand(l)
+	sq.helmCmd.Args("-n", namespace)
+	sq.kubeCmd.Args("-n", namespace)
 
 	l.Infof("Parsing configuration files")
 	l.Infof("Entering dir: %q", basePath)
@@ -261,35 +292,46 @@ func (sq Squadron) Namespace(name string) (Namespace, error) {
 	return Namespace{}, errResourceNotFound(name, "namespace", available)
 }
 
-func (ns Namespace) Group(name string) (Group, error) {
+func (ns Namespace) ValidateGroup(name string) error {
 	var available []string
 	for _, g := range ns.groups {
-		if g.Name == name {
-			return g, nil
+		if g == name {
+			return nil
 		}
-		available = append(available, g.Name)
+		available = append(available, g)
 	}
-	return Group{}, errResourceNotFound(name, "squadron", available)
+	return errResourceNotFound(name, "squadron", available)
 }
 
-func (sq Squadron) getOverrides(namespace, group string, services []string, tv TemplateVars) (map[string]Override, error) {
-	path := path.Join(sq.basePath, defaultNamespaceDir, namespace, group+defaultConfigFileExt)
+func (sq Squadron) Group(namespace, group string, tv TemplateVars) (Group, error) {
 	var wrapper struct {
 		Group Group `yaml:"squadron"`
 	}
-	bs, err := util.ParseTemplate(path, tv, true)
+	ns, err := sq.Namespace(namespace)
 	if err != nil {
-		return nil, err
+		return wrapper.Group, err
+	}
+	if err := ns.ValidateGroup(group); err != nil {
+		return wrapper.Group, err
+	}
+
+	path := path.Join(sq.basePath, defaultNamespaceDir, namespace, group+defaultConfigFileExt)
+	bs, err := util.ExecuteTemplate(path, tv)
+	if err != nil {
+		return wrapper.Group, err
+	}
+	wrapper.Group.Name = group
+	if wrapper.Group.ChartApiVersion == "" {
+		wrapper.Group.ChartApiVersion = chartApiVersionV2
+	}
+	if wrapper.Group.ChartApiVersion != chartApiVersionV1 && wrapper.Group.ChartApiVersion != chartApiVersionV2 {
+		return wrapper.Group, fmt.Errorf("invalid chart api version %q. use %q or %q",
+			wrapper.Group.ChartApiVersion, chartApiVersionV1, chartApiVersionV2)
 	}
 	if err := yaml.Unmarshal(bs, &wrapper); err != nil {
-		return nil, err
+		return wrapper.Group, err
 	}
-	for _, service := range wrapper.Group.Services() {
-		if !util.StringInSlice(service, services) {
-			delete(wrapper.Group.ServiceOverrides, service)
-		}
-	}
-	return wrapper.Group.ServiceOverrides, nil
+	return wrapper.Group, nil
 }
 
 func (sq Squadron) Build(s Service) (string, error) {
@@ -303,10 +345,7 @@ func (sq Squadron) Build(s Service) (string, error) {
 		image := fmt.Sprintf("%v:%v", s.Build.Image, s.Build.Tag)
 		args = append(strings.Split(s.Build.Command, " "), "-t", image)
 	}
-	env := []string{
-		fmt.Sprintf("TAG=%s", s.Build.Tag),
-	}
-	return util.Command(sq.l, args...).Cwd(sq.basePath).Env(env).Run()
+	return util.NewCommand(sq.l, args[0]).Args(args[1:]...).Cwd(sq.basePath).Env(fmt.Sprintf("TAG=%s", s.Build.Tag)).Run()
 }
 
 func (sq Squadron) Push(s Service) (string, error) {
@@ -315,7 +354,7 @@ func (sq Squadron) Push(s Service) (string, error) {
 		return "", fmt.Errorf("invalid image %q to build service %q", image, s.Name)
 	}
 	sq.l.Infof("Pushing service %v to %s", s.Name, image)
-	return util.Command(sq.l, "docker", "push", image).Cwd(sq.basePath).Run()
+	return sq.dockerCmd.Push(s.Build.Image, s.Build.Tag)
 }
 
 func Init(l *logrus.Entry, dir string) (string, error) {
@@ -334,9 +373,9 @@ func (sq Squadron) CheckIngressController(name string) error {
 	return nil
 }
 
-func (sq Squadron) Install(namespace, group, groupVersion string, services []string, tv TemplateVars, outputDir string) (string, error) {
+func (sq Squadron) Install(group Group, tv TemplateVars, outputDir string) (string, error) {
 	sq.l.Infof("Installing services")
-	groupChartPath := path.Join(sq.basePath, defaultOutputDir, outputDir, group)
+	groupChartPath := path.Join(sq.basePath, defaultOutputDir, outputDir, group.Name)
 
 	sq.l.Infof("Entering dir: %q", path.Join(sq.basePath, defaultOutputDir))
 	sq.l.Printf("Creating dir: %q", outputDir)
@@ -357,8 +396,8 @@ func (sq Squadron) Install(namespace, group, groupVersion string, services []str
 		return "", fmt.Errorf("could not clean workdir directory: %w", err)
 	}
 
-	groupChart := newChart(group, groupVersion)
-	for _, service := range services {
+	groupChart := newChart(group.Name, group.Version, group.ChartApiVersion)
+	for _, service := range group.Services() {
 		s, err := sq.Service(service)
 		if err != nil {
 			return "", err
@@ -366,23 +405,16 @@ func (sq Squadron) Install(namespace, group, groupVersion string, services []str
 		groupChart.Dependencies = append(groupChart.Dependencies, s.Chart)
 	}
 
-	overrides, err := sq.getOverrides(namespace, group, services, tv)
-	if err != nil {
-		return "", err
-	}
-	if err := util.GenerateYaml(path.Join(groupChartPath, chartFile), groupChart); err != nil {
-		return "", err
-	}
-	if err := util.GenerateYaml(path.Join(groupChartPath, valuesFile), overrides); err != nil {
+	if err := groupChart.generateChartFiles(groupChartPath, group.ServiceOverrides); err != nil {
 		return "", err
 	}
 
-	output, err := sq.helmCmd.UpdateDependency(group, groupChartPath)
+	output, err := sq.helmCmd.UpdateDependency(group.Name, groupChartPath)
 	if err != nil {
 		return output, err
 	}
 
-	return sq.helmCmd.Install(group, groupChartPath)
+	return sq.helmCmd.Install(group.Name, groupChartPath)
 }
 
 func (sq Squadron) Uninstall(group string) (string, error) {
@@ -435,7 +467,7 @@ func loadNamespaces(l *logrus.Entry, sl serviceLoader, basePath string) ([]Names
 		}
 		if info.IsDir() && path != namespaceDir {
 			l.Infof("Loading namespace: %v, from: %q", info.Name(), util.RelativePath(path, basePath))
-			gs, err := loadGroups(l, sl, basePath, info.Name())
+			gs, err := loadGroupNames(l, sl, basePath, info.Name())
 			if err != nil {
 				return err
 			}
@@ -450,8 +482,8 @@ func loadNamespaces(l *logrus.Entry, sl serviceLoader, basePath string) ([]Names
 	return nss, err
 }
 
-func loadGroups(l *logrus.Entry, sl serviceLoader, basePath, namespace string) ([]Group, error) {
-	var gs []Group
+func loadGroupNames(l *logrus.Entry, sl serviceLoader, basePath, namespace string) ([]string, error) {
+	var gs []string
 	groupPath := path.Join(basePath, defaultNamespaceDir, namespace)
 	err := filepath.Walk(groupPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -460,36 +492,11 @@ func loadGroups(l *logrus.Entry, sl serviceLoader, basePath, namespace string) (
 		if !info.IsDir() && (strings.HasSuffix(path, defaultConfigFileExt)) {
 			name := strings.TrimSuffix(info.Name(), defaultConfigFileExt)
 			l.Infof("Loading squadron: %v, from: %q", name, util.RelativePath(path, basePath))
-			g, err := loadGroup(l, sl, path, namespace, name)
-			if err != nil {
-				return err
-			}
-			gs = append(gs, g)
+			gs = append(gs, name)
 		}
 		return nil
 	})
 	return gs, err
-}
-
-func loadGroup(l *logrus.Entry, sl serviceLoader, path, namespace, group string) (Group, error) {
-	var wrapper struct {
-		Group Group `yaml:"squadron"`
-	}
-	bs, err := util.ParseTemplate(path, nil, false)
-	if err != nil {
-		return wrapper.Group, err
-	}
-	if err := yaml.Unmarshal(bs, &wrapper); err != nil {
-		return wrapper.Group, err
-	}
-	wrapper.Group.Name = group
-	for name := range wrapper.Group.ServiceOverrides {
-		// the overrides have not been parsed with templates
-		// we only need this on install
-		// so use nil instead of wrong values
-		wrapper.Group.ServiceOverrides[name] = nil
-	}
-	return wrapper.Group, nil
 }
 
 func errResourceNotFound(name, resource string, available []string) error {

@@ -19,6 +19,8 @@ spec:
         app.kubernetes.io/name: {{ .Chart.Name }}
         app.kubernetes.io/part-of: {{ .Release.Name }}
     spec:
+      imagePullSecrets:
+        - name: {{ .Values.imagePullSecretName }}
       containers:
         - name: {{ .Chart.Name }}
           image: {{ .Values.image }}

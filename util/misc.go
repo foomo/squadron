@@ -3,6 +3,7 @@ package util
 import (
 	"bytes"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -16,63 +17,72 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type CliCommand struct {
-	name string
-}
-
 func RelativePath(path, basePath string) string {
 	return strings.Replace(path, basePath+"/", "", -1)
 }
 
-func ParseTemplate(file string, templateVars interface{}, errOnMissing bool) ([]byte, error) {
-	tmp, err := template.ParseFiles(file)
+func ExecuteTemplate(file string, templateVars interface{}) ([]byte, error) {
+	templateBytes, errRead := ioutil.ReadFile(file)
+	if errRead != nil {
+		return nil, errRead
+	}
+	tmp, err := template.New("squadron").Option("missingkey=error").Funcs(builder.TemplateFuncs).Parse(string(templateBytes))
 	if err != nil {
 		return nil, err
 	}
 	out := bytes.NewBuffer([]byte{})
-	if errOnMissing {
-		tmp = tmp.Option("missingkey=error")
-	}
-	if err := tmp.Funcs(builder.TemplateFuncs).Execute(out, templateVars); err != nil {
+	if err := tmp.Option("missingkey=error").Funcs(builder.TemplateFuncs).Execute(out, templateVars); err != nil {
 		return nil, err
 	}
 	return out.Bytes(), nil
 }
 
 type Cmd struct {
-	l             *logrus.Entry
-	cmd           *exec.Cmd
+	l *logrus.Entry
+	// cmd           *exec.Cmd
+	command       []string
+	cwd           string
+	env           []string
+	stdin         io.Reader
+	stdoutWriters []io.Writer
+	stderrWriters []io.Writer
 	wait          bool
 	t             time.Duration
 	preStartFunc  func() error
 	postStartFunc func() error
 	postEndFunc   func() error
-	stdoutWriters []io.Writer
-	stderrWriters []io.Writer
 }
 
-func Command(l *logrus.Entry, command ...string) *Cmd {
-	cmd := exec.Command(command[0], command[1:]...)
-	cmd.Env = os.Environ()
+func NewCommand(l *logrus.Entry, name string) *Cmd {
 	return &Cmd{
-		l:    l,
-		cmd:  cmd,
-		wait: true,
+		l:       l,
+		command: []string{name},
+		wait:    true,
+		env:     os.Environ(),
 	}
 }
 
-func (c *Cmd) Cwd(path string) *Cmd {
-	c.cmd.Dir = path
+func (c Cmd) Command() []string {
+	return c.command
+}
+
+func (c *Cmd) Args(args ...string) *Cmd {
+	c.command = append(c.command, args...)
 	return c
 }
 
-func (c *Cmd) Env(env []string) *Cmd {
-	c.cmd.Env = append(c.cmd.Env, env...)
+func (c *Cmd) Cwd(path string) *Cmd {
+	c.cwd = path
+	return c
+}
+
+func (c *Cmd) Env(env ...string) *Cmd {
+	c.env = append(c.env, env...)
 	return c
 }
 
 func (c *Cmd) Stdin(r io.Reader) *Cmd {
-	c.cmd.Stdin = r
+	c.stdin = r
 	return c
 }
 
@@ -118,7 +128,9 @@ func (c *Cmd) PostEnd(f func() error) *Cmd {
 }
 
 func (c *Cmd) Run() (string, error) {
-	c.l.Tracef("executing %q", c.cmd.String())
+	cmd := exec.Command(c.command[0], c.command[1:]...)
+	cmd.Env = c.env
+	c.l.Tracef("executing %q", cmd.String())
 
 	combinedBuf := new(bytes.Buffer)
 	traceWriter := c.l.WriterLevel(logrus.TraceLevel)
@@ -126,8 +138,8 @@ func (c *Cmd) Run() (string, error) {
 
 	c.stdoutWriters = append(c.stdoutWriters, combinedBuf, traceWriter)
 	c.stderrWriters = append(c.stderrWriters, combinedBuf, warnWriter)
-	c.cmd.Stdout = io.MultiWriter(c.stdoutWriters...)
-	c.cmd.Stderr = io.MultiWriter(c.stderrWriters...)
+	cmd.Stdout = io.MultiWriter(c.stdoutWriters...)
+	cmd.Stderr = io.MultiWriter(c.stderrWriters...)
 
 	if c.preStartFunc != nil {
 		if err := c.preStartFunc(); err != nil {
@@ -135,7 +147,7 @@ func (c *Cmd) Run() (string, error) {
 		}
 	}
 
-	if err := c.cmd.Start(); err != nil {
+	if err := cmd.Start(); err != nil {
 		return "", err
 	}
 
@@ -148,12 +160,12 @@ func (c *Cmd) Run() (string, error) {
 	if c.wait {
 		if c.t != 0 {
 			timer := time.AfterFunc(c.t, func() {
-				c.cmd.Process.Kill()
+				cmd.Process.Kill()
 			})
 			defer timer.Stop()
 		}
 
-		if err := c.cmd.Wait(); err != nil {
+		if err := cmd.Wait(); err != nil {
 			if c.t == 0 {
 				return "", err
 			}
@@ -195,7 +207,7 @@ func StringInSlice(str string, slice []string) bool {
 }
 
 func IsYaml(file string) bool {
-	return StringInSlice(filepath.Ext(file), []string{".yml, .yaml"})
+	return StringInSlice(filepath.Ext(file), []string{".yml", ".yaml"})
 }
 
 func IsJson(file string) bool {

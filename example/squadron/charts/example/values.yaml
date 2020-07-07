@@ -46,14 +46,11 @@ env: []
 args: []
   # - "arg1==one"
 
-
 ingress:
   annotations: {}
     # kubernetes.io/ingress.class: nginx
     # kubernetes.io/tls-acme: "true"
-  host: ""
-  path: ""
-  secretName: ""
+  hosts: []
 
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
