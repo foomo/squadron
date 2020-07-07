@@ -6,7 +6,7 @@ builds:
     env:
       - CGO_ENABLED=0
     ldflags:
-      - -s -w -X cmd/actions/version.version={{.Version}}
+      - -s -w -X github.com/foomo/squadron/cmd/actions.version={{.Version}}
     goos:
       - windows
       - darwin
