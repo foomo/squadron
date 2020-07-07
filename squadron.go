@@ -28,8 +28,8 @@ const (
 	chartFile              = "Chart.yaml"
 	valuesFile             = "values.yaml"
 	requirementsFile       = "requirements.yaml"
-	chartAPIVersionV2      = "v2"
-	chartAPIVersionV1      = "v1"
+	chartApiVersionV2      = "v2"
+	chartApiVersionV1      = "v1"
 	defaultChartType       = "application" // application or library
 	defaultChartVersion    = "0.2.0"
 	defaultChartAppVersion = "1.16.0"
@@ -46,6 +46,7 @@ type Override map[string]interface{}
 type Group struct {
 	Name             string `yaml:"-"`
 	Version          string
+	ChartApiVersion  string              `yaml:"chartApiVersion"`
 	ServiceOverrides map[string]Override `yaml:"services"`
 	JobOverrides     map[string]Override `yaml:"jobs"`
 }
@@ -114,11 +115,7 @@ type Chart struct {
 	useApiV1     bool
 }
 
-func newChart(name, version string, useApiV1 bool) *Chart {
-	apiVersion := chartAPIVersionV2
-	if useApiV1 {
-		apiVersion = chartAPIVersionV1
-	}
+func newChart(name, version, apiVersion string) *Chart {
 	return &Chart{
 		APIVersion:  apiVersion,
 		Name:        name,
@@ -366,7 +363,7 @@ func (sq Squadron) CheckIngressController(name string) error {
 	return nil
 }
 
-func (sq Squadron) Install(namespace, group, groupVersion string, services []string, tv TemplateVars, outputDir string, useChartApiV1 bool) (string, error) {
+func (sq Squadron) Install(namespace, group, groupVersion, chartApiVersion string, services []string, tv TemplateVars, outputDir string) (string, error) {
 	sq.l.Infof("Installing services")
 	groupChartPath := path.Join(sq.basePath, defaultOutputDir, outputDir, group)
 
@@ -389,7 +386,7 @@ func (sq Squadron) Install(namespace, group, groupVersion string, services []str
 		return "", fmt.Errorf("could not clean workdir directory: %w", err)
 	}
 
-	groupChart := newChart(group, groupVersion, useChartApiV1)
+	groupChart := newChart(group, groupVersion, chartApiVersion)
 	for _, service := range services {
 		s, err := sq.Service(service)
 		if err != nil {
@@ -513,6 +510,13 @@ func loadGroup(l *logrus.Entry, sl serviceLoader, path, namespace, group string)
 		return wrapper.Group, err
 	}
 	wrapper.Group.Name = group
+	if wrapper.Group.ChartApiVersion == "" {
+		wrapper.Group.ChartApiVersion = chartApiVersionV2
+	}
+	if wrapper.Group.ChartApiVersion != chartApiVersionV1 && wrapper.Group.ChartApiVersion != chartApiVersionV2 {
+		return wrapper.Group, fmt.Errorf("invalid chart api version %q. use %q or %q",
+			wrapper.Group.ChartApiVersion, chartApiVersionV1, chartApiVersionV2)
+	}
 	for name := range wrapper.Group.ServiceOverrides {
 		// the overrides have not been parsed with templates
 		// we only need this on install
