@@ -61,7 +61,7 @@ func (g Group) Services() []string {
 
 type Namespace struct {
 	name   string
-	groups []Group
+	groups []string
 }
 
 type Config struct {
@@ -112,7 +112,6 @@ type Chart struct {
 	Type         string
 	Version      string
 	Dependencies []ChartDependency `yaml:"dependencies,omitempty"`
-	useApiV1     bool
 }
 
 func newChart(name, version, apiVersion string) *Chart {
@@ -126,7 +125,7 @@ func newChart(name, version, apiVersion string) *Chart {
 }
 
 func (c Chart) generateChartFiles(chartPath string, overrides interface{}) error {
-	if c.useApiV1 {
+	if c.APIVersion == chartApiVersionV1 {
 		// for chart APIVersion v1 dependencies are defined outside Chart.yaml, in requirements.yaml
 		var wrapper struct {
 			Dependencies []ChartDependency
@@ -293,35 +292,46 @@ func (sq Squadron) Namespace(name string) (Namespace, error) {
 	return Namespace{}, errResourceNotFound(name, "namespace", available)
 }
 
-func (ns Namespace) Group(name string) (Group, error) {
+func (ns Namespace) ValidateGroup(name string) error {
 	var available []string
 	for _, g := range ns.groups {
-		if g.Name == name {
-			return g, nil
+		if g == name {
+			return nil
 		}
-		available = append(available, g.Name)
+		available = append(available, g)
 	}
-	return Group{}, errResourceNotFound(name, "squadron", available)
+	return errResourceNotFound(name, "squadron", available)
 }
 
-func (sq Squadron) getOverrides(namespace, group string, services []string, tv TemplateVars) (map[string]Override, error) {
-	path := path.Join(sq.basePath, defaultNamespaceDir, namespace, group+defaultConfigFileExt)
+func (sq Squadron) Group(namespace, group string, tv TemplateVars) (Group, error) {
 	var wrapper struct {
 		Group Group `yaml:"squadron"`
 	}
-	bs, err := util.ParseTemplate(path, tv, true)
+	ns, err := sq.Namespace(namespace)
 	if err != nil {
-		return nil, err
+		return wrapper.Group, err
+	}
+	if err := ns.ValidateGroup(group); err != nil {
+		return wrapper.Group, err
+	}
+
+	path := path.Join(sq.basePath, defaultNamespaceDir, namespace, group+defaultConfigFileExt)
+	bs, err := util.ExecuteTemplate(path, tv)
+	if err != nil {
+		return wrapper.Group, err
+	}
+	wrapper.Group.Name = group
+	if wrapper.Group.ChartApiVersion == "" {
+		wrapper.Group.ChartApiVersion = chartApiVersionV2
+	}
+	if wrapper.Group.ChartApiVersion != chartApiVersionV1 && wrapper.Group.ChartApiVersion != chartApiVersionV2 {
+		return wrapper.Group, fmt.Errorf("invalid chart api version %q. use %q or %q",
+			wrapper.Group.ChartApiVersion, chartApiVersionV1, chartApiVersionV2)
 	}
 	if err := yaml.Unmarshal(bs, &wrapper); err != nil {
-		return nil, err
+		return wrapper.Group, err
 	}
-	for _, service := range wrapper.Group.Services() {
-		if !util.StringInSlice(service, services) {
-			delete(wrapper.Group.ServiceOverrides, service)
-		}
-	}
-	return wrapper.Group.ServiceOverrides, nil
+	return wrapper.Group, nil
 }
 
 func (sq Squadron) Build(s Service) (string, error) {
@@ -363,9 +373,9 @@ func (sq Squadron) CheckIngressController(name string) error {
 	return nil
 }
 
-func (sq Squadron) Install(namespace, group, groupVersion, chartApiVersion string, services []string, tv TemplateVars, outputDir string) (string, error) {
+func (sq Squadron) Install(group Group, tv TemplateVars, outputDir string) (string, error) {
 	sq.l.Infof("Installing services")
-	groupChartPath := path.Join(sq.basePath, defaultOutputDir, outputDir, group)
+	groupChartPath := path.Join(sq.basePath, defaultOutputDir, outputDir, group.Name)
 
 	sq.l.Infof("Entering dir: %q", path.Join(sq.basePath, defaultOutputDir))
 	sq.l.Printf("Creating dir: %q", outputDir)
@@ -386,8 +396,8 @@ func (sq Squadron) Install(namespace, group, groupVersion, chartApiVersion strin
 		return "", fmt.Errorf("could not clean workdir directory: %w", err)
 	}
 
-	groupChart := newChart(group, groupVersion, chartApiVersion)
-	for _, service := range services {
+	groupChart := newChart(group.Name, group.Version, group.ChartApiVersion)
+	for _, service := range group.Services() {
 		s, err := sq.Service(service)
 		if err != nil {
 			return "", err
@@ -395,21 +405,16 @@ func (sq Squadron) Install(namespace, group, groupVersion, chartApiVersion strin
 		groupChart.Dependencies = append(groupChart.Dependencies, s.Chart)
 	}
 
-	overrides, err := sq.getOverrides(namespace, group, services, tv)
-	if err != nil {
+	if err := groupChart.generateChartFiles(groupChartPath, group.ServiceOverrides); err != nil {
 		return "", err
 	}
 
-	if err := groupChart.generateChartFiles(groupChartPath, overrides); err != nil {
-		return "", err
-	}
-
-	output, err := sq.helmCmd.UpdateDependency(group, groupChartPath)
+	output, err := sq.helmCmd.UpdateDependency(group.Name, groupChartPath)
 	if err != nil {
 		return output, err
 	}
 
-	return sq.helmCmd.Install(group, groupChartPath)
+	return sq.helmCmd.Install(group.Name, groupChartPath)
 }
 
 func (sq Squadron) Uninstall(group string) (string, error) {
@@ -462,7 +467,7 @@ func loadNamespaces(l *logrus.Entry, sl serviceLoader, basePath string) ([]Names
 		}
 		if info.IsDir() && path != namespaceDir {
 			l.Infof("Loading namespace: %v, from: %q", info.Name(), util.RelativePath(path, basePath))
-			gs, err := loadGroups(l, sl, basePath, info.Name())
+			gs, err := loadGroupNames(l, sl, basePath, info.Name())
 			if err != nil {
 				return err
 			}
@@ -477,8 +482,8 @@ func loadNamespaces(l *logrus.Entry, sl serviceLoader, basePath string) ([]Names
 	return nss, err
 }
 
-func loadGroups(l *logrus.Entry, sl serviceLoader, basePath, namespace string) ([]Group, error) {
-	var gs []Group
+func loadGroupNames(l *logrus.Entry, sl serviceLoader, basePath, namespace string) ([]string, error) {
+	var gs []string
 	groupPath := path.Join(basePath, defaultNamespaceDir, namespace)
 	err := filepath.Walk(groupPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -487,43 +492,11 @@ func loadGroups(l *logrus.Entry, sl serviceLoader, basePath, namespace string) (
 		if !info.IsDir() && (strings.HasSuffix(path, defaultConfigFileExt)) {
 			name := strings.TrimSuffix(info.Name(), defaultConfigFileExt)
 			l.Infof("Loading squadron: %v, from: %q", name, util.RelativePath(path, basePath))
-			g, err := loadGroup(l, sl, path, namespace, name)
-			if err != nil {
-				return err
-			}
-			gs = append(gs, g)
+			gs = append(gs, name)
 		}
 		return nil
 	})
 	return gs, err
-}
-
-func loadGroup(l *logrus.Entry, sl serviceLoader, path, namespace, group string) (Group, error) {
-	var wrapper struct {
-		Group Group `yaml:"squadron"`
-	}
-	bs, err := util.ParseTemplate(path, nil, false)
-	if err != nil {
-		return wrapper.Group, err
-	}
-	if err := yaml.Unmarshal(bs, &wrapper); err != nil {
-		return wrapper.Group, err
-	}
-	wrapper.Group.Name = group
-	if wrapper.Group.ChartApiVersion == "" {
-		wrapper.Group.ChartApiVersion = chartApiVersionV2
-	}
-	if wrapper.Group.ChartApiVersion != chartApiVersionV1 && wrapper.Group.ChartApiVersion != chartApiVersionV2 {
-		return wrapper.Group, fmt.Errorf("invalid chart api version %q. use %q or %q",
-			wrapper.Group.ChartApiVersion, chartApiVersionV1, chartApiVersionV2)
-	}
-	for name := range wrapper.Group.ServiceOverrides {
-		// the overrides have not been parsed with templates
-		// we only need this on install
-		// so use nil instead of wrong values
-		wrapper.Group.ServiceOverrides[name] = nil
-	}
-	return wrapper.Group, nil
 }
 
 func errResourceNotFound(name, resource string, available []string) error {

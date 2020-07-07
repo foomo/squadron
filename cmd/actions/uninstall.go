@@ -26,8 +26,7 @@ func uninstall(group, namespace string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	_, err = ns.Group(group)
-	if err != nil {
+	if err = ns.ValidateGroup(group); err != nil {
 		return "", err
 	}
 

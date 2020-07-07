@@ -9,15 +9,15 @@ func init() {
 	installCmd.Flags().BoolVarP(&flagBuild, "build", "b", false, "Build service squadron before publishing")
 	installCmd.Flags().StringVarP(&flagOutputDir, "output", "o", "default", "Specifies output directory")
 	installCmd.Flags().BoolVarP(&flagPush, "push", "p", false, "Pushes the built service to the registry")
-	installCmd.Flags().StringSliceVar(&flagTemplateSlice, "template-vars", nil, "Specifies template vars x=y")
-	installCmd.Flags().StringVar(&flagTemplateFile, "template-file", "", "Specifies the template file with vars")
+	installCmd.Flags().StringSliceVar(&flagTemplateDataSlice, "template-data", nil, "Specifies template data x=y")
+	installCmd.Flags().StringVar(&flagTemplateDataFile, "template-data-file", "", "Specifies the template data file")
 }
 
 var (
-	flagBuild         bool
-	flagOutputDir     string
-	flagTemplateSlice []string
-	flagTemplateFile  string
+	flagBuild             bool
+	flagOutputDir         string
+	flagTemplateDataSlice []string
+	flagTemplateDataFile  string
 )
 
 var (
@@ -27,7 +27,7 @@ var (
 		Long:  "installs a squadron of services with given namespace and tag version",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			templateVars, err := squadron.NewTemplateVars(flagDir, flagTemplateSlice, flagTemplateFile)
+			templateVars, err := squadron.NewTemplateVars(flagDir, flagTemplateDataSlice, flagTemplateDataFile)
 			if err != nil {
 				return err
 			}
@@ -38,19 +38,14 @@ var (
 )
 
 func install(group, namespace, outputDir string, buildService bool, tv squadron.TemplateVars) (string, error) {
-	ns, err := sq.Namespace(namespace)
+	g, err := sq.Group(namespace, group, tv)
 	if err != nil {
 		return "", err
 	}
-	g, err := ns.Group(group)
-	if err != nil {
-		return "", err
-	}
-	services := g.Services()
 
 	if buildService {
 		log.Infof("Building services")
-		for _, service := range services {
+		for _, service := range g.Services() {
 			out, err := build(service, flagPush)
 			if err != nil {
 				if err == squadron.ErrBuildNotConfigured {
@@ -64,5 +59,5 @@ func install(group, namespace, outputDir string, buildService bool, tv squadron.
 	if err := sq.CheckIngressController("ingress-nginx"); err != nil {
 		return "", err
 	}
-	return sq.Install(namespace, g.Name, g.Version, g.ChartApiVersion, services, tv, outputDir)
+	return sq.Install(g, tv, outputDir)
 }

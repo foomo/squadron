@@ -20,16 +20,13 @@ func RelativePath(path, basePath string) string {
 	return strings.Replace(path, basePath+"/", "", -1)
 }
 
-func ParseTemplate(file string, templateVars interface{}, errOnMissing bool) ([]byte, error) {
+func ExecuteTemplate(file string, templateVars interface{}) ([]byte, error) {
 	tmp, err := template.ParseFiles(file)
 	if err != nil {
 		return nil, err
 	}
 	out := bytes.NewBuffer([]byte{})
-	if errOnMissing {
-		tmp = tmp.Option("missingkey=error")
-	}
-	if err := tmp.Funcs(builder.TemplateFuncs).Execute(out, templateVars); err != nil {
+	if err := tmp.Option("missingkey=error").Funcs(builder.TemplateFuncs).Execute(out, templateVars); err != nil {
 		return nil, err
 	}
 	return out.Bytes(), nil
