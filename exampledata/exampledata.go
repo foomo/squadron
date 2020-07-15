@@ -186,7 +186,7 @@ func squadronChartsExampleChartYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "squadron/charts/example/Chart.yaml", size: 105, mode: os.FileMode(420), modTime: time.Unix(1594134010, 0)}
+	info := bindataFileInfo{name: "squadron/charts/example/Chart.yaml", size: 105, mode: os.FileMode(420), modTime: time.Unix(1594136152, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -226,7 +226,7 @@ func squadronChartsExampleTemplatesDeploymentYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "squadron/charts/example/templates/deployment.yaml", size: 2209, mode: os.FileMode(420), modTime: time.Unix(1594134010, 0)}
+	info := bindataFileInfo{name: "squadron/charts/example/templates/deployment.yaml", size: 2209, mode: os.FileMode(420), modTime: time.Unix(1594136152, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -306,7 +306,7 @@ func squadronChartsExampleValuesYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "squadron/charts/example/values.yaml", size: 1528, mode: os.FileMode(420), modTime: time.Unix(1594134005, 0)}
+	info := bindataFileInfo{name: "squadron/charts/example/values.yaml", size: 1528, mode: os.FileMode(420), modTime: time.Unix(1594136152, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -326,7 +326,7 @@ func squadronNamespacesLocalHelloSquadronYml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "squadron/namespaces/local/hello-squadron.yml", size: 717, mode: os.FileMode(420), modTime: time.Unix(1594134010, 0)}
+	info := bindataFileInfo{name: "squadron/namespaces/local/hello-squadron.yml", size: 717, mode: os.FileMode(420), modTime: time.Unix(1594136152, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
