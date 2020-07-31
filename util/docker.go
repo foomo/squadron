@@ -11,7 +11,7 @@ type DockerCmd struct {
 }
 
 func NewDockerCommand(l *logrus.Entry) *DockerCmd {
-	return &DockerCmd{*NewCommand(l, "helm")}
+	return &DockerCmd{*NewCommand(l, "docker")}
 }
 
 func (c DockerCmd) Build(workDir string, options ...string) *Cmd {
