@@ -3,10 +3,11 @@ module github.com/foomo/squadron
 go 1.14
 
 require (
-	github.com/foomo/config-bob v0.0.0-20180509121310-96db3832d519
-	github.com/foomo/htpasswd v0.0.0-20200116085101-e3a90e78da9c // indirect
+	github.com/GehirnInc/crypt v0.0.0-20200316065508-bb7000b8a962 // indirect
+	github.com/foomo/config-bob v0.5.0
 	github.com/sirupsen/logrus v1.6.0
 	github.com/spf13/cobra v0.0.6
+	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9 // indirect
 	gopkg.in/yaml.v2 v2.3.0
 	k8s.io/api v0.18.4
 )

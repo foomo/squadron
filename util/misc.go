@@ -3,6 +3,7 @@ package util
 import (
 	"bytes"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -21,7 +22,11 @@ func RelativePath(path, basePath string) string {
 }
 
 func ExecuteTemplate(file string, templateVars interface{}) ([]byte, error) {
-	tmp, err := template.ParseFiles(file)
+	templateBytes, errRead := ioutil.ReadFile(file)
+	if errRead != nil {
+		return nil, errRead
+	}
+	tmp, err := template.New("squadron").Option("missingkey=error").Funcs(builder.TemplateFuncs).Parse(string(templateBytes))
 	if err != nil {
 		return nil, err
 	}
