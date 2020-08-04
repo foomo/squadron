@@ -12,7 +12,7 @@ func NewHelmCommand(l *logrus.Entry) *HelmCmd {
 
 func (c HelmCmd) UpdateDependency(chart, chartPath string) (string, error) {
 	c.l.Infof("Running helm dependency update for chart: %v", chart)
-	return c.Args("dependency", "update", chartPath).Run()
+	return c.Args("dependency", "update", chartPath, "--skip-refresh").Run()
 }
 
 func (c HelmCmd) Install(chart, chartPath string) (string, error) {
