@@ -46,7 +46,6 @@ type Override map[string]interface{}
 type Group struct {
 	Name             string `yaml:"-"`
 	Version          string
-	ChartApiVersion  string              `yaml:"chartApiVersion"`
 	ServiceOverrides map[string]Override `yaml:"services"`
 	JobOverrides     map[string]Override `yaml:"jobs"`
 }
@@ -114,9 +113,9 @@ type Chart struct {
 	Dependencies []ChartDependency `yaml:"dependencies,omitempty"`
 }
 
-func newChart(name, version, apiVersion string) *Chart {
+func newChart(name, version string) *Chart {
 	return &Chart{
-		APIVersion:  apiVersion,
+		APIVersion:  chartApiVersionV2,
 		Name:        name,
 		Description: fmt.Sprintf("A helm parent chart for squadron %v", name),
 		Type:        defaultChartType,
@@ -124,8 +123,9 @@ func newChart(name, version, apiVersion string) *Chart {
 	}
 }
 
-func (c Chart) generateChartFiles(chartPath string, overrides interface{}) error {
-	if c.APIVersion == chartApiVersionV1 {
+func (c Chart) generateChartFiles(chartPath string, overrides interface{}, useChartApiV1 bool) error {
+	if useChartApiV1 {
+		c.APIVersion = chartApiVersionV1
 		// for chart APIVersion v1 dependencies are defined outside Chart.yaml, in requirements.yaml
 		var wrapper struct {
 			Dependencies []ChartDependency
@@ -321,13 +321,6 @@ func (sq Squadron) Group(namespace, group string, tv TemplateVars) (Group, error
 		return wrapper.Group, err
 	}
 	wrapper.Group.Name = group
-	if wrapper.Group.ChartApiVersion == "" {
-		wrapper.Group.ChartApiVersion = chartApiVersionV2
-	}
-	if wrapper.Group.ChartApiVersion != chartApiVersionV1 && wrapper.Group.ChartApiVersion != chartApiVersionV2 {
-		return wrapper.Group, fmt.Errorf("invalid chart api version %q. use %q or %q",
-			wrapper.Group.ChartApiVersion, chartApiVersionV1, chartApiVersionV2)
-	}
 	if err := yaml.Unmarshal(bs, &wrapper); err != nil {
 		return wrapper.Group, err
 	}
@@ -374,47 +367,19 @@ func (sq Squadron) CheckIngressController(name string) error {
 }
 
 func (sq Squadron) Install(group Group, tv TemplateVars, outputDir string) (string, error) {
-	sq.l.Infof("Installing services")
 	groupChartPath := path.Join(sq.basePath, defaultOutputDir, outputDir, group.Name)
-
-	sq.l.Infof("Entering dir: %q", path.Join(sq.basePath, defaultOutputDir))
-	sq.l.Printf("Creating dir: %q", outputDir)
-	if _, err := os.Stat(groupChartPath); os.IsNotExist(err) {
-		if err := os.MkdirAll(groupChartPath, 0744); err != nil {
-			return "", fmt.Errorf("could not create a workdir directory: %w", err)
-		}
-	}
-
-	chartsPath := path.Join(groupChartPath, chartsDir)
-	sq.l.Infof("Removing dir: %q", chartsPath)
-	if err := os.RemoveAll(chartsPath); err != nil {
-		return "", fmt.Errorf("could not clean charts directory: %w", err)
-	}
-	groupChartLockPath := path.Join(groupChartPath, chartLockFile)
-	sq.l.Infof("Removing file: %q", groupChartLockPath)
-	if err := os.RemoveAll(groupChartLockPath); err != nil {
-		return "", fmt.Errorf("could not clean workdir directory: %w", err)
-	}
-
-	groupChart := newChart(group.Name, group.Version, group.ChartApiVersion)
-	for _, service := range group.Services() {
-		s, err := sq.Service(service)
-		if err != nil {
-			return "", err
-		}
-		groupChart.Dependencies = append(groupChart.Dependencies, s.Chart)
-	}
-
-	if err := groupChart.generateChartFiles(groupChartPath, group.ServiceOverrides); err != nil {
+	if err := sq.prepareChart(group, tv, groupChartPath, false); err != nil {
 		return "", err
 	}
-
-	output, err := sq.helmCmd.UpdateDependency(group.Name, groupChartPath)
-	if err != nil {
-		return output, err
-	}
-
 	return sq.helmCmd.Install(group.Name, groupChartPath)
+}
+
+func (sq Squadron) Generate(group Group, tv TemplateVars, outputDir string, useChartApiV1 bool) (string, error) {
+	groupChartPath := path.Join(sq.basePath, defaultOutputDir, outputDir, group.Name)
+	if err := sq.prepareChart(group, tv, groupChartPath, useChartApiV1); err != nil {
+		return "", err
+	}
+	return sq.helmCmd.Package(group.Name, groupChartPath, path.Join(sq.basePath, defaultOutputDir, outputDir))
 }
 
 func (sq Squadron) Uninstall(group string) (string, error) {
@@ -439,6 +404,43 @@ func (sq Squadron) Restart(services []string) (string, error) {
 		}
 	}
 	return "", nil
+}
+
+func (sq Squadron) prepareChart(group Group, tv TemplateVars, groupChartPath string, useChartApiV1 bool) error {
+	sq.l.Infof("Preparing chart")
+	sq.l.Infof("Entering dir: %q", path.Join(sq.basePath, defaultOutputDir))
+	if _, err := os.Stat(groupChartPath); err == nil {
+		sq.l.Infof("Removing dir: %q", groupChartPath)
+		if err := os.RemoveAll(groupChartPath); err != nil {
+			sq.l.Warnf("could not delete group chart directory: %q", err)
+		}
+	}
+
+	sq.l.Printf("Creating dir: %q", groupChartPath)
+	if _, err := os.Stat(groupChartPath); os.IsNotExist(err) {
+		if err := os.MkdirAll(groupChartPath, 0744); err != nil {
+			return fmt.Errorf("could not create a workdir directory: %w", err)
+		}
+	}
+
+	groupChart := newChart(group.Name, group.Version)
+	for _, service := range group.Services() {
+		s, err := sq.Service(service)
+		if err != nil {
+			return err
+		}
+		groupChart.Dependencies = append(groupChart.Dependencies, s.Chart)
+	}
+	if err := groupChart.generateChartFiles(groupChartPath, group.ServiceOverrides, useChartApiV1); err != nil {
+		return err
+	}
+
+	_, err := sq.helmCmd.UpdateDependency(group.Name, groupChartPath)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func loadService(reader io.Reader, name, tag, basePath string) (Service, error) {
