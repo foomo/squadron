@@ -42,7 +42,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&flagTag, "tag", "t", "latest", "Specifies the image tag")
 	rootCmd.PersistentFlags().StringVarP(&flagDir, "dir", "d", "", "Specifies working directory")
 	rootCmd.PersistentFlags().BoolVarP(&flagVerbose, "verbose", "v", false, "Specifies should command output be displayed")
-	rootCmd.AddCommand(buildCmd, installCmd, uninstallCmd, restartCmd, initCmd, versionCmd)
+	rootCmd.AddCommand(buildCmd, installCmd, genCmd, uninstallCmd, restartCmd, initCmd, versionCmd)
 }
 
 func Execute() {

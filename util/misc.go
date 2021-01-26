@@ -2,12 +2,14 @@ package util
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"text/template"
 	"time"
@@ -21,17 +23,48 @@ func RelativePath(path, basePath string) string {
 	return strings.Replace(path, basePath+"/", "", -1)
 }
 
+func join(value interface{}, sep string) (string, error) {
+	v := reflect.ValueOf(value)
+	if v.Kind() != reflect.Slice && v.Kind() != reflect.Array {
+		return "", fmt.Errorf("Value must be a slice or array")
+	}
+	var l []string
+	for i := 0; i < v.Len(); i++ {
+		l = append(l, fmt.Sprint(v.Index(i)))
+	}
+	return strings.Join(l, sep), nil
+}
+
+func joinMap(value interface{}, mapSep, sep string) (string, error) {
+	if mapSep == sep {
+		return "", fmt.Errorf("Cannot use same separator %q for map entries and items", sep)
+	}
+	v := reflect.ValueOf(value)
+	if v.Kind() != reflect.Map {
+		return "", fmt.Errorf("Value must be a map")
+	}
+	var l []string
+	for _, key := range v.MapKeys() {
+		l = append(l, fmt.Sprintf("%v%v%v", key, mapSep, v.MapIndex(key)))
+	}
+	return strings.Join(l, sep), nil
+}
+
 func ExecuteTemplate(file string, templateVars interface{}) ([]byte, error) {
+	tplFuncs := builder.TemplateFuncs
+	tplFuncs["join"] = join
+	tplFuncs["joinMap"] = joinMap
+
 	templateBytes, errRead := ioutil.ReadFile(file)
 	if errRead != nil {
 		return nil, errRead
 	}
-	tmp, err := template.New("squadron").Option("missingkey=error").Funcs(builder.TemplateFuncs).Parse(string(templateBytes))
+	tpl, err := template.New("squadron").Option("missingkey=error").Funcs(tplFuncs).Parse(string(templateBytes))
 	if err != nil {
 		return nil, err
 	}
 	out := bytes.NewBuffer([]byte{})
-	if err := tmp.Option("missingkey=error").Funcs(builder.TemplateFuncs).Execute(out, templateVars); err != nil {
+	if err := tpl.Option("missingkey=error").Funcs(tplFuncs).Execute(out, templateVars); err != nil {
 		return nil, err
 	}
 	return out.Bytes(), nil
@@ -60,6 +93,11 @@ func NewCommand(l *logrus.Entry, name string) *Cmd {
 		wait:    true,
 		env:     os.Environ(),
 	}
+}
+
+func (c Cmd) Base() *Cmd {
+	c.command = []string{c.command[0]}
+	return &c
 }
 
 func (c Cmd) Command() []string {
