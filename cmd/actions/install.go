@@ -56,8 +56,5 @@ func install(group, namespace, outputDir string, buildService bool, tv squadron.
 			}
 		}
 	}
-	if err := sq.CheckIngressController("ingress-nginx"); err != nil {
-		return "", err
-	}
 	return sq.Install(g, tv, outputDir)
 }
