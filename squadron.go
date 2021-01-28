@@ -338,7 +338,7 @@ func (sq Squadron) Build(s Service) (string, error) {
 		image := fmt.Sprintf("%v:%v", s.Build.Image, s.Build.Tag)
 		args = append(strings.Split(s.Build.Command, " "), "-t", image)
 	}
-	return util.NewCommand(sq.l, args[0]).Args(args[1:]...).Cwd(sq.basePath).Env(fmt.Sprintf("TAG=%s", s.Build.Tag)).Run()
+	return util.NewCommand(sq.l, args[0]).Args(args[1:]...).Cwd(sq.basePath).Run()
 }
 
 func (sq Squadron) Push(s Service) (string, error) {
