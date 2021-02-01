@@ -4,7 +4,9 @@
 
 Application for managing kubernetes microservice environments. 
 
-Use it, if a helm chart is not enough in order to organize multiple services into a effective squadron.
+Use it, if a helm chart is not enough in order to organize multiple services into an effective squadron.
+
+Another way to think of it would be `helm-compose`, because it makes k8s and helm way more approachable, not matter if it is development or production (where it just becomes another helm chart)
 
 ## Quickstart
 
