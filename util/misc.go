@@ -166,7 +166,7 @@ func (c *Cmd) PostEnd(f func() error) *Cmd {
 }
 
 func (c *Cmd) Run() (string, error) {
-	cmd := exec.Command("/bin/bash", "-e", "-c", strings.Join(c.command, " "))
+	cmd := exec.Command(c.command[0], c.command[1:]...)
 	cmd.Env = append(os.Environ(), c.env...)
 	if c.cwd != "" {
 		cmd.Dir = c.cwd
