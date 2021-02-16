@@ -166,8 +166,9 @@ func (c KubeCmd) DeleteConfigMap(name string) (string, error) {
 func (c KubeCmd) GetConfigMapKey(name, key string) (string, error) {
 	key = strings.ReplaceAll(key, ".", "\\.")
 	// jsonpath map key is not very fond of dots
-	out, err := c.Args("get", "configmap", name, "-o",
-		fmt.Sprintf("jsonpath={.data.%v}", key)).Run()
+	out, err := c.Args(
+		"get", "configmap", name,
+		"-o", "jsonpath='{.data."+key+"}'").Run()
 	if err != nil {
 		return out, err
 	}
