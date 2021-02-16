@@ -1,6 +1,9 @@
 package util
 
 import (
+	"path/filepath"
+	"strings"
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -13,5 +16,6 @@ func NewGoCommand(l *logrus.Entry) *GoCmd {
 }
 
 func (c GoCmd) Build(workDir, output, input string, flags ...string) *Cmd {
-	return c.Args("build", "-o", output).Args(flags...).Args(input)
+	relInput := strings.TrimPrefix(input, workDir+string(filepath.Separator))
+	return c.Args("build", "-o", output).Cwd(workDir).Args(flags...).Args(relInput)
 }
