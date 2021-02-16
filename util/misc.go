@@ -166,8 +166,8 @@ func (c *Cmd) PostEnd(f func() error) *Cmd {
 }
 
 func (c *Cmd) Run() (string, error) {
-	cmd := exec.Command(c.command[0], c.command[1:]...)
-	cmd.Env = c.env
+	cmd := exec.Command("/bin/bash", "-e", "-c", strings.Join(c.command, " "))
+	cmd.Env = append(os.Environ(), c.env...)
 	c.l.Tracef("executing %q", cmd.String())
 
 	combinedBuf := new(bytes.Buffer)
