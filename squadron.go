@@ -332,13 +332,22 @@ func (sq Squadron) Build(s Service) (string, error) {
 	if s.Build.Command == "" {
 		return "", ErrBuildNotConfigured
 	}
-
-	args := strings.Split(s.Build.Command, " ")
-	if args[0] == "docker" && s.Build.Image != "" && s.Build.Tag != "" {
-		image := fmt.Sprintf("%v:%v", s.Build.Image, s.Build.Tag)
-		args = append(strings.Split(s.Build.Command, " "), "-t", image)
+	args := []string{}
+	shell := "/bin/bash"
+	for _, envVarName := range []string{"SHELL", "SQUADRON_SHELL"} {
+		if os.Getenv(envVarName) != "" {
+			shell = os.Getenv(envVarName)
+		}
 	}
-	return util.NewCommand(sq.l, args[0]).Args(args[1:]...).Cwd(sq.basePath).Run()
+	switch filepath.Base(shell) {
+	case "bash":
+		args = []string{"-c"}
+	case "zsh":
+		args = []string{"-c"}
+	}
+	args = append(args, s.Build.Command)
+	return util.NewCommand(sq.l, shell).Args(args...).Cwd(sq.basePath).Run()
+
 }
 
 func (sq Squadron) Push(s Service) (string, error) {
