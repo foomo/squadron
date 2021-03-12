@@ -25,3 +25,11 @@ squadron:
 # squadron up -n storefinder storefinder   = helm upgrage --install --create-namespace -n storefinder storefinder
 # squadron down -n storefinder storefinder = helm uninstall storefinder -n storefinder
 # squadron up -n storefinder storefinder storefinder-frontend --push
+
+# squadron build ..
+# squadron generate .. --tgz
+
+# (squadron init ..) 
+
+# squadron version
+# squadron help
