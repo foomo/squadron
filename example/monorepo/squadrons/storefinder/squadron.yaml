@@ -1,0 +1,27 @@
+# Schema version
+version: "1.0"
+prefix: storefinder # optional
+squadron:
+  nats:
+    chart: 
+      name: nats
+      version: 0.7.5
+      repository: https://nats-io.github.io/k8s/helm/charts/
+    values:
+      foo: bar
+  frontend:
+    chart: ${PWD}/../path/to/local/chart
+    build: # same as docker-compose
+      image: registry.your-company.com/path/to/image
+      tag: {{ env "TAG" | default 'latest' }}
+      context: .
+      dockefile: path/to/dockerfile
+    values:
+      image: "{{ .Squadron.build.image }}:{{ .Squadron.build.tag }}"
+      service:
+        ports:
+          - {{ env .PORT | default 80 }}
+
+# squadron up -n storefinder storefinder   = helm upgrage --install --create-namespace -n storefinder storefinder
+# squadron down -n storefinder storefinder = helm uninstall storefinder -n storefinder
+# squadron up -n storefinder storefinder storefinder-frontend --push
