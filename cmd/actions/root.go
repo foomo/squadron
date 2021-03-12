@@ -12,16 +12,16 @@ var (
 		Use: "squadron",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			log = newLogger(flagVerbose)
+			var err error
 			if cmd.Name() == "help" || cmd.Name() == "init" || cmd.Name() == "version" {
 				return nil
 			}
-			// flagDir
-			if err := util.ValidatePath(".", &flagDir); err != nil {
+			// cwd
+			if err = util.ValidatePath(".", &cwd); err != nil {
 				return err
 			}
-			// cnf
-			var err error
-			sq, err = squadron.New(log, flagTag, flagDir, flagNamespace)
+			// squadron
+			sq, err = squadron.New(log, cwd, flagNamespace)
 			if err != nil {
 				return err
 			}
@@ -29,21 +29,11 @@ var (
 		},
 	}
 
-	log           *logrus.Entry
-	sq            *squadron.Squadron
-	flagTag       string
-	flagDir       string
-	flagVerbose   bool
-	flagNamespace string
+	log         *logrus.Entry
+	sq          *squadron.Squadron
+	cwd         string
+	flagVerbose bool
 )
-
-func init() {
-	rootCmd.PersistentFlags().StringVarP(&flagNamespace, "namespace", "n", "default", "Specifies the namespace")
-	rootCmd.PersistentFlags().StringVarP(&flagTag, "tag", "t", "latest", "Specifies the image tag")
-	rootCmd.PersistentFlags().StringVarP(&flagDir, "dir", "d", "", "Specifies working directory")
-	rootCmd.PersistentFlags().BoolVarP(&flagVerbose, "verbose", "v", false, "Specifies should command output be displayed")
-	rootCmd.AddCommand(buildCmd, installCmd, genCmd, uninstallCmd, restartCmd, initCmd, versionCmd)
-}
 
 func Execute() {
 	log := logrus.New()

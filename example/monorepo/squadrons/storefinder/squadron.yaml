@@ -3,7 +3,7 @@ version: "1.0"
 prefix: storefinder # optional
 squadron:
   nats:
-    chart: 
+    chart:
       name: nats
       version: 0.7.5
       repository: https://nats-io.github.io/k8s/helm/charts/
@@ -29,7 +29,7 @@ squadron:
 # squadron build ..
 # squadron generate .. --tgz
 
-# (squadron init ..) 
+# (squadron init ..)
 
 # squadron version
 # squadron help
