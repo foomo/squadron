@@ -16,7 +16,7 @@ import (
 
 	"github.com/foomo/config-bob/builder"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 func RelativePath(path, basePath string) string {

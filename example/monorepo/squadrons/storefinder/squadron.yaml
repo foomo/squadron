@@ -13,14 +13,14 @@ squadron:
     chart: ${PWD}/../path/to/local/chart
     build: # same as docker-compose
       image: registry.your-company.com/path/to/image
-      tag: {{ env "TAG" | default 'latest' }}
-      context: .
+      tag: {{ env "TAG" }}
+      context: ${PWD}
       dockefile: path/to/dockerfile
     values:
-      image: "{{ .Squadron.build.image }}:{{ .Squadron.build.tag }}"
+      image: "{{ .Squadron.frontend.Build.target }}:{{ .Squadron.frontend.Build.tag }}"
       service:
         ports:
-          - {{ env .PORT | default 80 }}
+          - {{ env "PORT" }}
 
 # squadron up -n storefinder storefinder   = helm upgrage --install --create-namespace -n storefinder storefinder
 # squadron down -n storefinder storefinder = helm uninstall storefinder -n storefinder

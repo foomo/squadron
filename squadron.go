@@ -1,23 +1,27 @@
 package squadron
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"path"
+	"text/template"
 
+	"github.com/foomo/config-bob/builder"
 	"github.com/foomo/squadron/util"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 const (
-	defaultOutputDir  = ".output"
-	chartApiVersionV2 = "v2"
-	defaultChartType  = "application" // application or library
-	chartFile         = "Chart.yaml"
-	valuesFile        = "values.yaml"
+	defaultOutputDir    = ".output"
+	chartApiVersionV2   = "v2"
+	defaultChartType    = "application" // application or library
+	chartFile           = "Chart.yaml"
+	valuesFile          = "values.yaml"
+	defaultSquadronFile = "squadron.yaml"
 )
 
 type Chart struct {
@@ -39,24 +43,9 @@ func newChart(name, version string) *Chart {
 	}
 }
 
-func (c *Chart) addDependency(alias string, d interface{}) error {
-	cd := ChartDependency{}
-	if depString, ok := d.(string); ok {
-		localChart, err := loadChart(path.Join(depString, chartFile))
-		if err != nil {
-			return fmt.Errorf("unable to load chart path %q, error: %v", depString, err)
-		}
-		cd.Name = localChart.Name
-		cd.Repository = depString
-		cd.Version = localChart.Version
-	} else if depStruct, ok := d.(ChartDependency); ok {
-		cd = depStruct
-	} else {
-		return fmt.Errorf("incorrect format %q for chart field", d)
-	}
+func (c *Chart) addDependency(alias string, cd ChartDependency) {
 	cd.Alias = alias
 	c.Dependencies = append(c.Dependencies, cd)
-	return nil
 }
 
 func loadChart(path string) (*Chart, error) {
@@ -84,6 +73,8 @@ func (c Chart) generate(chartPath string, overrides interface{}) error {
 }
 
 type Build struct {
+	Image      string   `yaml:"image,omitempty"`
+	Tag        string   `yaml:"tag,omitempty"`
 	Context    string   `yaml:"context,omitempty"`
 	Dockerfile string   `yaml:"dockerfile,omitempty"`
 	Args       []string `yaml:"args,omitempty"`
@@ -109,29 +100,87 @@ type Unit struct {
 	Values interface{} `yaml:"values,omitempty"`
 }
 
+func (u Unit) GetChartDependency() (*ChartDependency, error) {
+	cd := ChartDependency{}
+	if vString, ok := u.Chart.(string); ok {
+		localChart, err := loadChart(path.Join(vString, chartFile))
+		if err != nil {
+			return nil, fmt.Errorf("unable to load chart path %q, error: %v", vString, err)
+		}
+		cd.Name = localChart.Name
+		cd.Repository = vString
+		cd.Version = localChart.Version
+	} else if vStruct, ok := u.Chart.(ChartDependency); ok {
+		cd = vStruct
+	} else {
+		return nil, fmt.Errorf("incorrect format %q for chart field", u.Chart)
+	}
+	return &cd, nil
+}
+
+func (u Unit) GetBuild() (*Build, error) {
+	b := Build{}
+	if vString, ok := u.Build.(string); ok {
+		b.Context = vString
+	} else if vStruct, ok := u.Build.(Build); ok {
+		b = vStruct
+	} else {
+		return nil, fmt.Errorf("invalid format %s for build field", u.Build)
+	}
+	return &b, nil
+}
+
 type Configuration struct {
-	name     string
-	Version  string          `yaml:"version,omitempty"`
-	Prefix   string          `yaml:"prefix,omitempty"`
-	Squadron map[string]Unit `yaml:"squadron,omitempty"`
+	name    string
+	Version string          `yaml:"version,omitempty"`
+	Prefix  string          `yaml:"prefix,omitempty"`
+	Units   map[string]Unit `yaml:"squadron,omitempty"`
 }
 
 type Squadron struct {
-	l        *logrus.Entry
-	helmCmd  *util.HelmCmd
-	basePath string
-	c        Configuration
-}
-
-func (sq Squadron) Units() map[string]Unit {
-	return sq.c.Squadron
+	l         *logrus.Entry
+	helmCmd   *util.HelmCmd
+	dockerCmd *util.DockerCmd
+	basePath  string
+	c         *Configuration
 }
 
 func New(l *logrus.Entry, basePath, namespace string) (*Squadron, error) {
-	sq := Squadron{l: l, helmCmd: util.NewHelmCommand(l), basePath: basePath}
+	sq := Squadron{
+		l:         l,
+		helmCmd:   util.NewHelmCommand(l),
+		dockerCmd: util.NewDockerCommand(l),
+		basePath:  basePath,
+	}
 	sq.helmCmd.Args("-n", namespace)
-	// todo load and parse configuration file
+
+	// execute without errors to get existing values
+	out, err := executeFileTemplate(path.Join(basePath, defaultSquadronFile), nil, false)
+	if err != nil {
+		return nil, err
+	}
+	if err := yaml.Unmarshal(out, &sq.c); err != nil {
+		return nil, err
+	}
+
+	// load existing values as template vars and execute again
+	tv := sq.c.loadTemplateVars()
+	out, err = executeFileTemplate(path.Join(basePath, defaultSquadronFile), tv, true)
+	if err != nil {
+		return nil, err
+	}
+	if err := yaml.Unmarshal(out, &sq.c); err != nil {
+		return nil, err
+	}
 	return &sq, nil
+}
+
+func (c Configuration) loadTemplateVars() TemplateVars {
+	return TemplateVars{"Squadron": c.Units}
+}
+
+func (sq Squadron) Units() map[string]Unit {
+	return sq.c.Units
 }
 
 func (sq Squadron) Up(units map[string]Unit, namespace string, helmArgs ...string) error {
@@ -156,6 +205,41 @@ func (sq Squadron) Up(units map[string]Unit, namespace string, helmArgs ...strin
 	return err
 }
 
+func (sq Squadron) Build(u Unit) error {
+	b, err := u.GetBuild()
+	if err != nil {
+		return err
+	}
+	if b == nil {
+		return nil
+	}
+	dockerCmd := sq.dockerCmd
+	dockerCmd.Option("-t", fmt.Sprintf("%v:%v", b.Image, b.Tag))
+	dockerCmd.Option("--file", b.Dockerfile)
+	dockerCmd.ListOption("--build-arg", b.Args)
+	dockerCmd.ListOption("--label", b.Labels)
+	dockerCmd.ListOption("--cache-from", b.CacheFrom)
+	dockerCmd.Option("--network", b.Network)
+	dockerCmd.Option("--target", b.Target)
+	dockerCmd.Option("--shm-size", b.ShmSize)
+	dockerCmd.ListOption("--add-host", b.ExtraHosts)
+	dockerCmd.Option("--isolation", b.Isolation)
+	_, err = sq.dockerCmd.Build(b.Context)
+	return err
+}
+
+func (sq Squadron) Push(u Unit) error {
+	b, err := u.GetBuild()
+	if err != nil {
+		return err
+	}
+	if b == nil {
+		return nil
+	}
+	_, err = sq.dockerCmd.Push(b.Image, b.Tag)
+	return err
+}
+
 func (sq Squadron) cleanupOutput(chartPath string) error {
 	if _, err := os.Stat(chartPath); err == nil {
 		sq.l.Infof("removing dir: %q", chartPath)
@@ -174,15 +258,42 @@ func (sq Squadron) cleanupOutput(chartPath string) error {
 }
 
 func (sq Squadron) generateChart(units map[string]Unit, chartPath, chartName, version string) error {
-	sq.l.Printf("generating chart files in %q", chartName, chartPath)
+	sq.l.Printf("generating chart %q files in %q", chartName, chartPath)
 	chart := newChart(chartName, version)
 	overrides := map[string]interface{}{}
 	for name, unit := range units {
-		chart.addDependency(name, unit.Chart)
+		cd, err := unit.GetChartDependency()
+		if err != nil {
+			return err
+		}
+		chart.addDependency(name, *cd)
 		overrides[name] = unit.Values
 	}
 	if err := chart.generate(chartPath, overrides); err != nil {
 		return err
 	}
 	return nil
+}
+
+type TemplateVars map[string]interface{}
+
+func executeFileTemplate(path string, templateVars interface{}, errorOnMissing bool) ([]byte, error) {
+	tplFuncs := builder.TemplateFuncs
+
+	templateBytes, errRead := ioutil.ReadFile(path)
+	if errRead != nil {
+		return nil, errRead
+	}
+	tpl, err := template.New("squadron").Funcs(tplFuncs).Parse(string(templateBytes))
+	if err != nil {
+		return nil, err
+	}
+	out := bytes.NewBuffer([]byte{})
+	if errorOnMissing {
+		tpl = tpl.Option("missingkey=error")
+	}
+	if err := tpl.Funcs(tplFuncs).Execute(out, templateVars); err != nil {
+		return nil, err
+	}
+	return out.Bytes(), nil
 }
