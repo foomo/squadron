@@ -17,7 +17,7 @@ func (c HelmCmd) UpdateDependency(chart, chartPath string) (string, error) {
 
 func (c HelmCmd) Install(chart, chartPath string) (string, error) {
 	c.l.Infof("Running helm install for chart: %v", chart)
-	return c.Args("upgrade", chart, chartPath, "--install", "--create-namespace").Run()
+	return c.Args("upgrade", chart, chartPath, "--install").Run()
 }
 
 func (c HelmCmd) Package(chart, chartPath, destPath string) (string, error) {
