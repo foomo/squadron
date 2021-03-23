@@ -8,7 +8,6 @@ import (
 
 	"github.com/foomo/squadron/util"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -21,71 +20,10 @@ const (
 	configName        = "squadron"
 )
 
-type Build struct {
-	Image      string   `yaml:"image"`
-	Tag        string   `yaml:"tag"`
-	Context    string   `yaml:"context"`
-	Dockerfile string   `yaml:"dockerfile"`
-	Args       []string `yaml:"args"`
-	Labels     []string `yaml:"labels"`
-	CacheFrom  []string `yaml:"cache_from"`
-	Network    string   `yaml:"network"`
-	Target     string   `yaml:"target"`
-	ShmSize    string   `yaml:"shm_size"`
-	ExtraHosts []string `yaml:"extra_hosts"`
-	Isolation  string   `yaml:"isolation"`
-}
-
 type Unit struct {
-	Chart  interface{}            `yaml:"chart,omitempty"`
-	Builds map[string]interface{} `yaml:"builds,omitempty"`
-	Values interface{}            `yaml:"values,omitempty"`
-}
-
-func (u Unit) getChartDependency() (*ChartDependency, error) {
-	if u.Chart == nil {
-		return nil, nil
-	}
-	cd := ChartDependency{}
-	if vString, ok := u.Chart.(string); ok {
-		localChart, err := loadChart(path.Join(vString, chartFile))
-		if err != nil {
-			return nil, fmt.Errorf("unable to load chart path %q, error: %v", vString, err)
-		}
-		cd.Name = localChart.Name
-		cd.Repository = fmt.Sprintf("file://%v", vString)
-		cd.Version = localChart.Version
-	} else {
-		out, err := yaml.Marshal(u.Chart)
-		if err != nil {
-			return nil, err
-		}
-		if err := yaml.Unmarshal(out, &cd); err != nil {
-			return nil, err
-		}
-	}
-	return &cd, nil
-}
-
-func (u Unit) getBuilds() (*Build, error) {
-	if len(u.Builds) == 0 {
-		return nil, nil
-	}
-	b := Build{}
-	for _, build := range u.Builds {
-		if vString, ok := build.(string); ok {
-			b.Context = vString
-		} else {
-			out, err := yaml.Marshal(build)
-			if err != nil {
-				return nil, err
-			}
-			if err := yaml.Unmarshal(out, &b); err != nil {
-				return nil, err
-			}
-		}
-	}
-	return &b, nil
+	Chart  ChartDependency        `yaml:"chart,omitempty"`
+	Builds map[string]Build       `yaml:"builds,omitempty"`
+	Values map[string]interface{} `yaml:"values,omitempty"`
 }
 
 type Configuration struct {
@@ -101,22 +39,29 @@ type Squadron struct {
 	helmCmd   *util.HelmCmd
 	dockerCmd *util.DockerCmd
 	basePath  string
-	c         *Configuration
-	tv        TemplateVars
+	c         Configuration
 }
 
-func New(l *logrus.Entry, basePath, namespace string) (*Squadron, error) {
+func New(l *logrus.Entry, basePath, namespace string, files []string) (*Squadron, error) {
 	sq := Squadron{
 		l:         l,
 		helmCmd:   util.NewHelmCommand(l),
 		dockerCmd: util.NewDockerCommand(l),
 		basePath:  basePath,
-		tv:        TemplateVars{"PWD": basePath, "NS": namespace},
+		c:         Configuration{},
 	}
 	sq.helmCmd.Args("-n", namespace)
 
-	cFile := configName + defaultYamlExt
-	executeSquadronTemplate(sq.c, cFile)
+	tv := TemplateVars{}
+	tv.add("PWD", basePath)
+	tv.add("NS", namespace)
+	cFile := path.Join(basePath, configName+defaultYamlExt)
+	if err := executeSquadronTemplate(cFile, &sq.c, tv); err != nil {
+		return nil, err
+	}
+	if err := mergeSquadronFiles(files, &sq.c, tv); err != nil {
+		return nil, err
+	}
 
 	sq.name = filepath.Base(basePath)
 	if sq.c.Name != "" {
@@ -160,38 +105,32 @@ func (sq Squadron) Up(units map[string]Unit, namespace string, helmArgs []string
 }
 
 func (sq Squadron) Build(u Unit) error {
-	b, err := u.getBuilds()
-	if err != nil {
-		return err
+	for _, b := range u.Builds {
+		dockerCmd := sq.dockerCmd
+		dockerCmd.Option("-t", fmt.Sprintf("%v:%v", b.Image, b.Tag))
+		dockerCmd.Option("--file", b.Dockerfile)
+		dockerCmd.ListOption("--build-arg", b.Args)
+		dockerCmd.ListOption("--label", b.Labels)
+		dockerCmd.ListOption("--cache-from", b.CacheFrom)
+		dockerCmd.Option("--network", b.Network)
+		dockerCmd.Option("--target", b.Target)
+		dockerCmd.Option("--shm-size", b.ShmSize)
+		dockerCmd.ListOption("--add-host", b.ExtraHosts)
+		dockerCmd.Option("--isolation", b.Isolation)
+		if _, err := sq.dockerCmd.Build(b.Context); err != nil {
+			return err
+		}
 	}
-	if b == nil {
-		return nil
-	}
-	dockerCmd := sq.dockerCmd
-	dockerCmd.Option("-t", fmt.Sprintf("%v:%v", b.Image, b.Tag))
-	dockerCmd.Option("--file", b.Dockerfile)
-	dockerCmd.ListOption("--build-arg", b.Args)
-	dockerCmd.ListOption("--label", b.Labels)
-	dockerCmd.ListOption("--cache-from", b.CacheFrom)
-	dockerCmd.Option("--network", b.Network)
-	dockerCmd.Option("--target", b.Target)
-	dockerCmd.Option("--shm-size", b.ShmSize)
-	dockerCmd.ListOption("--add-host", b.ExtraHosts)
-	dockerCmd.Option("--isolation", b.Isolation)
-	_, err = sq.dockerCmd.Build(b.Context)
-	return err
+	return nil
 }
 
 func (sq Squadron) Push(u Unit) error {
-	b, err := u.getBuilds()
-	if err != nil {
-		return err
+	for _, b := range u.Builds {
+		if _, err := sq.dockerCmd.Push(b.Image, b.Tag); err != nil {
+			return err
+		}
 	}
-	if b == nil {
-		return nil
-	}
-	_, err = sq.dockerCmd.Push(b.Image, b.Tag)
-	return err
+	return nil
 }
 
 func (sq Squadron) cleanupOutput(chartPath string) error {
@@ -216,11 +155,7 @@ func (sq Squadron) generateChart(units map[string]Unit, chartPath, chartName, ve
 	chart := newChart(chartName, version)
 	overrides := map[string]interface{}{}
 	for name, unit := range units {
-		cd, err := unit.getChartDependency()
-		if err != nil {
-			return err
-		}
-		chart.addDependency(name, *cd)
+		chart.addDependency(name, unit.Chart)
 		overrides[name] = unit.Values
 	}
 	if err := chart.generate(chartPath, overrides); err != nil {

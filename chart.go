@@ -16,6 +16,28 @@ type ChartDependency struct {
 	Alias      string `yaml:"alias,omitempty"`
 }
 
+func (cd *ChartDependency) UnmarshalYAML(value *yaml.Node) error {
+	if value.Tag == "!!map" {
+		type wrapper ChartDependency
+		return value.Decode((*wrapper)(cd))
+	}
+	if value.Tag == "!!str" {
+		var vString string
+		if err := value.Decode(&vString); err != nil {
+			return err
+		}
+		localChart, err := loadChart(path.Join(vString, chartFile))
+		if err != nil {
+			return fmt.Errorf("unable to load chart path %q, error: %v", vString, err)
+		}
+		cd.Name = localChart.Name
+		cd.Repository = fmt.Sprintf("file://%v", vString)
+		cd.Version = localChart.Version
+		return nil
+	}
+	return fmt.Errorf("unsupported node tag type for %T: %q", cd, value.Tag)
+}
+
 type Chart struct {
 	APIVersion   string            `yaml:"apiVersion"`
 	Name         string            `yaml:"name,omitempty"`

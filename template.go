@@ -16,6 +16,10 @@ import (
 
 type TemplateVars map[string]interface{}
 
+func (tv *TemplateVars) add(name string, value interface{}) {
+	(*tv)[name] = value
+}
+
 func executeFileTemplate(path string, templateVars interface{}, errorOnMissing bool) ([]byte, error) {
 	templateFunctions := template.FuncMap{}
 	templateFunctions["env"] = builder.TemplateFuncs["env"]
@@ -70,7 +74,7 @@ func base64(v string) string {
 	return b64.StdEncoding.EncodeToString([]byte(v))
 }
 
-func executeSquadronTemplate(c *Configuration, file string) error {
+func executeSquadronTemplate(file string, c *Configuration, tv TemplateVars) error {
 	// execute without errors to get existing values
 	out, err := executeFileTemplate(file, nil, false)
 	if err != nil {
@@ -81,8 +85,7 @@ func executeSquadronTemplate(c *Configuration, file string) error {
 		return err
 	}
 	// execute again with loaded template vars
-	var tv TemplateVars
-	tv["Squadron"] = vars["squadron"]
+	tv.add("Squadron", vars["squadron"])
 	out, err = executeFileTemplate(file, tv, true)
 	if err != nil {
 		return err
@@ -93,17 +96,17 @@ func executeSquadronTemplate(c *Configuration, file string) error {
 	return nil
 }
 
-func mergeSquadronFiles(c *Configuration, toMerge []string) error {
+func mergeSquadronFiles(files []string, c *Configuration, tv TemplateVars) error {
 	var mcs []Configuration
-	for _, f := range toMerge {
+	for _, f := range files {
 		mc := Configuration{}
-		if err := executeSquadronTemplate(&mc, f); err != nil {
+		if err := executeSquadronTemplate(f, &mc, tv); err != nil {
 			return err
 		}
 		mcs = append(mcs, mc)
 	}
 	for _, mc := range mcs {
-		if err := mergo.Merge(&c, mc, mergo.WithOverride); err != nil {
+		if err := mergo.Merge(c, mc, mergo.WithOverride); err != nil {
 			return err
 		}
 	}

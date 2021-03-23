@@ -8,13 +8,14 @@ import (
 
 func init() {
 	upCmd.Flags().StringVarP(&flagNamespace, "namespace", "n", "default", "Specifies the namespace")
+	upCmd.Flags().StringSliceVarP(&flagFiles, "file", "f", []string{}, "Configuration file to merge")
 	upCmd.Flags().BoolVarP(&flagBuild, "build", "b", false, "Build service squadron before publishing")
 	upCmd.Flags().BoolVarP(&flagPush, "push", "p", false, "Pushes the built service to the registry")
 }
 
 var (
 	upCmd = &cobra.Command{
-		Use:   "up {UNIT...} -n {NAMESPACE} -b -p",
+		Use:   "up {UNIT...} -n {NAMESPACE} -b -p -f",
 		Short: "builds and installs a group of charts",
 		Args:  cobra.MinimumNArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -28,13 +29,13 @@ var (
 					break
 				}
 			}
-			return up(log, units, cwd, flagNamespace, flagBuild, flagPush, extraArgs)
+			return up(log, units, cwd, flagNamespace, flagBuild, flagPush, flagFiles, extraArgs)
 		},
 	}
 )
 
-func up(l *logrus.Entry, unitNames []string, cwd, namespace string, build, push bool, extraArgs []string) error {
-	sq, err := squadron.New(l, cwd, namespace)
+func up(l *logrus.Entry, unitNames []string, cwd, namespace string, build, push bool, files []string, extraArgs []string) error {
+	sq, err := squadron.New(l, cwd, namespace, files)
 	if err != nil {
 		return err
 	}

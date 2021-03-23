@@ -29,6 +29,7 @@ var (
 	flagNamespace string
 	flagBuild     bool
 	flagPush      bool
+	flagFiles     []string
 )
 
 func init() {

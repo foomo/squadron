@@ -30,7 +30,7 @@ var (
 )
 
 func down(l *logrus.Entry, unitNames []string, cwd, namespace string, extraArgs []string) error {
-	sq, err := squadron.New(l, cwd, namespace)
+	sq, err := squadron.New(l, cwd, namespace, nil)
 	if err != nil {
 		return err
 	}

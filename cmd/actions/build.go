@@ -22,7 +22,7 @@ var (
 )
 
 func build(l *logrus.Entry, unitNames []string, cwd string, push bool) error {
-	sq, err := squadron.New(l, cwd, "")
+	sq, err := squadron.New(l, cwd, "", nil)
 	if err != nil {
 		return err
 	}
