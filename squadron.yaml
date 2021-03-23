@@ -1,0 +1,46 @@
+# Schema version
+name: test
+version: "1.0"
+prefix: storefinder # optional
+squadron:
+  nats:
+    chart:
+      name: nats
+      version: 0.7.5
+      repository: https://nats-io.github.io/k8s/helm/charts/
+    values:
+      foo: bar
+      nameOverride: nats
+      natsbox:
+        enabled: false
+  frontend:
+    chart: "{{ .PWD }}/test/squadron/charts/example"
+    builds: # same as docker-compose
+      buildFirst:
+        image: registry.your-company.com/path/to/image
+        tag: {{ env "TAG" }}
+        context: "{{ .PWD }}/test/application/"
+    values:
+      image: "{{ .Squadron.frontend.builds.buildFirst.image }}:{{ .Squadron.frontend.builds.buildFirst.tag }}"
+      service:
+        ports:
+          - {{ default .Squadron.frontend.builds.buildFirst "isolation" 80 }}
+
+# squadron up -n storefinder storefinder   = helm upgrage --install --create-namespace -n storefinder storefinder
+# squadron down -n storefinder storefinder = helm uninstall storefinder -n storefinder
+# squadron up -n storefinder storefinder storefinder-frontend --push
+
+# squadron build ..
+
+# squadron generate .. --tgz
+#todo implement generate
+
+# (squadron init ..)
+
+# squadron config {-f (merging optional)} -> prints out the config
+#todo implement config
+
+# squadron version
+# squadron help
+
+# check if cobra autocompletion works

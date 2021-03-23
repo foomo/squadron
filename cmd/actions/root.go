@@ -1,7 +1,6 @@
 package actions
 
 import (
-	"github.com/foomo/squadron"
 	"github.com/foomo/squadron/util"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -20,20 +19,22 @@ var (
 			if err = util.ValidatePath(".", &cwd); err != nil {
 				return err
 			}
-			// squadron
-			sq, err = squadron.New(log, cwd, flagNamespace)
-			if err != nil {
-				return err
-			}
 			return nil
 		},
 	}
 
-	log         *logrus.Entry
-	sq          *squadron.Squadron
-	cwd         string
-	flagVerbose bool
+	log           *logrus.Entry
+	cwd           string
+	flagVerbose   bool
+	flagNamespace string
+	flagBuild     bool
+	flagPush      bool
 )
+
+func init() {
+	rootCmd.PersistentFlags().BoolVarP(&flagVerbose, "verbose", "v", false, "verbose ouput")
+	rootCmd.AddCommand(upCmd, downCmd, buildCmd, versionCmd)
+}
 
 func Execute() {
 	log := logrus.New()

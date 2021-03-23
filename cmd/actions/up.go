@@ -2,52 +2,62 @@ package actions
 
 import (
 	"github.com/foomo/squadron"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
 func init() {
 	upCmd.Flags().StringVarP(&flagNamespace, "namespace", "n", "default", "Specifies the namespace")
-	upCmd.Flags().StringVar(&flagUnit, "unit", "", "Specifies the unit")
-	upCmd.Flags().BoolVar(&flagNoBuild, "no-build", false, "Build service squadron before publishing")
-	upCmd.Flags().BoolVar(&flagPush, "push", false, "Pushes the built service to the registry")
+	upCmd.Flags().BoolVarP(&flagBuild, "build", "b", false, "Build service squadron before publishing")
+	upCmd.Flags().BoolVarP(&flagPush, "push", "p", false, "Pushes the built service to the registry")
 }
 
 var (
-	flagNamespace string
-	flagNoBuild   bool
-	flagPush      bool
-	flagUnit      string
-)
-
-var (
 	upCmd = &cobra.Command{
-		Use:   "up [SQUADRON] -n {NAMESPACE}",
+		Use:   "up {UNIT...} -n {NAMESPACE} -b -p",
 		Short: "builds and installs a group of charts",
-		Long:  "builds and installs a group of services with given namespace",
-		Args:  cobra.MinimumNArgs(1),
+		Args:  cobra.MinimumNArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			units := sq.Units()
-			if flagUnit != "" {
-				for name, unit := range units {
-					if name == flagUnit {
-						units = map[string]squadron.Unit{name: unit}
-					}
+			//todo use -f flag for merging multiple files if provided
+			var extraArgs []string
+			units := args
+			for i, arg := range args {
+				if arg == "--" {
+					extraArgs = args[i+1:]
+					units = args[:i]
+					break
 				}
 			}
-			for _, unit := range units {
-				if !flagNoBuild {
-					if err := sq.Build(unit); err != nil {
-						return err
-					}
-				}
-				if flagPush {
-					if err := sq.Push(unit); err != nil {
-						return err
-					}
-				}
-			}
-			// todo check what else args will contain
-			return sq.Up(units, flagNamespace, args...)
+			return up(log, units, cwd, flagNamespace, flagBuild, flagPush, extraArgs)
 		},
 	}
 )
+
+func up(l *logrus.Entry, unitNames []string, cwd, namespace string, build, push bool, extraArgs []string) error {
+	sq, err := squadron.New(l, cwd, namespace)
+	if err != nil {
+		return err
+	}
+
+	units := map[string]squadron.Unit{}
+	if len(unitNames) == 0 {
+		units = sq.Units()
+	}
+	for _, un := range unitNames {
+		units[un] = sq.Units()[un]
+	}
+
+	for _, unit := range units {
+		if build {
+			if err := sq.Build(unit); err != nil {
+				return err
+			}
+		}
+		if push {
+			if err := sq.Push(unit); err != nil {
+				return err
+			}
+		}
+	}
+	return sq.Up(units, namespace, extraArgs)
+}
