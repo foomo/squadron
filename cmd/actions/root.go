@@ -34,7 +34,8 @@ var (
 
 func init() {
 	rootCmd.PersistentFlags().BoolVarP(&flagVerbose, "verbose", "v", false, "verbose ouput")
-	rootCmd.AddCommand(upCmd, downCmd, buildCmd, versionCmd)
+	rootCmd.AddCommand(upCmd, downCmd, buildCmd, generateCmd, configCmd, versionCmd)
+	// #todo check if cobra autocompletion works
 }
 
 func Execute() {

@@ -19,7 +19,6 @@ var (
 		Short: "builds and installs a group of charts",
 		Args:  cobra.MinimumNArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			//todo use -f flag for merging multiple files if provided
 			var extraArgs []string
 			units := args
 			for i, arg := range args {

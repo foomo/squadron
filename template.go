@@ -27,7 +27,7 @@ func executeFileTemplate(path string, templateVars interface{}, errorOnMissing b
 	templateFunctions["base64"] = base64
 	templateFunctions["default"] = defaultIndex
 	templateFunctions["yaml"] = yamlMixed
-	// todo test piping
+	// todo test yaml
 
 	templateBytes, errRead := ioutil.ReadFile(path)
 	if errRead != nil {
@@ -76,7 +76,7 @@ func base64(v string) string {
 
 func executeSquadronTemplate(file string, c *Configuration, tv TemplateVars) error {
 	// execute without errors to get existing values
-	out, err := executeFileTemplate(file, nil, false)
+	out, err := executeFileTemplate(file, tv, false)
 	if err != nil {
 		return err
 	}

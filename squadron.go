@@ -8,6 +8,7 @@ import (
 
 	"github.com/foomo/squadron/util"
 	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -72,6 +73,38 @@ func New(l *logrus.Entry, basePath, namespace string, files []string) (*Squadron
 
 func (sq Squadron) Units() map[string]Unit {
 	return sq.c.Units
+}
+
+func (sq Squadron) Config() error {
+	bs, err := yaml.Marshal(sq.c)
+	if err != nil {
+		return err
+	}
+	sq.l.Println(string(bs))
+	return nil
+}
+
+func (sq Squadron) Generate(units map[string]Unit) error {
+	chartPath := path.Join(sq.basePath, defaultOutputDir, "default", sq.name)
+	// cleanup old files
+	if err := sq.cleanupOutput(chartPath); err != nil {
+		return err
+	}
+	// generate Chart.yaml and values.yaml
+	if err := sq.generateChart(units, chartPath, sq.name, sq.c.Version); err != nil {
+		return err
+	}
+	// run helm dependancy upgrade
+	_, err := sq.helmCmd.UpdateDependency(sq.name, chartPath)
+	if err != nil {
+		return err
+	}
+	// run helm package to basePath
+	_, err = sq.helmCmd.Package(sq.name, chartPath, sq.basePath)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (sq Squadron) Down(helmArgs []string) error {
