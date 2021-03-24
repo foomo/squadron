@@ -8,8 +8,8 @@ squadron:
       version: 0.7.5
       repository: https://nats-io.github.io/k8s/helm/charts/
     values:
-      foo: bar
-      # foo:  print .PWD "/example/squadron/charts/example/Chart.yaml" | yaml  // /n and indent?
+      foo:
+        {{ print .PWD "/example/squadron/charts/example/Chart.yaml" | yaml | indent 8 }}
       nameOverride: nats
       natsbox:
         enabled: false

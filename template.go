@@ -5,7 +5,6 @@ import (
 	b64 "encoding/base64"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"strings"
 	"text/template"
 
@@ -26,8 +25,8 @@ func executeFileTemplate(path string, templateVars interface{}, errorOnMissing b
 	templateFunctions["op"] = builder.TemplateFuncs["op"]
 	templateFunctions["base64"] = base64
 	templateFunctions["default"] = defaultIndex
-	templateFunctions["yaml"] = yamlMixed
-	// todo test yaml
+	templateFunctions["yaml"] = yamlFile
+	templateFunctions["indent"] = indent
 
 	templateBytes, errRead := ioutil.ReadFile(path)
 	if errRead != nil {
@@ -47,19 +46,14 @@ func executeFileTemplate(path string, templateVars interface{}, errorOnMissing b
 	return out.Bytes(), nil
 }
 
-func yamlMixed(v interface{}) (string, error) {
-	if vString, ok := v.(string); ok {
-		var err error
-		v, err = os.ReadFile(vString)
-		if err != nil {
-			return fmt.Sprintf("%q", v), err
-		}
-	}
-	yamlBytes, err := yaml.Marshal(v)
+func yamlFile(v string) (string, error) {
+	var bs []byte
+	var err error
+	bs, err = ioutil.ReadFile(v)
 	if err != nil {
 		return fmt.Sprintf("%q", v), err
 	}
-	return strings.Trim(string(yamlBytes), "\n"), nil
+	return strings.Trim(string(bs), "\n"), nil
 }
 
 func defaultIndex(v map[string]interface{}, index string, def interface{}) interface{} {
@@ -111,4 +105,9 @@ func mergeSquadronFiles(files []string, c *Configuration, tv TemplateVars) error
 		}
 	}
 	return nil
+}
+
+func indent(spaces int, v string) string {
+	pad := strings.Repeat(" ", spaces)
+	return strings.Replace(v, "\n", "\n"+pad, -1)
 }
