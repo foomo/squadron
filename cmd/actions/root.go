@@ -53,3 +53,13 @@ func newLogger(verbose bool) *logrus.Entry {
 	}
 	return logrus.NewEntry(logger)
 }
+
+func parseExtraArgs(args []string) (out []string, extraArgs []string) {
+	for i, arg := range args {
+		if arg == "--" {
+			out, extraArgs = args[:i], args[i+1:]
+			break
+		}
+	}
+	return
+}

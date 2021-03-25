@@ -17,31 +17,16 @@ var (
 		Example: "  squadron down --namespace demo",
 		Args:    cobra.MinimumNArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var extraArgs []string
-			var units []string
-			for i, arg := range args {
-				if arg == "--" {
-					extraArgs = args[i:]
-					units = args[:i]
-				}
-			}
-			return down(log, units, cwd, flagNamespace, extraArgs)
+			_, helmArgs := parseExtraArgs(args)
+			return down(log, cwd, flagNamespace, helmArgs)
 		},
 	}
 )
 
-func down(l *logrus.Entry, unitNames []string, cwd, namespace string, extraArgs []string) error {
+func down(l *logrus.Entry, cwd, namespace string, extraArgs []string) error {
 	sq, err := squadron.New(l, cwd, namespace, nil)
 	if err != nil {
 		return err
-	}
-
-	var units map[string]squadron.Unit
-	if len(unitNames) == 0 {
-		units = sq.Units()
-	}
-	for _, un := range unitNames {
-		units[un] = sq.Units()[un]
 	}
 	return sq.Down(extraArgs)
 }

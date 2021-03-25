@@ -19,16 +19,8 @@ var (
 		Example: "  squadron up frontend backend --build --push --namespace demo -- --dry-run",
 		Args:    cobra.MinimumNArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var extraArgs []string
-			units := args
-			for i, arg := range args {
-				if arg == "--" {
-					extraArgs = args[i+1:]
-					units = args[:i]
-					break
-				}
-			}
-			return up(log, units, cwd, flagNamespace, flagBuild, flagPush, flagFiles, extraArgs)
+			unitNames, helmArgs := parseExtraArgs(args)
+			return up(log, unitNames, cwd, flagNamespace, flagBuild, flagPush, flagFiles, helmArgs)
 		},
 	}
 )
