@@ -7,10 +7,9 @@ import (
 )
 
 func init() {
-	upCmd.Flags().StringVarP(&flagNamespace, "namespace", "n", "default", "Specifies the namespace")
-	upCmd.Flags().StringSliceVarP(&flagFiles, "file", "f", []string{}, "Configuration file to merge")
-	upCmd.Flags().BoolVarP(&flagBuild, "build", "b", false, "Build service squadron before publishing")
-	upCmd.Flags().BoolVarP(&flagPush, "push", "p", false, "Pushes the built service to the registry")
+	upCmd.Flags().StringVarP(&flagNamespace, "namespace", "n", "default", "specifies the namespace")
+	upCmd.Flags().BoolVarP(&flagBuild, "build", "b", false, "builds or rebuilds units")
+	upCmd.Flags().BoolVarP(&flagPush, "push", "p", false, "pushes units to the registry")
 }
 
 var (

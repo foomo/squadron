@@ -6,10 +6,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() {
-	generateCmd.Flags().StringSliceVarP(&flagFiles, "file", "f", []string{}, "Configuration file to merge")
-}
-
 var (
 	generateCmd = &cobra.Command{
 		Use:     "generate [UNIT...]",
