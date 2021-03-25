@@ -80,7 +80,9 @@ func (sq Squadron) Config() error {
 	if err != nil {
 		return err
 	}
-	sq.l.Println(string(bs))
+	if _, err := os.Stdout.WriteString(string(bs)); err != nil {
+		return err
+	}
 	return nil
 }
 
