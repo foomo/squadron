@@ -75,15 +75,12 @@ func (sq Squadron) Units() map[string]Unit {
 	return sq.c.Units
 }
 
-func (sq Squadron) Config() error {
+func (sq Squadron) Config() (string, error) {
 	bs, err := yaml.Marshal(sq.c)
 	if err != nil {
-		return err
+		return "", err
 	}
-	if _, err := os.Stdout.WriteString(string(bs)); err != nil {
-		return err
-	}
-	return nil
+	return string(bs), nil
 }
 
 func (sq Squadron) Generate(units map[string]Unit) error {

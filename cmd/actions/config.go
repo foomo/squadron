@@ -9,10 +9,6 @@ import (
 	"github.com/foomo/squadron"
 )
 
-func init() {
-	configCmd.Flags().StringSliceVarP(&flagFiles, "file", "f", []string{}, "specify alternative squadron files (default squadron.yaml)")
-}
-
 var (
 	configCmd = &cobra.Command{
 		Use:     "config",
@@ -30,5 +26,10 @@ func config(l *logrus.Entry, cwd string, files []string) error {
 	if err != nil {
 		return err
 	}
-	return sq.Config()
+	cf, err := sq.Config()
+	if err != nil {
+		return err
+	}
+	fmt.Println(cf)
+	return nil
 }
