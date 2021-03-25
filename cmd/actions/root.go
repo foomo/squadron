@@ -33,7 +33,7 @@ var (
 )
 
 func init() {
-	rootCmd.PersistentFlags().BoolVarP(&flagVerbose, "verbose", "v", false, "verbose ouput")
+	rootCmd.PersistentFlags().BoolVarP(&flagVerbose, "verbose", "v", false, "Show more ouput")
 	rootCmd.AddCommand(upCmd, downCmd, buildCmd, generateCmd, configCmd, versionCmd, completionCmd)
 }
 
