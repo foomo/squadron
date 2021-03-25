@@ -7,13 +7,13 @@ import (
 )
 
 func init() {
-	configCmd.Flags().StringSliceVarP(&flagFiles, "file", "f", []string{}, "Configuration file to merge")
+	configCmd.Flags().StringSliceVarP(&flagFiles, "file", "f", []string{}, "specify alternative squadron files (default squadron.yaml)")
 }
 
 var (
 	configCmd = &cobra.Command{
-		Use:   "config -f",
-		Short: "builds and installs a group of charts",
+		Use:   "config",
+		Short: "validate and view the Squadron file.",
 		Args:  cobra.MinimumNArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return config(log, cwd, flagFiles)
