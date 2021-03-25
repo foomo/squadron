@@ -27,7 +27,7 @@ func build(l *logrus.Entry, unitNames []string, cwd string, push bool) error {
 		return err
 	}
 
-	var units map[string]squadron.Unit
+	units := map[string]squadron.Unit{}
 	if len(unitNames) == 0 {
 		units = sq.Units()
 	}
