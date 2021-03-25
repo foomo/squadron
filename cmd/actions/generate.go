@@ -1,9 +1,10 @@
 package actions
 
 import (
-	"github.com/foomo/squadron"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+
+	"github.com/foomo/squadron"
 )
 
 var (

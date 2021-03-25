@@ -6,9 +6,10 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/foomo/squadron/util"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
+
+	"github.com/foomo/squadron/util"
 )
 
 const (

@@ -1,9 +1,12 @@
 package actions
 
 import (
-	"github.com/foomo/squadron"
+	"fmt"
+
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+
+	"github.com/foomo/squadron"
 )
 
 func init() {
