@@ -56,9 +56,8 @@ func New(l *logrus.Entry, basePath, namespace string, files []string) (*Squadron
 	tv := TemplateVars{}
 	tv.add("PWD", basePath)
 	tv.add("NS", namespace)
-	cFile := path.Join(basePath, configName+defaultYamlExt)
-	if err := executeSquadronTemplate(cFile, &sq.c, tv); err != nil {
-		return nil, err
+	if len(files) == 0 {
+		files = append(files, path.Join(basePath, configName+defaultYamlExt))
 	}
 	if err := mergeSquadronFiles(files, &sq.c, tv); err != nil {
 		return nil, err
