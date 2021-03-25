@@ -18,7 +18,7 @@ var (
 		Example: "  squadron build frontend backend",
 		Args:    cobra.MinimumNArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return build(log, args, cwd, flagPush)
+			return build(log, args, cwd, flagFiles, flagPush)
 		},
 	}
 )
