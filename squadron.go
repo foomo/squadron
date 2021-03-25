@@ -18,8 +18,6 @@ const (
 	defaultChartType  = "application" // application or library
 	chartFile         = "Chart.yaml"
 	valuesFile        = "values.yaml"
-	defaultYamlExt    = ".yaml"
-	configName        = "squadron"
 )
 
 type Unit struct {
@@ -57,9 +55,6 @@ func New(l *logrus.Entry, basePath, namespace string, files []string) (*Squadron
 	tv := TemplateVars{}
 	tv.add("PWD", basePath)
 	tv.add("NS", namespace)
-	if len(files) == 0 {
-		files = append(files, path.Join(basePath, configName+defaultYamlExt))
-	}
 	if err := mergeSquadronFiles(files, &sq.c, tv); err != nil {
 		return nil, err
 	}
