@@ -5,6 +5,8 @@ import (
 	b64 "encoding/base64"
 	"fmt"
 	"io/ioutil"
+	"os"
+	"os/exec"
 	"strings"
 	"text/template"
 
@@ -22,7 +24,7 @@ func (tv *TemplateVars) add(name string, value interface{}) {
 func executeFileTemplate(path string, templateVars interface{}, errorOnMissing bool) ([]byte, error) {
 	templateFunctions := template.FuncMap{}
 	templateFunctions["env"] = builder.TemplateFuncs["env"]
-	templateFunctions["op"] = builder.TemplateFuncs["op"]
+	templateFunctions["op"] = onePassword
 	templateFunctions["base64"] = base64
 	templateFunctions["default"] = defaultIndex
 	templateFunctions["yaml"] = yamlFile
@@ -110,4 +112,33 @@ func mergeSquadronFiles(files []string, c *Configuration, tv TemplateVars) error
 func indent(spaces int, v string) string {
 	pad := strings.Repeat(" ", spaces)
 	return strings.Replace(v, "\n", "\n"+pad, -1)
+}
+
+func onePassword(account, uuid, field string) (string, error) {
+	// validate command
+	if _, err := exec.LookPath("op"); err != nil {
+		fmt.Println("Your templates includes a call to 1Password, please install it:")
+		fmt.Println("https://support.1password.com/command-line-getting-started/#set-up-the-command-line-tool")
+		return "", err
+	}
+
+	// validate session
+	if os.Getenv(fmt.Sprintf("OP_SESSION_%s", account)) == "" {
+		fmt.Println("Your templates includes a call to 1Password, please sign into your account:")
+		if token, err := exec.Command("op", "signin", account, "--raw").Output(); err != nil {
+			fmt.Println(fmt.Sprintf("Failed to login into your '%s' account! Please refer to the manual:", account))
+			fmt.Println("https://support.1password.com/command-line-getting-started/#set-up-the-command-line-tool")
+			return "", err
+		} else if err := os.Setenv(fmt.Sprintf("OP_SESSION_%s", account), string(token)); err != nil {
+			return "", err
+		} else {
+			fmt.Println("NOTE: If you want to skip this step, run:")
+			fmt.Println(fmt.Sprintf("eval $(op signin %s)", account))
+		}
+	}
+	res, err := exec.Command("op", "get", "item", uuid, "--fields", field).Output()
+	if err != nil {
+		return "", err
+	}
+	return string(res), nil
 }
