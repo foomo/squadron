@@ -26,7 +26,7 @@ var (
 	}
 )
 
-func up(l *logrus.Entry, unitNames []string, cwd, namespace string, build, push bool, files []string, extraArgs []string) error {
+func up(l *logrus.Entry, unitNames []string, cwd, namespace string, build, push bool, files []string, helmArgs []string) error {
 	sq, err := squadron.New(l, cwd, namespace, files)
 	if err != nil {
 		return err
@@ -52,5 +52,5 @@ func up(l *logrus.Entry, unitNames []string, cwd, namespace string, build, push 
 			}
 		}
 	}
-	return sq.Up(units, namespace, extraArgs)
+	return sq.Up(units, namespace, helmArgs)
 }
