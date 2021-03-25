@@ -12,9 +12,10 @@ func init() {
 
 var (
 	generateCmd = &cobra.Command{
-		Use:   "generate {UNIT...} -f",
-		Short: "builds and installs a group of charts",
-		Args:  cobra.MinimumNArgs(0),
+		Use:     "generate [UNIT...]",
+		Short:   "generate and view the squadron chart",
+		Example: "  squadron generate fronted backend",
+		Args:    cobra.MinimumNArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return generate(log, args, cwd, flagFiles)
 		},

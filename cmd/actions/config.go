@@ -12,9 +12,10 @@ func init() {
 
 var (
 	configCmd = &cobra.Command{
-		Use:   "config",
-		Short: "validate and view the Squadron file.",
-		Args:  cobra.MinimumNArgs(0),
+		Use:     "config",
+		Short:   "generate and view the squadron chart",
+		Example: "  squadron config --file squadron.yaml --file squadron.override.yaml",
+		Args:    cobra.MinimumNArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return config(log, cwd, flagFiles)
 		},

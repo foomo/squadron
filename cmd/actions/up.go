@@ -15,9 +15,10 @@ func init() {
 
 var (
 	upCmd = &cobra.Command{
-		Use:   "up {UNIT...} -n {NAMESPACE} -b -p -f",
-		Short: "builds and installs a group of charts",
-		Args:  cobra.MinimumNArgs(0),
+		Use:     "up [UNIT...]",
+		Short:   "installs the squadron chart",
+		Example: "  squadron up frontend backend --build --push --namespace demo -- --dry-run",
+		Args:    cobra.MinimumNArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var extraArgs []string
 			units := args

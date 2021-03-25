@@ -12,9 +12,10 @@ func init() {
 
 var (
 	downCmd = &cobra.Command{
-		Use:   "down -n {NAMESPACE}",
-		Short: "uninstalls a group of charts",
-		Args:  cobra.MinimumNArgs(0),
+		Use:     "down",
+		Short:   "uninstalls the squadron chart",
+		Example: "  squadron down --namespace demo",
+		Args:    cobra.MinimumNArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var extraArgs []string
 			var units []string
