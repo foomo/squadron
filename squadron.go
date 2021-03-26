@@ -79,7 +79,7 @@ func (sq Squadron) Config() (string, error) {
 }
 
 func (sq Squadron) Generate(units map[string]Unit) error {
-	chartPath := path.Join(sq.basePath, defaultOutputDir, "default", sq.name)
+	chartPath := path.Join(sq.basePath, defaultOutputDir, sq.name)
 	// cleanup old files
 	if err := sq.cleanupOutput(chartPath); err != nil {
 		return err
@@ -109,8 +109,8 @@ func (sq Squadron) Down(helmArgs []string) error {
 	return err
 }
 
-func (sq Squadron) Up(units map[string]Unit, namespace string, helmArgs []string) error {
-	chartPath := path.Join(sq.basePath, defaultOutputDir, namespace, sq.name)
+func (sq Squadron) Up(units map[string]Unit, helmArgs []string) error {
+	chartPath := path.Join(sq.basePath, defaultOutputDir, sq.name)
 	// cleanup old files
 	if err := sq.cleanupOutput(chartPath); err != nil {
 		return err

@@ -2,6 +2,7 @@ package actions
 
 import (
 	"github.com/foomo/squadron/util"
+
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
