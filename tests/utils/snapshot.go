@@ -32,6 +32,6 @@ func MustCheckSnapshot(t *testing.T, name string, v interface{}) {
 	}
 	g := MustReadSnapshot(t, name)
 	if !bytes.Equal(res, g) {
-		t.Fatalf("err: %v not equal to %v", res, g)
+		t.Fatalf("err: %s not equal to %s", res, g)
 	}
 }

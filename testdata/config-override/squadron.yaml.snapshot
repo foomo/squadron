@@ -22,6 +22,9 @@ squadron:
                     - name: mycompany.com
                       path: /
                       port: 80
+                    - name: mycompany.com
+                      path: /foo
+                      port: 8080
             service:
                 ports:
                     - 80

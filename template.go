@@ -17,16 +17,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// example of a custom unmarshaller for JSON
-func yamlUnmarshal(data []byte, out interface{}) error {
-	return yaml.Unmarshal(data, out)
-}
-
 func init() {
 	// define the unmarshallers for the given file extensions, blank extension is the global unmarshaller
 	conflate.Unmarshallers = conflate.UnmarshallerMap{
-		".yaml": {yamlUnmarshal},
-		".yml":  {yamlUnmarshal},
+		".yaml": {conflate.YAMLUnmarshal},
+		".yml":  {conflate.YAMLUnmarshal},
 	}
 }
 
@@ -169,7 +164,7 @@ func onePassword(account, uuid, field string) (string, error) {
 			return "", err
 		} else {
 			fmt.Println("NOTE: If you want to skip this step, run:")
-			fmt.Println(fmt.Sprintf("eval $(op signin %s)", account))
+			fmt.Println(fmt.Sprintf("export OP_SESSION_%s=%s", account, token))
 		}
 	}
 	res, err := exec.Command("op", "get", "item", uuid, "--fields", field).Output()
