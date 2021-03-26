@@ -7,18 +7,18 @@ import (
 )
 
 type Build struct {
-	Image      string   `yaml:"image"`
-	Tag        string   `yaml:"tag"`
-	Context    string   `yaml:"context"`
-	Dockerfile string   `yaml:"dockerfile"`
-	Args       []string `yaml:"args"`
-	Labels     []string `yaml:"labels"`
-	CacheFrom  []string `yaml:"cache_from"`
-	Network    string   `yaml:"network"`
-	Target     string   `yaml:"target"`
-	ShmSize    string   `yaml:"shm_size"`
-	ExtraHosts []string `yaml:"extra_hosts"`
-	Isolation  string   `yaml:"isolation"`
+	Image      string   `yaml:"image,omitempty"`
+	Tag        string   `yaml:"tag,omitempty"`
+	Context    string   `yaml:"context,omitempty"`
+	Dockerfile string   `yaml:"dockerfile,omitempty"`
+	Args       []string `yaml:"args,omitempty"`
+	Labels     []string `yaml:"labels,omitempty"`
+	CacheFrom  []string `yaml:"cache_from,omitempty"`
+	Network    string   `yaml:"network,omitempty"`
+	Target     string   `yaml:"target,omitempty"`
+	ShmSize    string   `yaml:"shm_size,omitempty"`
+	ExtraHosts []string `yaml:"extra_hosts,omitempty"`
+	Isolation  string   `yaml:"isolation,omitempty"`
 }
 
 func (b *Build) UnmarshalYAML(value *yaml.Node) error {
