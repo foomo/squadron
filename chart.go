@@ -5,8 +5,9 @@ import (
 	"io/ioutil"
 	"path"
 
-	"github.com/foomo/squadron/util"
 	"gopkg.in/yaml.v3"
+
+	"github.com/foomo/squadron/util"
 )
 
 type ChartDependency struct {

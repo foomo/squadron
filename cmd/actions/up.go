@@ -52,5 +52,5 @@ func up(l *logrus.Entry, unitNames []string, cwd, namespace string, build, push 
 			}
 		}
 	}
-	return sq.Up(units, namespace, helmArgs)
+	return sq.Up(units, helmArgs)
 }
