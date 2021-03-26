@@ -7,3 +7,6 @@ build:
 
 test:
 	go test ./...
+
+test.update:
+	go test -update ./...
