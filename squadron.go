@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	defaultOutputDir  = ".output"
+	defaultOutputDir  = ".squadron"
 	chartApiVersionV2 = "v2"
 	defaultChartType  = "application" // application or library
 	chartFile         = "Chart.yaml"
