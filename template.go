@@ -87,7 +87,12 @@ func executeSquadronTemplate(text string, c *Configuration, tv TemplateVars) err
 		return err
 	}
 	// execute again with loaded template vars
-	tv.add("Squadron", vars["squadron"])
+	if value, ok := vars["global"]; ok {
+		tv.add("Global", value)
+	}
+	if value, ok := vars["squadron"]; ok {
+		tv.add("Squadron", value)
+	}
 	out, err = executeFileTemplate(text, tv, true)
 	if err != nil {
 		return err

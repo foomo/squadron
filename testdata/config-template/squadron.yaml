@@ -1,0 +1,20 @@
+version: "1.0"
+
+global:
+  host: mycompany.com
+
+squadron:
+  frontend:
+    chart:
+      name: mychart
+      version: 0.1.0
+      repository: http://helm.mycompany.com/repository
+    builds:
+      service:
+        tag: latest
+        image: docker.mycompany.com/mycomapny/frontend
+    values:
+      env: <% env "LC_CTYPE" %>
+      local: <% .Squadron.frontend.builds.service.image %>:<% .Squadron.frontend.builds.service.tag %>
+      global: <% .Global.host %>
+      base64: <% base64 "1234567890" %>

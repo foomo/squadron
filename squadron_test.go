@@ -28,6 +28,25 @@ func TestConfigOverrideSnapshot(t *testing.T) {
 	)
 }
 
+func TestConfigGlobalSnapshot(t *testing.T) {
+	testConfigSnapshot(t,
+		[]string{
+			path.Join("testdata", "config-global", "squadron.yaml"),
+			path.Join("testdata", "config-global", "squadron.override.yaml"),
+		},
+		path.Join("testdata", "config-global", "squadron.yaml.snapshot"),
+	)
+}
+
+func TestConfigTemplateSnapshot(t *testing.T) {
+	testConfigSnapshot(t,
+		[]string{
+			path.Join("testdata", "config-template", "squadron.yaml"),
+		},
+		path.Join("testdata", "config-template", "squadron.yaml.snapshot"),
+	)
+}
+
 func testConfigSnapshot(t *testing.T, configs []string, snapshot string) {
 	var cwd string
 	testutils.Must(t, util.ValidatePath(".", &cwd))

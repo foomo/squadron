@@ -27,10 +27,11 @@ type Unit struct {
 }
 
 type Configuration struct {
-	Name    string          `yaml:"name,omitempty"`
-	Version string          `yaml:"version,omitempty"`
-	Prefix  string          `yaml:"prefix,omitempty"`
-	Units   map[string]Unit `yaml:"squadron,omitempty"`
+	Name    string                 `yaml:"name,omitempty"`
+	Version string                 `yaml:"version,omitempty"`
+	Prefix  string                 `yaml:"prefix,omitempty"`
+	Global  map[string]interface{} `yaml:"global,omitempty"`
+	Units   map[string]Unit        `yaml:"squadron,omitempty"`
 }
 
 type Squadron struct {
@@ -62,6 +63,10 @@ func New(l *logrus.Entry, basePath, namespace string, files []string) (*Squadron
 		sq.name = sq.c.Name
 	}
 	return &sq, nil
+}
+
+func (sq Squadron) Global() map[string]interface{} {
+	return sq.c.Global
 }
 
 func (sq Squadron) Units() map[string]Unit {
@@ -178,12 +183,15 @@ func (sq Squadron) cleanupOutput(chartPath string) error {
 func (sq Squadron) generateChart(units map[string]Unit, chartPath, chartName, version string) error {
 	sq.l.Printf("generating chart %q files in %q", chartName, chartPath)
 	chart := newChart(chartName, version)
-	overrides := map[string]interface{}{}
+	values := map[string]interface{}{}
+	if sq.Global() != nil {
+		values["global"] = sq.Global()
+	}
 	for name, unit := range units {
 		chart.addDependency(name, unit.Chart)
-		overrides[name] = unit.Values
+		values[name] = unit.Values
 	}
-	if err := chart.generate(chartPath, overrides); err != nil {
+	if err := chart.generate(chartPath, values); err != nil {
 		return err
 	}
 	return nil

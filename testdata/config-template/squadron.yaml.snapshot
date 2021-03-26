@@ -1,0 +1,18 @@
+version: "1.0"
+global:
+    host: mycompany.com
+squadron:
+    frontend:
+        chart:
+            name: mychart
+            repository: http://helm.mycompany.com/repository
+            version: 0.1.0
+        builds:
+            service:
+                image: docker.mycompany.com/mycomapny/frontend
+                tag: latest
+        values:
+            base64: MTIzNDU2Nzg5MA==
+            env: UTF-8
+            global: mycompany.com
+            local: docker.mycompany.com/mycomapny/frontend:latest
