@@ -3,7 +3,9 @@ package squadron
 import (
 	"bytes"
 	b64 "encoding/base64"
+	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -11,9 +13,22 @@ import (
 	"text/template"
 
 	"github.com/foomo/config-bob/builder"
-	"github.com/imdario/mergo"
+	"github.com/miracl/conflate"
 	"gopkg.in/yaml.v3"
 )
+
+// example of a custom unmarshaller for JSON
+func yamlUnmarshal(data []byte, out interface{}) error {
+	return yaml.Unmarshal(data, out)
+}
+
+func init() {
+	// define the unmarshallers for the given file extensions, blank extension is the global unmarshaller
+	conflate.Unmarshallers = conflate.UnmarshallerMap{
+		".yaml": {yamlUnmarshal},
+		".yml":  {yamlUnmarshal},
+	}
+}
 
 type TemplateVars map[string]interface{}
 
@@ -21,7 +36,7 @@ func (tv *TemplateVars) add(name string, value interface{}) {
 	(*tv)[name] = value
 }
 
-func executeFileTemplate(path string, templateVars interface{}, errorOnMissing bool) ([]byte, error) {
+func executeFileTemplate(text string, templateVars interface{}, errorOnMissing bool) ([]byte, error) {
 	templateFunctions := template.FuncMap{}
 	templateFunctions["env"] = builder.TemplateFuncs["env"]
 	templateFunctions["op"] = onePassword
@@ -30,11 +45,7 @@ func executeFileTemplate(path string, templateVars interface{}, errorOnMissing b
 	templateFunctions["yaml"] = yamlFile
 	templateFunctions["indent"] = indent
 
-	templateBytes, errRead := ioutil.ReadFile(path)
-	if errRead != nil {
-		return nil, errRead
-	}
-	tpl, err := template.New("squadron").Funcs(templateFunctions).Parse(string(templateBytes))
+	tpl, err := template.New("squadron").Delims("<%", "%>").Funcs(templateFunctions).Parse(text)
 	if err != nil {
 		return nil, err
 	}
@@ -70,9 +81,9 @@ func base64(v string) string {
 	return b64.StdEncoding.EncodeToString([]byte(v))
 }
 
-func executeSquadronTemplate(file string, c *Configuration, tv TemplateVars) error {
+func executeSquadronTemplate(text string, c *Configuration, tv TemplateVars) error {
 	// execute without errors to get existing values
-	out, err := executeFileTemplate(file, tv, false)
+	out, err := executeFileTemplate(text, tv, false)
 	if err != nil {
 		return err
 	}
@@ -82,7 +93,7 @@ func executeSquadronTemplate(file string, c *Configuration, tv TemplateVars) err
 	}
 	// execute again with loaded template vars
 	tv.add("Squadron", vars["squadron"])
-	out, err = executeFileTemplate(file, tv, true)
+	out, err = executeFileTemplate(text, tv, true)
 	if err != nil {
 		return err
 	}
@@ -93,19 +104,28 @@ func executeSquadronTemplate(file string, c *Configuration, tv TemplateVars) err
 }
 
 func mergeSquadronFiles(files []string, c *Configuration, tv TemplateVars) error {
-	var mcs []Configuration
-	for _, f := range files {
-		mc := Configuration{}
-		if err := executeSquadronTemplate(f, &mc, tv); err != nil {
-			return err
-		}
-		mcs = append(mcs, mc)
+	// step 1: merge 'valid' yaml files
+	mergedFiles, err := conflate.FromFiles(files...)
+	if err != nil {
+		return err
 	}
-	for _, mc := range mcs {
-		if err := mergo.Merge(c, mc, mergo.WithOverride); err != nil {
-			return err
-		}
+	var data interface{}
+	if err := mergedFiles.Unmarshal(&data); err != nil {
+		return err
 	}
+
+	mergedBytes, err := mergedFiles.MarshalYAML()
+	if err != nil {
+		return err
+	}
+
+	// TODO print out YAML on debug
+
+	// step 2: render template
+	if err := executeSquadronTemplate(string(mergedBytes), c, tv); err != nil {
+		return err
+	}
+
 	return nil
 }
 
