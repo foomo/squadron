@@ -137,7 +137,7 @@ func (sq Squadron) Up(units map[string]Unit, helmArgs []string) error {
 func (sq Squadron) Build(u Unit) error {
 	for _, b := range u.Builds {
 		dockerCmd := sq.dockerCmd
-		dockerCmd.Option("-t", fmt.Sprintf("%v:%v", b.Image, b.Tag))
+		dockerCmd.Option("-t", fmt.Sprintf("%s:%s", b.Image, b.Tag))
 		dockerCmd.Option("--file", b.Dockerfile)
 		dockerCmd.ListOption("--build-arg", b.Args)
 		dockerCmd.ListOption("--label", b.Labels)
