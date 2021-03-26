@@ -53,8 +53,6 @@ func New(l *logrus.Entry, basePath, namespace string, files []string) (*Squadron
 	sq.helmCmd.Args("-n", namespace)
 
 	tv := TemplateVars{}
-	tv.add("PWD", basePath)
-	tv.add("NS", namespace)
 	if err := mergeSquadronFiles(files, &sq.c, tv); err != nil {
 		return nil, err
 	}
