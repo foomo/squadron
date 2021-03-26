@@ -39,6 +39,7 @@ func executeFileTemplate(text string, templateVars interface{}, errorOnMissing b
 	templateFunctions["default"] = defaultIndex
 	templateFunctions["yaml"] = yamlFile
 	templateFunctions["indent"] = indent
+	templateFunctions["git"] = git
 
 	tpl, err := template.New("squadron").Delims("<%", "%>").Funcs(templateFunctions).Parse(text)
 	if err != nil {
@@ -61,7 +62,7 @@ func yamlFile(v string) (string, error) {
 	if err != nil {
 		return fmt.Sprintf("%q", v), err
 	}
-	return strings.Trim(string(bs), "\n"), nil
+	return string(bytes.TrimSpace(bs)), nil
 }
 
 func defaultIndex(v map[string]interface{}, index string, def interface{}) interface{} {
@@ -127,6 +128,25 @@ func mergeSquadronFiles(files []string, c *Configuration, tv TemplateVars) error
 	}
 
 	return nil
+}
+
+func git(action string) (string, error) {
+	cmd := exec.Command("git")
+
+	switch action {
+	case "tag":
+		cmd.Args = append(cmd.Args, "describe", "--tags", "--always")
+	case "commitsha":
+		cmd.Args = append(cmd.Args, "rev-list", "-1", "HEAD")
+	case "abbrevcommitsha":
+		cmd.Args = append(cmd.Args, "rev-list", "-1", "HEAD", "--abbrev-commit")
+	}
+	res, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+
+	return string(bytes.TrimSpace(res)), nil
 }
 
 func indent(spaces int, v string) string {
