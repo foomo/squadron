@@ -12,7 +12,6 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/foomo/config-bob/builder"
 	"github.com/miracl/conflate"
 	"gopkg.in/yaml.v3"
 )
@@ -33,12 +32,12 @@ func (tv *TemplateVars) add(name string, value interface{}) {
 
 func executeFileTemplate(text string, templateVars interface{}, errorOnMissing bool) ([]byte, error) {
 	templateFunctions := template.FuncMap{}
-	templateFunctions["env"] = builder.TemplateFuncs["env"]
+	templateFunctions["env"] = env
 	templateFunctions["op"] = onePassword
 	templateFunctions["base64"] = base64
 	templateFunctions["default"] = defaultIndex
-	templateFunctions["yaml"] = yamlFile
 	templateFunctions["indent"] = indent
+	templateFunctions["file"] = file
 	templateFunctions["git"] = git
 
 	tpl, err := template.New("squadron").Delims("<%", "%>").Funcs(templateFunctions).Parse(text)
@@ -55,14 +54,22 @@ func executeFileTemplate(text string, templateVars interface{}, errorOnMissing b
 	return out.Bytes(), nil
 }
 
-func yamlFile(v string) (string, error) {
-	var bs []byte
-	var err error
-	bs, err = ioutil.ReadFile(v)
-	if err != nil {
-		return fmt.Sprintf("%q", v), err
+func env(name string) (string, error) {
+	if value := os.Getenv(name); value == "" {
+		return "", fmt.Errorf("env variable %q was empty", name)
+	} else {
+		return value, nil
 	}
-	return string(bytes.TrimSpace(bs)), nil
+}
+
+func file(v string) (string, error) {
+	if v == "" {
+		return "", nil
+	} else if bs, err := ioutil.ReadFile(v); err != nil {
+		return "", err
+	} else {
+		return string(bytes.TrimSpace(bs)), nil
+	}
 }
 
 func defaultIndex(v map[string]interface{}, index string, def interface{}) interface{} {

@@ -8,7 +8,7 @@ squadron:
             repository: http://helm.mycompany.com/repository
             version: 0.1.0
         builds:
-            service:
+            default:
                 image: docker.mycompany.com/mycomapny/frontend
                 tag: latest
         values:
@@ -16,3 +16,8 @@ squadron:
             env: UTF-8
             global: mycompany.com
             local: docker.mycompany.com/mycomapny/frontend:latest
+            values: |
+                foo: bar
+                bar:
+                  - foo
+                  - bar

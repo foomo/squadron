@@ -10,11 +10,13 @@ squadron:
       version: 0.1.0
       repository: http://helm.mycompany.com/repository
     builds:
-      service:
+      default:
         tag: latest
         image: docker.mycompany.com/mycomapny/frontend
     values:
       env: <% env "LC_CTYPE" %>
-      local: <% .Squadron.frontend.builds.service.image %>:<% .Squadron.frontend.builds.service.tag %>
+      local: <% .Squadron.frontend.builds.default.image %>:<% .Squadron.frontend.builds.default.tag %>
       global: <% .Global.host %>
       base64: <% base64 "1234567890" %>
+      values: |
+        <% file "testdata/config-template/values.yaml" | indent 8 %>
