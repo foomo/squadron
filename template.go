@@ -164,17 +164,17 @@ func onePassword(account, uuid, field string) (string, error) {
 
 	// validate session
 	if os.Getenv(fmt.Sprintf("OP_SESSION_%s", account)) == "" {
-		if err := onePasswordSignin(account); err != nil {
+		if err := onePasswordSignIn(account); err != nil {
 			return "", err
 		}
 	}
 
-	res, err := onPasswordGet(uuid, field)
+	res, err := onePasswordGet(uuid, field)
 	if err != nil && strings.Contains(res, "You are not currently signed in") {
 		// retry with login
-		if err := onePasswordSignin(account); err != nil {
+		if err := onePasswordSignIn(account); err != nil {
 			return "", err
-		} else if res, err = onPasswordGet(uuid, field); err != nil {
+		} else if res, err = onePasswordGet(uuid, field); err != nil {
 			return "", err
 		}
 	} else if err != nil {
@@ -183,12 +183,12 @@ func onePassword(account, uuid, field string) (string, error) {
 	return res, nil
 }
 
-func onPasswordGet(uuid, field string) (string, error) {
+func onePasswordGet(uuid, field string) (string, error) {
 	res, err := exec.Command("op", "get", "item", uuid, "--fields", field).CombinedOutput()
 	return string(res), err
 }
 
-func onePasswordSignin(account string) error {
+func onePasswordSignIn(account string) error {
 	fmt.Println("Your templates includes a call to 1Password, please sign to retrieve your session token:")
 
 	// create command

@@ -84,7 +84,6 @@ func (sq Squadron) Generate(units map[string]Unit) error {
 	if err != nil {
 		return err
 	}
-	// run helm package to basePath
 	return nil
 }
 
