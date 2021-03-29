@@ -54,8 +54,8 @@ func testConfigSnapshot(t *testing.T, configs []string, snapshot string) {
 	sq, err := squadron.New(testutils.Log(), cwd, "", configs)
 	testutils.Must(t, err, "failed to init squadron")
 
-	cf, err := sq.Config()
+	cf, err := sq.GetConfigYAML()
 	testutils.Must(t, err, "failed to parse config")
 
-	testutils.MustCheckSnapshot(t, snapshot, []byte(cf))
+	testutils.MustCheckSnapshot(t, snapshot, cf)
 }

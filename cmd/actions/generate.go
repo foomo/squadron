@@ -19,18 +19,16 @@ var (
 	}
 )
 
-func generate(l *logrus.Entry, unitNames []string, cwd string, files []string) error {
+func generate(l *logrus.Entry, args []string, cwd string, files []string) error {
 	sq, err := squadron.New(l, cwd, "", files)
 	if err != nil {
 		return err
 	}
 
-	units := map[string]squadron.Unit{}
-	if len(unitNames) == 0 {
-		units = sq.Units()
+	units, err := parseUnitArgs(args, sq.GetUnits())
+	if err != nil {
+		return err
 	}
-	for _, un := range unitNames {
-		units[un] = sq.Units()[un]
-	}
+
 	return sq.Generate(units)
 }

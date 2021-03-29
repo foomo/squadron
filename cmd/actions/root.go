@@ -1,6 +1,9 @@
 package actions
 
 import (
+	"gopkg.in/errgo.v2/fmt/errors"
+
+	"github.com/foomo/squadron"
 	"github.com/foomo/squadron/util"
 
 	"github.com/sirupsen/logrus"
@@ -55,6 +58,7 @@ func newLogger(verbose bool) *logrus.Entry {
 	return logrus.NewEntry(logger)
 }
 
+// parseExtraArgs ...
 func parseExtraArgs(args []string) (out []string, extraArgs []string) {
 	for i, arg := range args {
 		if arg == "--" {
@@ -63,4 +67,20 @@ func parseExtraArgs(args []string) (out []string, extraArgs []string) {
 		}
 	}
 	return
+}
+
+// parseUnitArgs helper
+func parseUnitArgs(args []string, units map[string]squadron.Unit) (map[string]squadron.Unit, error) {
+	if len(args) == 0 {
+		return units, nil
+	}
+	ret := map[string]squadron.Unit{}
+	for _, arg := range args {
+		if unit, ok := units[arg]; ok {
+			ret[arg] = unit
+		} else {
+			return nil, errors.Newf("unknown unit name %s", arg)
+		}
+	}
+	return ret, nil
 }

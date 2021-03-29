@@ -23,29 +23,30 @@ var (
 	}
 )
 
-func build(l *logrus.Entry, unitNames []string, cwd string, files []string, push bool) error {
+func build(l *logrus.Entry, args []string, cwd string, files []string, push bool) error {
 	sq, err := squadron.New(l, cwd, "", files)
 	if err != nil {
 		return err
 	}
 
-	units := map[string]squadron.Unit{}
-	if len(unitNames) == 0 {
-		units = sq.Units()
-	}
-	for _, un := range unitNames {
-		units[un] = sq.Units()[un]
+	units, err := parseUnitArgs(args, sq.GetUnits())
+	if err != nil {
+		return err
 	}
 
 	for _, unit := range units {
-		if err := sq.Build(unit); err != nil {
+		if err := unit.Build(true); err != nil {
 			return err
 		}
-		if push {
-			if err := sq.Push(unit); err != nil {
+	}
+
+	if push {
+		for _, unit := range units {
+			if err := unit.Push(); err != nil {
 				return err
 			}
 		}
 	}
+
 	return nil
 }

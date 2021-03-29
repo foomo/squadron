@@ -12,7 +12,7 @@ import (
 var (
 	configCmd = &cobra.Command{
 		Use:     "config",
-		Short:   "generate and view the squadron chart",
+		Short:   "generate and view the squadron config",
 		Example: "  squadron config --file squadron.yaml --file squadron.override.yaml",
 		Args:    cobra.MinimumNArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -26,10 +26,12 @@ func config(l *logrus.Entry, cwd string, files []string) error {
 	if err != nil {
 		return err
 	}
-	cf, err := sq.Config()
+
+	cf, err := sq.GetConfigYAML()
 	if err != nil {
 		return err
 	}
-	fmt.Println(cf)
+
+	fmt.Println(string(cf))
 	return nil
 }

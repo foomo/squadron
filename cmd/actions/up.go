@@ -20,37 +20,42 @@ var (
 		Example: "  squadron up frontend backend --build --push --namespace demo -- --dry-run",
 		Args:    cobra.MinimumNArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			unitNames, helmArgs := parseExtraArgs(args)
-			return up(log, unitNames, cwd, flagNamespace, flagBuild, flagPush, flagFiles, helmArgs)
+			return up(log, args, cwd, flagNamespace, flagBuild, flagPush, flagFiles)
 		},
 	}
 )
 
-func up(l *logrus.Entry, unitNames []string, cwd, namespace string, build, push bool, files []string, helmArgs []string) error {
+func up(l *logrus.Entry, args []string, cwd, namespace string, build, push bool, files []string) error {
 	sq, err := squadron.New(l, cwd, namespace, files)
 	if err != nil {
 		return err
 	}
 
-	units := map[string]squadron.Unit{}
-	if len(unitNames) == 0 {
-		units = sq.Units()
-	}
-	for _, un := range unitNames {
-		units[un] = sq.Units()[un]
+	args, helmArgs := parseExtraArgs(args)
+	units, err := parseUnitArgs(args, sq.GetUnits())
+	if err != nil {
+		return err
 	}
 
 	for _, unit := range units {
-		if build {
-			if err := sq.Build(unit); err != nil {
-				return err
-			}
+		if err := unit.Build(build); err != nil {
+			return err
 		}
-		if push {
-			if err := sq.Push(unit); err != nil {
+	}
+
+	if push {
+		for _, unit := range units {
+			if err := unit.Push(); err != nil {
 				return err
 			}
 		}
 	}
-	return sq.Up(units, helmArgs)
+
+	if err := sq.Generate(units); err != nil {
+		return err
+	} else if err := sq.Up(helmArgs); err != nil {
+		return err
+	}
+
+	return nil
 }

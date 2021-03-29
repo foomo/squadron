@@ -1,9 +1,10 @@
 package actions
 
 import (
-	"github.com/foomo/squadron"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+
+	"github.com/foomo/squadron"
 )
 
 func init() {
@@ -17,16 +18,18 @@ var (
 		Example: "  squadron down --namespace demo",
 		Args:    cobra.MinimumNArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			_, helmArgs := parseExtraArgs(args)
-			return down(log, cwd, flagNamespace, helmArgs)
+			return down(log, args, cwd, flagNamespace)
 		},
 	}
 )
 
-func down(l *logrus.Entry, cwd, namespace string, extraArgs []string) error {
+func down(l *logrus.Entry, args []string, cwd, namespace string) error {
 	sq, err := squadron.New(l, cwd, namespace, nil)
 	if err != nil {
 		return err
 	}
-	return sq.Down(extraArgs)
+
+	_, helmArgs := parseExtraArgs(args)
+
+	return sq.Down(helmArgs)
 }
