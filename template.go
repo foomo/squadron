@@ -164,37 +164,58 @@ func onePassword(account, uuid, field string) (string, error) {
 
 	// validate session
 	if os.Getenv(fmt.Sprintf("OP_SESSION_%s", account)) == "" {
-		fmt.Println("Your templates includes a call to 1Password, please sign to retrieve your session token:")
-
-		// create command
-		cmd := exec.Command("op", "signin", account, "--raw")
-
-		// use multi writer to handle password prompt
-		var stdoutBuf bytes.Buffer
-		cmd.Stdout = io.MultiWriter(os.Stdout, &stdoutBuf)
-		cmd.Stdin = os.Stdin
-
-		// start the process and wait till it's finished
-		if err := cmd.Start(); err != nil {
+		if err := onePasswordSignin(account); err != nil {
 			return "", err
-		} else if err := cmd.Wait(); err != nil {
-			return "", err
-		}
-
-		if token := strings.TrimSuffix(stdoutBuf.String(), "\n"); token == "" {
-			fmt.Println(fmt.Sprintf("Failed to login into your '%s' account! Please refer to the manual:", account))
-			fmt.Println("https://support.1password.com/command-line-getting-started/#set-up-the-command-line-tool")
-			return "", errors.New("failed to retrieve 1password session token")
-		} else if err := os.Setenv(fmt.Sprintf("OP_SESSION_%s", account), token); err != nil {
-			return "", err
-		} else {
-			fmt.Println("NOTE: If you want to skip this step, run:")
-			fmt.Println(fmt.Sprintf("export OP_SESSION_%s=%s", account, token))
 		}
 	}
-	res, err := exec.Command("op", "get", "item", uuid, "--fields", field).Output()
-	if err != nil {
+
+	res, err := onPasswordGet(uuid, field)
+	if err != nil && strings.Contains(res, "You are not currently signed in") {
+		// retry with login
+		if err := onePasswordSignin(account); err != nil {
+			return "", err
+		} else if res, err = onPasswordGet(uuid, field); err != nil {
+			return "", err
+		}
+	} else if err != nil {
 		return "", err
 	}
-	return string(res), nil
+	return res, nil
+}
+
+func onPasswordGet(uuid, field string) (string, error) {
+	res, err := exec.Command("op", "get", "item", uuid, "--fields", field).CombinedOutput()
+	return string(res), err
+}
+
+func onePasswordSignin(account string) error {
+	fmt.Println("Your templates includes a call to 1Password, please sign to retrieve your session token:")
+
+	// create command
+	cmd := exec.Command("op", "signin", account, "--raw")
+
+	// use multi writer to handle password prompt
+	var stdoutBuf bytes.Buffer
+	cmd.Stdout = io.MultiWriter(os.Stdout, &stdoutBuf)
+	cmd.Stdin = os.Stdin
+
+	// start the process and wait till it's finished
+	if err := cmd.Start(); err != nil {
+		return err
+	} else if err := cmd.Wait(); err != nil {
+		return err
+	}
+
+	if token := strings.TrimSuffix(stdoutBuf.String(), "\n"); token == "" {
+		fmt.Println(fmt.Sprintf("Failed to login into your '%s' account! Please refer to the manual:", account))
+		fmt.Println("https://support.1password.com/command-line-getting-started/#set-up-the-command-line-tool")
+		return errors.New("failed to retrieve 1password session token")
+	} else if err := os.Setenv(fmt.Sprintf("OP_SESSION_%s", account), token); err != nil {
+		return err
+	} else {
+		fmt.Println("NOTE: If you want to skip this step, run:")
+		fmt.Println(fmt.Sprintf("export OP_SESSION_%s=%s", account, token))
+	}
+
+	return nil
 }
