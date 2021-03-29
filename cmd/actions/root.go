@@ -1,7 +1,7 @@
 package actions
 
 import (
-	"gopkg.in/errgo.v2/fmt/errors"
+	"github.com/pkg/errors"
 
 	"github.com/foomo/squadron"
 	"github.com/foomo/squadron/util"
@@ -79,7 +79,7 @@ func parseUnitArgs(args []string, units map[string]squadron.Unit) (map[string]sq
 		if unit, ok := units[arg]; ok {
 			ret[arg] = unit
 		} else {
-			return nil, errors.Newf("unknown unit name %s", arg)
+			return nil, errors.Errorf("unknown unit name %s", arg)
 		}
 	}
 	return ret, nil
