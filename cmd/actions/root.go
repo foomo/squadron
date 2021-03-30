@@ -1,6 +1,8 @@
 package actions
 
 import (
+	"strings"
+
 	"github.com/pkg/errors"
 
 	"github.com/foomo/squadron"
@@ -62,8 +64,11 @@ func newLogger(verbose bool) *logrus.Entry {
 func parseExtraArgs(args []string) (out []string, extraArgs []string) {
 	for i, arg := range args {
 		if arg == "--" {
-			out, extraArgs = args[:i], args[i+1:]
-			break
+			return args[:i], args[i+1:]
+		} else if strings.HasPrefix(arg, "--") && i > 0 {
+			return args[:i-1], args[i:]
+		} else if strings.HasPrefix(arg, "--") {
+			return nil, args
 		}
 	}
 	return
