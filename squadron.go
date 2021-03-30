@@ -114,6 +114,16 @@ func (sq Squadron) Up(helmArgs []string) error {
 	return err
 }
 
+func (sq Squadron) Template(helmArgs []string) (string, error) {
+	cmd := util.NewHelmCommand(sq.l)
+	cmd.Args("template", sq.name, sq.chartPath())
+	cmd.Args("--namespace", sq.namespace)
+	// use extra args
+	cmd.Args(helmArgs...)
+	// run
+	return cmd.Run()
+}
+
 func (sq Squadron) chartPath() string {
 	return path.Join(sq.basePath, defaultOutputDir, sq.name)
 }
