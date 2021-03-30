@@ -43,7 +43,6 @@ func New(l *logrus.Entry, basePath, namespace string, files []string) (*Squadron
 		namespace: namespace,
 		c:         Configuration{},
 	}
-	//sq.helmCmd.Args("-n", namespace)
 
 	tv := TemplateVars{}
 	if err := mergeSquadronFiles(files, &sq.c, tv); err != nil {
@@ -95,21 +94,23 @@ func (sq Squadron) Package() error {
 
 func (sq Squadron) Down(helmArgs []string) error {
 	cmd := util.NewHelmCommand(sq.l)
+	cmd.Args("uninstall", sq.name)
 	cmd.Args("--namespace", sq.namespace)
 	// use extra args
 	cmd.Args(helmArgs...)
-	// run helm upgrade --install
-	_, err := cmd.Uninstall(sq.name)
+	// run
+	_, err := cmd.Run()
 	return err
 }
 
 func (sq Squadron) Up(helmArgs []string) error {
 	cmd := util.NewHelmCommand(sq.l)
+	cmd.Args("upgrade", sq.name, sq.chartPath(), "--install")
 	cmd.Args("--namespace", sq.namespace)
 	// use extra args
 	cmd.Args(helmArgs...)
-	// run helm upgrade --install
-	_, err := cmd.Install(sq.name, sq.chartPath())
+	// run
+	_, err := cmd.Run()
 	return err
 }
 

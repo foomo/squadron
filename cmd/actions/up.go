@@ -17,7 +17,7 @@ var (
 	upCmd = &cobra.Command{
 		Use:     "up [UNIT...]",
 		Short:   "installs the squadron chart",
-		Example: "  squadron up frontend backend --build --push --namespace demo -- --dry-run",
+		Example: "  squadron up frontend backend --namespace demo --build --push -- --dry-run",
 		Args:    cobra.MinimumNArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return up(log, args, cwd, flagNamespace, flagBuild, flagPush, flagFiles)
