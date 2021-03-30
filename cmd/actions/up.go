@@ -51,7 +51,7 @@ func up(l *logrus.Entry, args []string, cwd, namespace string, build, push bool,
 		}
 	}
 
-	if err := sq.Generate(units); err != nil {
+	if err := sq.Generate(sq.GetUnits()); err != nil {
 		return err
 	} else if err := sq.Up(helmArgs); err != nil {
 		return err

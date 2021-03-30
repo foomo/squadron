@@ -9,26 +9,21 @@ import (
 
 var (
 	generateCmd = &cobra.Command{
-		Use:     "generate [UNIT...]",
+		Use:     "generate",
 		Short:   "generate and view the squadron chart",
 		Example: "  squadron generate fronted backend",
 		Args:    cobra.MinimumNArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return generate(log, args, cwd, flagFiles)
+			return generate(log, cwd, flagFiles)
 		},
 	}
 )
 
-func generate(l *logrus.Entry, args []string, cwd string, files []string) error {
+func generate(l *logrus.Entry, cwd string, files []string) error {
 	sq, err := squadron.New(l, cwd, "", files)
 	if err != nil {
 		return err
 	}
 
-	units, err := parseUnitArgs(args, sq.GetUnits())
-	if err != nil {
-		return err
-	}
-
-	return sq.Generate(units)
+	return sq.Generate(sq.GetUnits())
 }
