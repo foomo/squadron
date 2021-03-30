@@ -14,8 +14,10 @@ squadron:
         tag: latest
         image: docker.mycompany.com/mycomapny/frontend
     values:
+      image:
+        tag: <% .Squadron.frontend.builds.default.tag %>
+        repository: <% .Squadron.frontend.builds.default.image %>
       env: <% env "LC_CTYPE" %>
-      local: <% .Squadron.frontend.builds.default.image %>:<% .Squadron.frontend.builds.default.tag %>
       global: <% .Global.host %>
       base64: <% base64 "1234567890" %>
       values: |

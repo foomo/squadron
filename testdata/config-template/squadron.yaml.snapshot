@@ -15,7 +15,9 @@ squadron:
             base64: MTIzNDU2Nzg5MA==
             env: UTF-8
             global: mycompany.com
-            local: docker.mycompany.com/mycomapny/frontend:latest
+            image:
+                repository: docker.mycompany.com/mycomapny/frontend
+                tag: latest
             values: |
                 foo: bar
                 bar:
