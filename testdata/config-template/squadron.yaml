@@ -22,3 +22,16 @@ squadron:
       base64: <% base64 "1234567890" %>
       values: |
         <% file "testdata/config-template/values.yaml" | indent 8 %>
+  frontend-admin:
+    chart:
+      name: mychart
+      version: 0.1.0
+      repository: http://helm.mycompany.com/repository
+    builds:
+      default:
+        tag: latest
+        image: docker.mycompany.com/mycomapny/frontend-admin
+    values:
+      image:
+        tag: <% .Squadron.frontend_admin.builds.default.tag %>
+        repository: <% .Squadron.frontend_admin.builds.default.image %>

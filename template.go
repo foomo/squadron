@@ -3,7 +3,6 @@ package squadron
 import (
 	"bytes"
 	b64 "encoding/base64"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -13,6 +12,7 @@ import (
 	"text/template"
 
 	"github.com/miracl/conflate"
+	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
 
@@ -88,7 +88,7 @@ func executeSquadronTemplate(text string, c *Configuration, tv TemplateVars) err
 	// execute without errors to get existing values
 	out, err := executeFileTemplate(text, tv, false)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to execute initial file template")
 	}
 	var vars map[string]interface{}
 	if err := yaml.Unmarshal(out, &vars); err != nil {
@@ -96,14 +96,16 @@ func executeSquadronTemplate(text string, c *Configuration, tv TemplateVars) err
 	}
 	// execute again with loaded template vars
 	if value, ok := vars["global"]; ok {
+		replace(value)
 		tv.add("Global", value)
 	}
 	if value, ok := vars["squadron"]; ok {
+		replace(value)
 		tv.add("Squadron", value)
 	}
 	out, err = executeFileTemplate(text, tv, true)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to execute second file template")
 	}
 	if err := yaml.Unmarshal(out, &c); err != nil {
 		return err
@@ -111,20 +113,31 @@ func executeSquadronTemplate(text string, c *Configuration, tv TemplateVars) err
 	return nil
 }
 
+func replace(in interface{}) {
+	if value, ok := in.(map[string]interface{}); ok {
+		for k, v := range value {
+			if strings.Contains(k, "-") {
+				value[strings.Replace(k, "-", "_", -1)] = v
+				delete(value, k)
+			}
+			replace(v)
+		}
+	}
+}
+
 func mergeSquadronFiles(files []string, c *Configuration, tv TemplateVars) error {
 	// step 1: merge 'valid' yaml files
 	mergedFiles, err := conflate.FromFiles(files...)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to conflate files")
 	}
 	var data interface{}
 	if err := mergedFiles.Unmarshal(&data); err != nil {
-		return err
+		return errors.Wrap(err, "failed to unmarshal data")
 	}
-
 	mergedBytes, err := mergedFiles.MarshalYAML()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to marshal yaml")
 	}
 
 	// TODO print out YAML on debug

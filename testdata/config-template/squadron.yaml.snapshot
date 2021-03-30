@@ -23,3 +23,16 @@ squadron:
                 bar:
                   - foo
                   - bar
+    frontend-admin:
+        chart:
+            name: mychart
+            repository: http://helm.mycompany.com/repository
+            version: 0.1.0
+        builds:
+            default:
+                image: docker.mycompany.com/mycomapny/frontend-admin
+                tag: latest
+        values:
+            image:
+                repository: docker.mycompany.com/mycomapny/frontend-admin
+                tag: latest
