@@ -32,7 +32,7 @@ func (c *DockerCmd) ListOption(name string, v []string) *Cmd {
 
 func (c *DockerCmd) Build(workDir string) (string, error) {
 	c.l.Infof("Running docker build for %q", workDir)
-	return c.Args("build", workDir).Args(c.Options...).Run()
+	return c.Cwd(workDir).Args("build", ".").Args(c.Options...).Run()
 }
 
 func (c *DockerCmd) Push(image, tag string, options ...string) (string, error) {
