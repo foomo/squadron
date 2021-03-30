@@ -42,6 +42,6 @@ func (c *DockerCmd) Push(image, tag string, options ...string) (string, error) {
 
 func (c *DockerCmd) ImageExists(image, tag string) (bool, error) {
 	c.l.Infof("Checking image exists for %s:%s", image, tag)
-	ret, err := c.Args("images", "--filter", fmt.Sprintf("reference='%s:%s'", image, tag)).Run()
+	ret, err := c.Args("images", "--quiet", fmt.Sprintf("%s:%s", image, tag)).Run()
 	return ret != "", err
 }
