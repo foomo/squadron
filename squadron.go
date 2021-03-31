@@ -6,10 +6,10 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 
 	"github.com/foomo/squadron/util"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -32,13 +32,11 @@ type Squadron struct {
 	name      string
 	basePath  string
 	namespace string
-	l         *logrus.Entry
 	c         Configuration
 }
 
-func New(l *logrus.Entry, basePath, namespace string, files []string) (*Squadron, error) {
+func New(basePath, namespace string, files []string) (*Squadron, error) {
 	sq := Squadron{
-		l:         l,
 		basePath:  basePath,
 		namespace: namespace,
 		c:         Configuration{},
@@ -69,59 +67,44 @@ func (sq Squadron) GetConfigYAML() ([]byte, error) {
 }
 
 func (sq Squadron) Generate(units map[string]Unit) error {
-	// cleanup old files
+	logrus.Infof("recreating chart output dir %q", sq.chartPath())
 	if err := sq.cleanupOutput(sq.chartPath()); err != nil {
 		return err
 	}
-	// generate Chart.yaml and values.yaml
+	logrus.Infof("generating chart %q files in %q", sq.name, sq.chartPath())
 	if err := sq.generateChart(units, sq.chartPath(), sq.name, sq.c.Version); err != nil {
 		return err
 	}
-	// run helm dependency upgrade
-	cmd := util.NewHelmCommand(sq.l)
-	_, err := cmd.UpdateDependency(sq.name, sq.chartPath())
-	if err != nil {
-		return err
-	}
-	return nil
+	logrus.Infof("running helm dependency update for chart: %v", sq.chartPath())
+	_, err := util.NewHelmCommand().UpdateDependency(sq.name, sq.chartPath())
+	return err
 }
 
 func (sq Squadron) Package() error {
-	cmd := util.NewHelmCommand(sq.l)
-	_, err := cmd.Package(sq.name, sq.chartPath(), sq.basePath)
+	logrus.Infof("running helm package for chart: %v", sq.chartPath())
+	_, err := util.NewHelmCommand().Package(sq.name, sq.chartPath(), sq.basePath)
 	return err
 }
 
 func (sq Squadron) Down(helmArgs []string) error {
-	cmd := util.NewHelmCommand(sq.l)
-	cmd.Args("uninstall", sq.name)
-	cmd.Args("--namespace", sq.namespace)
-	// use extra args
-	cmd.Args(helmArgs...)
-	// run
-	_, err := cmd.Run()
+	logrus.Infof("running helm uninstall for chart: %v", sq.chartPath())
+	_, err := util.NewHelmCommand().Args("uninstall", sq.name).
+		Args("--namespace", sq.namespace).Args(helmArgs...).Run()
 	return err
 }
 
 func (sq Squadron) Up(helmArgs []string) error {
-	cmd := util.NewHelmCommand(sq.l)
-	cmd.Args("upgrade", sq.name, sq.chartPath(), "--install")
-	cmd.Args("--namespace", sq.namespace)
-	// use extra args
-	cmd.Args(helmArgs...)
-	// run
-	_, err := cmd.Run()
+	logrus.Infof("running helm install for chart: %v", sq.chartPath())
+	_, err := util.NewHelmCommand().
+		Args("upgrade", sq.name, sq.chartPath(), "--install").
+		Args("--namespace", sq.namespace).Args(helmArgs...).Run()
 	return err
 }
 
 func (sq Squadron) Template(helmArgs []string) (string, error) {
-	cmd := util.NewHelmCommand(sq.l)
-	cmd.Args("template", sq.name, sq.chartPath())
-	cmd.Args("--namespace", sq.namespace)
-	// use extra args
-	cmd.Args(helmArgs...)
-	// run
-	return cmd.Run()
+	logrus.Infof("running helm template for chart: %v", sq.chartPath())
+	return util.NewHelmCommand().Args("template", sq.name, sq.chartPath()).
+		Args("--namespace", sq.namespace).Args(helmArgs...).Run()
 }
 
 func (sq Squadron) chartPath() string {
@@ -130,13 +113,10 @@ func (sq Squadron) chartPath() string {
 
 func (sq Squadron) cleanupOutput(chartPath string) error {
 	if _, err := os.Stat(chartPath); err == nil {
-		sq.l.Infof("removing dir: %q", chartPath)
 		if err := os.RemoveAll(chartPath); err != nil {
-			sq.l.Warnf("could not delete chart output directory: %q", err)
+			logrus.Warnf("could not delete chart output directory: %q", err)
 		}
 	}
-
-	sq.l.Printf("creating dir: %q", chartPath)
 	if _, err := os.Stat(chartPath); os.IsNotExist(err) {
 		if err := os.MkdirAll(chartPath, 0744); err != nil {
 			return fmt.Errorf("could not create chart output directory: %w", err)
@@ -146,7 +126,6 @@ func (sq Squadron) cleanupOutput(chartPath string) error {
 }
 
 func (sq Squadron) generateChart(units map[string]Unit, chartPath, chartName, version string) error {
-	sq.l.Printf("generating chart %q files in %q", chartName, chartPath)
 	chart := newChart(chartName, version)
 	values := map[string]interface{}{}
 	if sq.GetGlobal() != nil {
