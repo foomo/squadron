@@ -61,6 +61,7 @@ func newLogger(verbose bool) *logrus.Entry {
 }
 
 // parseExtraArgs ...
+// TODO somehow -- is not being passed through any more?!
 func parseExtraArgs(args []string) (out []string, extraArgs []string) {
 	for i, arg := range args {
 		if arg == "--" {
