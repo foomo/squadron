@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/foomo/squadron"
-	"github.com/foomo/squadron/tests/utils"
+	testutils "github.com/foomo/squadron/tests/utils"
 	"github.com/foomo/squadron/util"
 )
 
@@ -51,7 +51,7 @@ func testConfigSnapshot(t *testing.T, configs []string, snapshot string) {
 	var cwd string
 	testutils.Must(t, util.ValidatePath(".", &cwd))
 
-	sq, err := squadron.New(testutils.Log(), cwd, "", configs)
+	sq, err := squadron.New(cwd, "", configs)
 	testutils.Must(t, err, "failed to init squadron")
 
 	cf, err := sq.GetConfigYAML()

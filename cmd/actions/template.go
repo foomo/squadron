@@ -3,7 +3,6 @@ package actions
 import (
 	"fmt"
 
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/foomo/squadron"
@@ -20,13 +19,13 @@ var (
 		Example: "  squadron template",
 		Args:    cobra.MinimumNArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return template(log, args, cwd, flagNamespace, flagFiles)
+			return template(args, cwd, flagNamespace, flagFiles)
 		},
 	}
 )
 
-func template(l *logrus.Entry, args []string, cwd, namespace string, files []string) error {
-	sq, err := squadron.New(l, cwd, namespace, files)
+func template(args []string, cwd, namespace string, files []string) error {
+	sq, err := squadron.New(cwd, namespace, files)
 	if err != nil {
 		return err
 	}

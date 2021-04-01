@@ -1,7 +1,6 @@
 package actions
 
 import (
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/foomo/squadron"
@@ -18,13 +17,13 @@ var (
 		Example: "  squadron build frontend backend",
 		Args:    cobra.MinimumNArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return build(log, args, cwd, flagFiles, flagPush)
+			return build(args, cwd, flagFiles, flagPush)
 		},
 	}
 )
 
-func build(l *logrus.Entry, args []string, cwd string, files []string, push bool) error {
-	sq, err := squadron.New(l, cwd, "", files)
+func build(args []string, cwd string, files []string, push bool) error {
+	sq, err := squadron.New(cwd, "", files)
 	if err != nil {
 		return err
 	}

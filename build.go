@@ -3,10 +3,10 @@ package squadron
 import (
 	"fmt"
 
-	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 
 	"github.com/foomo/squadron/util"
+	"github.com/sirupsen/logrus"
 )
 
 type Build struct {
@@ -29,30 +29,32 @@ type Build struct {
 // ------------------------------------------------------------------------------------------------
 
 func (b *Build) Exists() (bool, error) {
-	return util.NewDockerCommand(logrus.NewEntry(logrus.StandardLogger())).ImageExists(b.Image, b.Tag)
+	logrus.Infof("checking image exists for %s:%s", b.Image, b.Tag)
+	return util.NewDockerCommand().ImageExists(b.Image, b.Tag)
 }
 
 // Build ...
 func (b *Build) Build() error {
-	cmd := util.NewDockerCommand(logrus.NewEntry(logrus.StandardLogger()))
-	cmd.Option("-t", fmt.Sprintf("%s:%s", b.Image, b.Tag))
-	cmd.Option("--file", b.Dockerfile)
-	cmd.ListOption("--build-arg", b.Args)
-	cmd.ListOption("--label", b.Labels)
-	cmd.ListOption("--cache-from", b.CacheFrom)
-	cmd.Option("--network", b.Network)
-	cmd.Option("--target", b.Target)
-	cmd.Option("--shm-size", b.ShmSize)
-	cmd.ListOption("--add-host", b.ExtraHosts)
-	cmd.Option("--isolation", b.Isolation)
+	logrus.Infof("running docker build for %q", b.Context)
+	cmd := util.NewDockerCommand()
+	cmd.Args("-t", fmt.Sprintf("%s:%s", b.Image, b.Tag)).
+		Args("--file", b.Dockerfile).
+		ListArg("--build-arg", b.Args).
+		ListArg("--label", b.Labels).
+		ListArg("--cache-from", b.CacheFrom).
+		Args("--network", b.Network).
+		Args("--target", b.Target).
+		Args("--shm-size", b.ShmSize).
+		ListArg("--add-host", b.ExtraHosts).
+		Args("--isolation", b.Isolation)
 	_, err := cmd.Build(b.Context)
 	return err
 }
 
 // Push ...
 func (b *Build) Push() error {
-	cmd := util.NewDockerCommand(logrus.NewEntry(logrus.StandardLogger()))
-	_, err := cmd.Push(b.Image, b.Tag)
+	logrus.Infof("running docker push for %s:%s", b.Image, b.Tag)
+	_, err := util.NewDockerCommand().Push(b.Image, b.Tag)
 	return err
 }
 

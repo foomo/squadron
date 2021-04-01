@@ -16,7 +16,10 @@ var (
 	rootCmd = &cobra.Command{
 		Use: "squadron",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			log = newLogger(flagVerbose)
+			logrus.SetLevel(logrus.InfoLevel)
+			if flagVerbose {
+				logrus.SetLevel(logrus.TraceLevel)
+			}
 			var err error
 			if cmd.Name() == "help" || cmd.Name() == "init" || cmd.Name() == "version" {
 				return nil
@@ -29,7 +32,6 @@ var (
 		},
 	}
 
-	log           *logrus.Entry
 	cwd           string
 	flagVerbose   bool
 	flagNamespace string
@@ -46,18 +48,9 @@ func init() {
 }
 
 func Execute() {
-	log := logrus.New()
 	if err := rootCmd.Execute(); err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
-}
-
-func newLogger(verbose bool) *logrus.Entry {
-	logger := logrus.New()
-	if verbose {
-		logger.SetLevel(logrus.TraceLevel)
-	}
-	return logrus.NewEntry(logger)
 }
 
 // parseExtraArgs ...

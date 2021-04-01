@@ -3,7 +3,6 @@ package actions
 import (
 	"fmt"
 
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/foomo/squadron"
@@ -16,13 +15,13 @@ var (
 		Example: "  squadron config --file squadron.yaml --file squadron.override.yaml",
 		Args:    cobra.MinimumNArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return config(log, cwd, flagFiles)
+			return config(cwd, flagFiles)
 		},
 	}
 )
 
-func config(l *logrus.Entry, cwd string, files []string) error {
-	sq, err := squadron.New(l, cwd, "", files)
+func config(cwd string, files []string) error {
+	sq, err := squadron.New(cwd, "", files)
 	if err != nil {
 		return err
 	}

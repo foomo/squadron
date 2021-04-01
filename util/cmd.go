@@ -11,7 +11,6 @@ import (
 )
 
 type Cmd struct {
-	l *logrus.Entry
 	// cmd           *exec.Cmd
 	command       []string
 	cwd           string
@@ -26,9 +25,8 @@ type Cmd struct {
 	postEndFunc   func() error
 }
 
-func NewCommand(l *logrus.Entry, name string) *Cmd {
+func NewCommand(name string) *Cmd {
 	return &Cmd{
-		l:       l,
 		command: []string{name},
 		wait:    true,
 		env:     os.Environ(),
@@ -46,6 +44,13 @@ func (c Cmd) Command() []string {
 
 func (c *Cmd) Args(args ...string) *Cmd {
 	c.command = append(c.command, args...)
+	return c
+}
+
+func (c *Cmd) ListArg(name string, v []string) *Cmd {
+	for _, i := range v {
+		c.command = append(c.command, name, i)
+	}
 	return c
 }
 
@@ -111,11 +116,11 @@ func (c *Cmd) Run() (string, error) {
 	if c.cwd != "" {
 		cmd.Dir = c.cwd
 	}
-	c.l.Tracef("executing %q", cmd.String())
+	logrus.Tracef("executing %q", cmd.String())
 
 	combinedBuf := new(bytes.Buffer)
-	traceWriter := c.l.WriterLevel(logrus.TraceLevel)
-	warnWriter := c.l.WriterLevel(logrus.WarnLevel)
+	traceWriter := logrus.New().WriterLevel(logrus.TraceLevel)
+	warnWriter := logrus.New().WriterLevel(logrus.WarnLevel)
 
 	c.stdoutWriters = append(c.stdoutWriters, combinedBuf, traceWriter)
 	c.stderrWriters = append(c.stderrWriters, combinedBuf, warnWriter)
