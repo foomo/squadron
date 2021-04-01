@@ -1,6 +1,8 @@
 package actions
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"github.com/foomo/squadron"
@@ -10,6 +12,7 @@ func init() {
 	upCmd.Flags().StringVarP(&flagNamespace, "namespace", "n", "default", "specifies the namespace")
 	upCmd.Flags().BoolVarP(&flagBuild, "build", "b", false, "builds or rebuilds units")
 	upCmd.Flags().BoolVarP(&flagPush, "push", "p", false, "pushes units to the registry")
+	upCmd.Flags().BoolVar(&flagDiff, "diff", false, "preview upgrade as a coloured diff")
 }
 
 var (
@@ -19,12 +22,12 @@ var (
 		Example: "  squadron up frontend backend --namespace demo --build --push -- --dry-run",
 		Args:    cobra.MinimumNArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return up(args, cwd, flagNamespace, flagBuild, flagPush, flagFiles)
+			return up(args, cwd, flagNamespace, flagBuild, flagPush, flagDiff, flagFiles)
 		},
 	}
 )
 
-func up(args []string, cwd, namespace string, build, push bool, files []string) error {
+func up(args []string, cwd, namespace string, build, push, diff bool, files []string) error {
 	sq, err := squadron.New(cwd, namespace, files)
 	if err != nil {
 		return err
@@ -52,9 +55,14 @@ func up(args []string, cwd, namespace string, build, push bool, files []string) 
 
 	if err := sq.Generate(sq.GetUnits()); err != nil {
 		return err
-	} else if err := sq.Up(helmArgs); err != nil {
-		return err
 	}
 
+	if !diff {
+		return sq.Up(helmArgs)
+	} else if out, err := sq.Diff(helmArgs); err != nil {
+		return err
+	} else {
+		fmt.Println(out)
+	}
 	return nil
 }

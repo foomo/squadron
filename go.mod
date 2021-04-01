@@ -3,8 +3,11 @@ module github.com/foomo/squadron
 go 1.16
 
 require (
+	github.com/kylelemons/godebug v1.1.0
+	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/miracl/conflate v1.2.1
 	github.com/pkg/errors v0.8.1
+	github.com/sergi/go-diff v1.2.0
 	github.com/sirupsen/logrus v1.6.0
 	github.com/spf13/cobra v1.1.3
 	github.com/stretchr/testify v1.6.1 // indirect

@@ -37,6 +37,7 @@ var (
 	flagNamespace string
 	flagBuild     bool
 	flagPush      bool
+	flagDiff      bool
 	flagFiles     []string
 )
 

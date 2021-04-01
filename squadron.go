@@ -3,13 +3,19 @@ package squadron
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/foomo/squadron/util"
+	"github.com/kylelemons/godebug/pretty"
+	"github.com/logrusorgru/aurora"
+	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/sirupsen/logrus"
+
+	"github.com/foomo/squadron/util"
 )
 
 const (
@@ -89,22 +95,57 @@ func (sq Squadron) Package() error {
 func (sq Squadron) Down(helmArgs []string) error {
 	logrus.Infof("running helm uninstall for chart: %v", sq.chartPath())
 	_, err := util.NewHelmCommand().Args("uninstall", sq.name).
-		Args("--namespace", sq.namespace).Args(helmArgs...).Run()
+		Stdout(os.Stdout).
+		Args("--namespace", sq.namespace).
+		Args(helmArgs...).
+		Run()
 	return err
 }
 
+func (sq Squadron) Diff(helmArgs []string) (string, error) {
+	logrus.Infof("running helm diff for chart: %v", sq.chartPath())
+	manifest, err := exec.Command("helm", "get", "manifest", sq.name, "--namespace", sq.namespace).Output()
+	if err != nil {
+		return "", err
+	}
+	template, err := exec.Command("helm", "upgrade", sq.name, sq.chartPath(), "--namespace", sq.namespace, "--dry-run").Output()
+	if err != nil {
+		return "", err
+	}
+	dmp := diffmatchpatch.New()
+	return dmp.DiffPrettyText(dmp.DiffMain(string(manifest), string(template), false)), nil
+}
+
+func (sq Squadron) computeDiff(formatter aurora.Aurora, a interface{}, b interface{}) string {
+	diffs := make([]string, 0)
+	for _, s := range strings.Split(pretty.Compare(a, b), "\n") {
+		switch {
+		case strings.HasPrefix(s, "+"):
+			diffs = append(diffs, formatter.Bold(formatter.Green(s)).String())
+		case strings.HasPrefix(s, "-"):
+			diffs = append(diffs, formatter.Bold(formatter.Red(s)).String())
+		}
+	}
+	return strings.Join(diffs, "\n")
+}
+
 func (sq Squadron) Up(helmArgs []string) error {
-	logrus.Infof("running helm install for chart: %v", sq.chartPath())
+	logrus.Infof("running helm upgrade for chart: %v", sq.chartPath())
 	_, err := util.NewHelmCommand().
+		Stdout(os.Stdout).
 		Args("upgrade", sq.name, sq.chartPath(), "--install").
-		Args("--namespace", sq.namespace).Args(helmArgs...).Run()
+		Args("--namespace", sq.namespace).
+		Args(helmArgs...).
+		Run()
 	return err
 }
 
 func (sq Squadron) Template(helmArgs []string) (string, error) {
 	logrus.Infof("running helm template for chart: %v", sq.chartPath())
 	return util.NewHelmCommand().Args("template", sq.name, sq.chartPath()).
-		Args("--namespace", sq.namespace).Args(helmArgs...).Run()
+		Args("--namespace", sq.namespace).
+		Args(helmArgs...).
+		Run()
 }
 
 func (sq Squadron) chartPath() string {
