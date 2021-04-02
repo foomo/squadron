@@ -66,7 +66,7 @@ func parseExtraArgs(args []string) (out []string, extraArgs []string) {
 			return nil, args
 		}
 	}
-	return
+	return args, nil
 }
 
 // parseUnitArgs helper

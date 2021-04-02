@@ -36,18 +36,17 @@ func (b *Build) Exists() (bool, error) {
 // Build ...
 func (b *Build) Build() error {
 	logrus.Infof("running docker build for %q", b.Context)
-	cmd := util.NewDockerCommand()
-	cmd.Args("-t", fmt.Sprintf("%s:%s", b.Image, b.Tag)).
-		Args("--file", b.Dockerfile).
+	_, err := util.NewDockerCommand().Build(b.Context).
+		Arg("-t", fmt.Sprintf("%s:%s", b.Image, b.Tag)).
+		Arg("--file", b.Dockerfile).
 		ListArg("--build-arg", b.Args).
 		ListArg("--label", b.Labels).
 		ListArg("--cache-from", b.CacheFrom).
-		Args("--network", b.Network).
-		Args("--target", b.Target).
-		Args("--shm-size", b.ShmSize).
+		Arg("--network", b.Network).
+		Arg("--target", b.Target).
+		Arg("--shm-size", b.ShmSize).
 		ListArg("--add-host", b.ExtraHosts).
-		Args("--isolation", b.Isolation)
-	_, err := cmd.Build(b.Context)
+		Arg("--isolation", b.Isolation).Run()
 	return err
 }
 

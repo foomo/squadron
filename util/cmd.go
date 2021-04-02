@@ -43,13 +43,32 @@ func (c Cmd) Command() []string {
 }
 
 func (c *Cmd) Args(args ...string) *Cmd {
-	c.command = append(c.command, args...)
+	for _, arg := range args {
+		if arg == "" {
+			continue
+		}
+		c.command = append(c.command, arg)
+	}
 	return c
 }
 
-func (c *Cmd) ListArg(name string, v []string) *Cmd {
-	for _, i := range v {
-		c.command = append(c.command, name, i)
+func (c *Cmd) Arg(name, v string) *Cmd {
+	if name == "" || v == "" {
+		return c
+	}
+	c.command = append(c.command, name, v)
+	return c
+}
+
+func (c *Cmd) ListArg(name string, vs []string) *Cmd {
+	if name == "" {
+		return c
+	}
+	for _, v := range vs {
+		if v == "" {
+			continue
+		}
+		c.command = append(c.command, name, v)
 	}
 	return c
 }
