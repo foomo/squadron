@@ -53,13 +53,12 @@ func up(args []string, cwd, namespace string, build, push, diff bool, files []st
 		}
 	}
 
-	if err := sq.Generate(sq.GetUnits()); err != nil {
+	if err := sq.Generate(units); err != nil {
 		return err
 	}
 
 	if !diff {
-		return sq.Up(helmArgs)
-	} else if out, err := sq.Diff(helmArgs); err != nil {
+		return sq.Up(units, helmArgs)
 		return err
 	} else {
 		fmt.Println(out)

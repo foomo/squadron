@@ -30,6 +30,7 @@ type Configuration struct {
 	Name    string                 `yaml:"name,omitempty"`
 	Version string                 `yaml:"version,omitempty"`
 	Prefix  string                 `yaml:"prefix,omitempty"`
+	Unite   bool                   `yaml:"unite,omitempty"`
 	Global  map[string]interface{} `yaml:"global,omitempty"`
 	Units   map[string]Unit        `yaml:"squadron,omitempty"`
 }
@@ -77,6 +78,19 @@ func (sq Squadron) Generate(units map[string]Unit) error {
 	if err := sq.cleanupOutput(sq.chartPath()); err != nil {
 		return err
 	}
+	if sq.c.Unite {
+		return sq.generateUmbrellaChart(units)
+	}
+	for uName, u := range units {
+		logrus.Infof("generating %q value overrides file in %q", uName, sq.chartPath())
+		if err := sq.generateValues(u.Values, sq.chartPath(), uName); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (sq Squadron) generateUmbrellaChart(units map[string]Unit) error {
 	logrus.Infof("generating chart %q files in %q", sq.name, sq.chartPath())
 	if err := sq.generateChart(units, sq.chartPath(), sq.name, sq.c.Version); err != nil {
 		return err
@@ -129,15 +143,37 @@ func (sq Squadron) computeDiff(formatter aurora.Aurora, a interface{}, b interfa
 	return strings.Join(diffs, "\n")
 }
 
-func (sq Squadron) Up(helmArgs []string) error {
-	logrus.Infof("running helm upgrade for chart: %v", sq.chartPath())
-	_, err := util.NewHelmCommand().
-		Stdout(os.Stdout).
-		Args("upgrade", sq.name, sq.chartPath(), "--install").
-		Args("--namespace", sq.namespace).
-		Args(helmArgs...).
-		Run()
-	return err
+func (sq Squadron) Up(units map[string]Unit, helmArgs []string) error {
+	if sq.c.Unite {
+		logrus.Infof("running helm upgrade for chart: %v", sq.chartPath())
+		_, err := util.NewHelmCommand().
+			Stdout(os.Stdout).
+			Args("upgrade", sq.name, sq.chartPath(), "--install").
+			Args("--namespace", sq.namespace).
+			Args(helmArgs...).
+			Run()
+		return err
+	}
+	for uName, u := range units {
+		//todo use release prefix on install: squadron name or --name
+		logrus.Infof("running helm upgrade for %v", uName)
+		cmd := util.NewHelmCommand().
+			Stdout(os.Stdout).
+			Args("upgrade", uName, "--install").
+			Args("--namespace", sq.namespace).
+			Args("-f", path.Join(sq.chartPath(), uName+".yaml")).
+			Args(helmArgs...)
+		if strings.Contains(u.Chart.Repository, "file://") {
+			cmd.Args("/" + strings.TrimLeft(u.Chart.Repository, "file://"))
+		} else {
+			cmd.Args(u.Chart.Name, "--repo", u.Chart.Repository)
+		}
+		_, err := cmd.Run()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (sq Squadron) Template(helmArgs []string) (string, error) {
@@ -177,6 +213,16 @@ func (sq Squadron) generateChart(units map[string]Unit, chartPath, chartName, ve
 		values[name] = unit.Values
 	}
 	if err := chart.generate(chartPath, values); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (sq Squadron) generateValues(values map[string]interface{}, vPath, vName string) error {
+	if sq.GetGlobal() != nil {
+		values["global"] = sq.GetGlobal()
+	}
+	if err := util.GenerateYaml(path.Join(vPath, vName+".yaml"), values); err != nil {
 		return err
 	}
 	return nil
