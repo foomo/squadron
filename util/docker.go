@@ -20,8 +20,3 @@ func (c *DockerCmd) Build(workDir string) *Cmd {
 func (c *DockerCmd) Push(image, tag string) (string, error) {
 	return c.Args("push", fmt.Sprintf("%s:%s", image, tag)).Run()
 }
-
-func (c *DockerCmd) ImageExists(image, tag string) (bool, error) {
-	out, err := c.Args("images", "--quiet", fmt.Sprintf("%s:%s", image, tag)).Run()
-	return out != "", err
-}

@@ -34,7 +34,7 @@ func build(args []string, cwd string, files []string, push bool) error {
 	}
 
 	for _, unit := range units {
-		if err := unit.Build(true); err != nil {
+		if err := unit.Build(); err != nil {
 			return err
 		}
 	}

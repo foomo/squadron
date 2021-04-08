@@ -11,14 +11,10 @@ type Unit struct {
 // ------------------------------------------------------------------------------------------------
 
 // Build ...
-func (u *Unit) Build(always bool) error {
+func (u *Unit) Build() error {
 	for _, build := range u.Builds {
-		if exists, err := build.Exists(); err != nil {
+		if err := build.Build(); err != nil {
 			return err
-		} else if !exists || always {
-			if err := build.Build(); err != nil {
-				return err
-			}
 		}
 	}
 	return nil

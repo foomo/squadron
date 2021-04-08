@@ -39,9 +39,11 @@ func up(args []string, cwd, namespace string, build, push, diff bool, files []st
 		return err
 	}
 
-	for _, unit := range units {
-		if err := unit.Build(build); err != nil {
-			return err
+	if build {
+		for _, unit := range units {
+			if err := unit.Build(); err != nil {
+				return err
+			}
 		}
 	}
 

@@ -28,11 +28,6 @@ type Build struct {
 // ~ Public methods
 // ------------------------------------------------------------------------------------------------
 
-func (b *Build) Exists() (bool, error) {
-	logrus.Infof("checking image exists for %s:%s", b.Image, b.Tag)
-	return util.NewDockerCommand().ImageExists(b.Image, b.Tag)
-}
-
 // Build ...
 func (b *Build) Build() error {
 	logrus.Infof("running docker build for %q", b.Context)
