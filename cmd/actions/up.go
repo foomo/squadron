@@ -61,7 +61,7 @@ func up(args []string, cwd, namespace string, build, push, diff bool, files []st
 
 	if !diff {
 		return sq.Up(units, helmArgs)
-	} else if out, err := sq.Diff(helmArgs); err != nil {
+	} else if out, err := sq.Diff(units, helmArgs); err != nil {
 		return err
 	} else {
 		fmt.Println(out)

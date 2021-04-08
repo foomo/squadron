@@ -1,6 +1,7 @@
 package squadron
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
@@ -116,18 +117,42 @@ func (sq Squadron) Down(helmArgs []string) error {
 	return err
 }
 
-func (sq Squadron) Diff(helmArgs []string) (string, error) {
-	logrus.Infof("running helm diff for chart: %v", sq.chartPath())
-	manifest, err := exec.Command("helm", "get", "manifest", sq.name, "--namespace", sq.namespace).Output()
-	if err != nil {
-		return "", err
+func (sq Squadron) Diff(units map[string]Unit, helmArgs []string) (string, error) {
+	if sq.c.Unite {
+		logrus.Infof("running helm diff for: %s", sq.chartPath())
+		manifest, err := exec.Command("helm", "get", "manifest", sq.name, "--namespace", sq.namespace).Output()
+		if err != nil {
+			return "", err
+		}
+		template, err := exec.Command("helm", "upgrade", sq.name, sq.chartPath(), "--namespace", sq.namespace, "--dry-run").Output()
+		if err != nil {
+			return "", err
+		}
+		dmp := diffmatchpatch.New()
+		return dmp.DiffPrettyText(dmp.DiffMain(string(manifest), string(template), false)), nil
 	}
-	template, err := exec.Command("helm", "upgrade", sq.name, sq.chartPath(), "--namespace", sq.namespace, "--dry-run").Output()
-	if err != nil {
-		return "", err
+	for uName, u := range units {
+		//todo use release prefix on install: squadron name or --name
+		logrus.Infof("running helm diff for: %s", uName)
+		manifest, err := exec.Command("helm", "get", "manifest", uName, "--namespace", sq.namespace).CombinedOutput()
+		if err != nil && string(bytes.TrimSpace(manifest)) != "Error: release: not found" {
+			return "", err
+		}
+		cmd := exec.Command("helm", "upgrade", uName, "--install", "--namespace", sq.namespace, "-f", path.Join(sq.chartPath(), uName+".yaml"), "--dry-run")
+		if strings.Contains(u.Chart.Repository, "file://") {
+			cmd.Args = append(cmd.Args, "/"+strings.TrimLeft(u.Chart.Repository, "file://"))
+		} else {
+			cmd.Args = append(cmd.Args, u.Chart.Name, "--repo", u.Chart.Repository)
+		}
+		template, err := cmd.Output()
+		if err != nil {
+			return "", err
+		}
+		dmp := diffmatchpatch.New()
+		return dmp.DiffPrettyText(dmp.DiffMain(string(manifest), string(template), false)), nil
 	}
-	dmp := diffmatchpatch.New()
-	return dmp.DiffPrettyText(dmp.DiffMain(string(manifest), string(template), false)), nil
+
+	return "", nil
 }
 
 func (sq Squadron) computeDiff(formatter aurora.Aurora, a interface{}, b interface{}) string {
