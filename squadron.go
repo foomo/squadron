@@ -145,7 +145,7 @@ func (sq Squadron) computeDiff(formatter aurora.Aurora, a interface{}, b interfa
 
 func (sq Squadron) Up(units map[string]Unit, helmArgs []string) error {
 	if sq.c.Unite {
-		logrus.Infof("running helm upgrade for chart: %v", sq.chartPath())
+		logrus.Infof("running helm upgrade for chart: %s", sq.chartPath())
 		_, err := util.NewHelmCommand().
 			Stdout(os.Stdout).
 			Args("upgrade", sq.name, sq.chartPath(), "--install").
@@ -156,7 +156,7 @@ func (sq Squadron) Up(units map[string]Unit, helmArgs []string) error {
 	}
 	for uName, u := range units {
 		//todo use release prefix on install: squadron name or --name
-		logrus.Infof("running helm upgrade for %v", uName)
+		logrus.Infof("running helm upgrade for %s", uName)
 		cmd := util.NewHelmCommand().
 			Stdout(os.Stdout).
 			Args("upgrade", uName, "--install").
@@ -168,20 +168,41 @@ func (sq Squadron) Up(units map[string]Unit, helmArgs []string) error {
 		} else {
 			cmd.Args(u.Chart.Name, "--repo", u.Chart.Repository)
 		}
-		_, err := cmd.Run()
-		if err != nil {
+		if _, err := cmd.Run(); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (sq Squadron) Template(helmArgs []string) (string, error) {
-	logrus.Infof("running helm template for chart: %v", sq.chartPath())
-	return util.NewHelmCommand().Args("template", sq.name, sq.chartPath()).
-		Args("--namespace", sq.namespace).
-		Args(helmArgs...).
-		Run()
+func (sq Squadron) Template(units map[string]Unit, helmArgs []string) error {
+	if sq.c.Unite {
+		logrus.Infof("running helm template for chart: %s", sq.chartPath())
+		_, err := util.NewHelmCommand().Args("template", sq.name, sq.chartPath()).
+			Stdout(os.Stdout).
+			Args("--namespace", sq.namespace).
+			Args(helmArgs...).
+			Run()
+		return err
+	}
+	for uName, u := range units {
+		//todo use release prefix on install: squadron name or --name
+		logrus.Infof("running helm template for chart: %s", uName)
+		cmd := util.NewHelmCommand().Args("template", uName).
+			Stdout(os.Stdout).
+			Args("--namespace", sq.namespace).
+			Args("-f", path.Join(sq.chartPath(), uName+".yaml")).
+			Args(helmArgs...)
+		if strings.Contains(u.Chart.Repository, "file://") {
+			cmd.Args("/" + strings.TrimLeft(u.Chart.Repository, "file://"))
+		} else {
+			cmd.Args(u.Chart.Name, "--repo", u.Chart.Repository)
+		}
+		if _, err := cmd.Run(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (sq Squadron) chartPath() string {

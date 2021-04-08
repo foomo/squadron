@@ -1,8 +1,6 @@
 package actions
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 
 	"github.com/foomo/squadron"
@@ -31,13 +29,15 @@ func template(args []string, cwd, namespace string, files []string) error {
 	}
 
 	args, helmArgs := parseExtraArgs(args)
+	units, err := parseUnitArgs(args, sq.GetUnits())
+	if err != nil {
+		return err
+	}
 
 	if err := sq.Generate(sq.GetUnits()); err != nil {
 		return err
-	} else if out, err := sq.Template(helmArgs); err != nil {
+	} else if err := sq.Template(units, helmArgs); err != nil {
 		return err
-	} else {
-		fmt.Println(out)
 	}
 
 	return nil
