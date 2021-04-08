@@ -45,7 +45,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&flagVerbose, "verbose", "v", false, "show more output")
 	rootCmd.PersistentFlags().StringSliceVarP(&flagFiles, "file", "f", []string{"squadron.yaml"}, "specify alternative squadron files")
 
-	rootCmd.AddCommand(upCmd, downCmd, buildCmd, generateCmd, configCmd, versionCmd, completionCmd, templateCmd)
+	rootCmd.AddCommand(upCmd, downCmd, buildCmd, listCmd, generateCmd, configCmd, versionCmd, completionCmd, templateCmd)
 }
 
 func Execute() {
