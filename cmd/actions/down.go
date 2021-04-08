@@ -12,23 +12,27 @@ func init() {
 
 var (
 	downCmd = &cobra.Command{
-		Use:     "down",
-		Short:   "uninstalls the squadron chart",
-		Example: "  squadron down --namespace demo",
+		Use:     "down [UNIT...]",
+		Short:   "uninstalls the squadron or given units",
+		Example: "  squadron down frontend backend --namespace demo",
 		Args:    cobra.MinimumNArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return down(args, cwd, flagNamespace)
+			return down(args, cwd, flagNamespace, flagFiles)
 		},
 	}
 )
 
-func down(args []string, cwd, namespace string) error {
-	sq, err := squadron.New(cwd, namespace, nil)
+func down(args []string, cwd, namespace string, files []string) error {
+	sq, err := squadron.New(cwd, namespace, files)
 	if err != nil {
 		return err
 	}
 
-	_, helmArgs := parseExtraArgs(args)
+	args, helmArgs := parseExtraArgs(args)
+	units, err := parseUnitArgs(args, sq.GetUnits())
+	if err != nil {
+		return err
+	}
 
-	return sq.Down(helmArgs)
+	return sq.Down(units, helmArgs)
 }

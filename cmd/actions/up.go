@@ -18,7 +18,7 @@ func init() {
 var (
 	upCmd = &cobra.Command{
 		Use:     "up [UNIT...]",
-		Short:   "installs the squadron chart",
+		Short:   "installs the squadron or given units",
 		Example: "  squadron up frontend backend --namespace demo --build --push -- --dry-run",
 		Args:    cobra.MinimumNArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {

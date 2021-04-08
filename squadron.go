@@ -107,14 +107,31 @@ func (sq Squadron) Package() error {
 	return err
 }
 
-func (sq Squadron) Down(helmArgs []string) error {
-	logrus.Infof("running helm uninstall for chart: %v", sq.chartPath())
-	_, err := util.NewHelmCommand().Args("uninstall", sq.name).
-		Stdout(os.Stdout).
-		Args("--namespace", sq.namespace).
-		Args(helmArgs...).
-		Run()
-	return err
+func (sq Squadron) Down(units map[string]Unit, helmArgs []string) error {
+	if sq.c.Unite {
+		logrus.Infof("running helm uninstall for: %s", sq.chartPath())
+		_, err := util.NewHelmCommand().Args("uninstall", sq.name).
+			Stdout(os.Stdout).
+			Args("--namespace", sq.namespace).
+			Args(helmArgs...).
+			Run()
+		return err
+	}
+	for uName, _ := range units {
+		//todo use release prefix on install: squadron name or --name
+		logrus.Infof("running helm uninstall for: %s", uName)
+		stdErr := bytes.NewBuffer([]byte{})
+		if _, err := util.NewHelmCommand().Args("uninstall", uName).
+			Stderr(stdErr).
+			Stdout(os.Stdout).
+			Args("--namespace", sq.namespace).
+			Args(helmArgs...).
+			Run(); err != nil && string(bytes.TrimSpace(stdErr.Bytes())) != fmt.Sprintf("Error: uninstall: Release not loaded: %s: release: not found", uName) {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (sq Squadron) Diff(units map[string]Unit, helmArgs []string) (string, error) {
