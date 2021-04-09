@@ -71,7 +71,13 @@ func (sq Squadron) GetGlobal() map[string]interface{} {
 }
 
 func (sq Squadron) GetConfigYAML() ([]byte, error) {
-	return yaml.Marshal(sq.c)
+	var b bytes.Buffer
+	yamlEncoder := yaml.NewEncoder(&b)
+	yamlEncoder.SetIndent(2)
+	if err := yamlEncoder.Encode(sq.c); err != nil {
+		return nil, err
+	}
+	return b.Bytes(), nil
 }
 
 func (sq Squadron) Generate(units map[string]Unit) error {

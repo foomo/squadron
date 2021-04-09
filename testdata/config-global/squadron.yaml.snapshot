@@ -1,4 +1,4 @@
 version: "1.0"
 global:
-    bar: bar
-    foo: baz
+  bar: bar
+  foo: baz
