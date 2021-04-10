@@ -40,7 +40,7 @@ func executeFileTemplate(text string, templateVars interface{}, errorOnMissing b
 	templateFunctions["file"] = file
 	templateFunctions["git"] = git
 
-	tpl, err := template.New("squadron").Delims("<%", "%>").Funcs(templateFunctions).Parse(text)
+	tpl, err := template.New("squadron").Delims("<%=", "%>").Funcs(templateFunctions).Parse(text)
 	if err != nil {
 		return nil, err
 	}
