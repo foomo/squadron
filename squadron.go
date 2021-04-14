@@ -125,9 +125,10 @@ func (sq Squadron) Down(units map[string]Unit, helmArgs []string) error {
 	}
 	for uName, _ := range units {
 		//todo use release prefix on install: squadron name or --name
+		rName := fmt.Sprintf("%s-%s", sq.name, uName)
 		logrus.Infof("running helm uninstall for: %s", uName)
 		stdErr := bytes.NewBuffer([]byte{})
-		if _, err := util.NewHelmCommand().Args("uninstall", uName).
+		if _, err := util.NewHelmCommand().Args("uninstall", rName).
 			Stderr(stdErr).
 			Stdout(os.Stdout).
 			Args("--namespace", sq.namespace).
@@ -156,12 +157,13 @@ func (sq Squadron) Diff(units map[string]Unit, helmArgs []string) (string, error
 	}
 	for uName, u := range units {
 		//todo use release prefix on install: squadron name or --name
+		rName := fmt.Sprintf("%s-%s", sq.name, uName)
 		logrus.Infof("running helm diff for: %s", uName)
-		manifest, err := exec.Command("helm", "get", "manifest", uName, "--namespace", sq.namespace).CombinedOutput()
+		manifest, err := exec.Command("helm", "get", "manifest", rName, "--namespace", sq.namespace).CombinedOutput()
 		if err != nil && string(bytes.TrimSpace(manifest)) != "Error: release: not found" {
 			return "", err
 		}
-		cmd := exec.Command("helm", "upgrade", uName, "--install", "--namespace", sq.namespace, "-f", path.Join(sq.chartPath(), uName+".yaml"), "--dry-run")
+		cmd := exec.Command("helm", "upgrade", rName, "--install", "--namespace", sq.namespace, "-f", path.Join(sq.chartPath(), uName+".yaml"), "--dry-run")
 		if strings.Contains(u.Chart.Repository, "file://") {
 			cmd.Args = append(cmd.Args, "/"+strings.TrimLeft(u.Chart.Repository, "file://"))
 		} else {
@@ -204,10 +206,11 @@ func (sq Squadron) Up(units map[string]Unit, helmArgs []string) error {
 	}
 	for uName, u := range units {
 		//todo use release prefix on install: squadron name or --name
+		rName := fmt.Sprintf("%s-%s", sq.name, uName)
 		logrus.Infof("running helm upgrade for %s", uName)
 		cmd := util.NewHelmCommand().
 			Stdout(os.Stdout).
-			Args("upgrade", uName, "--install").
+			Args("upgrade", rName, "--install").
 			Args("--namespace", sq.namespace).
 			Args("-f", path.Join(sq.chartPath(), uName+".yaml")).
 			Args(helmArgs...)
@@ -235,8 +238,9 @@ func (sq Squadron) Template(units map[string]Unit, helmArgs []string) error {
 	}
 	for uName, u := range units {
 		//todo use release prefix on install: squadron name or --name
+		rName := fmt.Sprintf("%s-%s", sq.name, uName)
 		logrus.Infof("running helm template for chart: %s", uName)
-		cmd := util.NewHelmCommand().Args("template", uName).
+		cmd := util.NewHelmCommand().Args("template", rName).
 			Stdout(os.Stdout).
 			Args("--namespace", sq.namespace).
 			Args("-f", path.Join(sq.chartPath(), uName+".yaml")).
