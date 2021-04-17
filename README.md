@@ -1,8 +1,8 @@
-![Travis CI: build status](https://travis-ci.org/foomo/squadron.svg?branch=master) ![GoReportCard](https://goreportcard.com/badge/github.com/foomo/squadron) ![godoc](https://godoc.org/github.com/foomo/squadron?status.svg) ![goreleaser](https://github.com/foomo/squadron/workflows/goreleaser/badge.svg)
-
 # Squadron
 
-Application for managing kubernetes microservice environments. 
+![Travis CI: build status](https://travis-ci.org/foomo/squadron.svg?branch=master) ![GoReportCard](https://goreportcard.com/badge/github.com/foomo/squadron) ![godoc](https://godoc.org/github.com/foomo/squadron?status.svg) ![goreleaser](https://github.com/foomo/squadron/workflows/goreleaser/badge.svg)
+
+Application for managing kubernetes microservice environments.
 
 Use it, if a helm chart is not enough in order to organize multiple services into an effective squadron.
 
@@ -10,32 +10,42 @@ Another way to think of it would be `helm-compose`, because it makes k8s and hel
 
 ## Quickstart
 
-```text
-# Create a new folder with an example application with squadron:
-$ squadron init [NAME]
+Configure your squadron
 
-$ cd [NAME]/
+```yaml
+# squadron.yaml
+version: "1.0"
 
-# Run install for predefined squadron and namespace:
-$ squadron install [SQUADRON] -n [NAMESPACE]
+squadron:
+  frontend:
+    chart:
+      name: mychart
+      version: 0.1.0
+      repository: http://helm.mycompany.com/repository
+    builds:
+      service:
+        tag: latest
+        dockerfile: Dockerfile
+        image: docker.mycompany.com/mycomapny/frontend
+        args:
+          - "foo=foo"
+          - "bar=bar"
+    values:
+      image: docker.mycompany.com/mycomapny/frontend:latest
 ```
 
-## Structure
+Install the squadron squadron and namespace:
 
 ```text
-/squadron
-    /charts (Helm Charts)
-        /<chart name>
-    /services
-        service-a.yaml
-        service-b.yaml
-    /namespaces
-        /local (reserved, local)
-            squadron-a.yaml
-            squadron-b.yaml
-        /node-a (remote)
-            squadron-c.yaml
+$ squadron up --build --push --namespace default
 ```
+
+Uninstall the squadron again:
+
+```text
+$ squadron down
+```
+
 ## Commands
 
 ```text
