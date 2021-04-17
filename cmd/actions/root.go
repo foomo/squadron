@@ -55,13 +55,10 @@ func Execute() {
 }
 
 // parseExtraArgs ...
-// TODO somehow -- is not being passed through any more?!
 func parseExtraArgs(args []string) (out []string, extraArgs []string) {
 	for i, arg := range args {
-		if arg == "--" {
-			return args[:i], args[i+1:]
-		} else if strings.HasPrefix(arg, "--") && i > 0 {
-			return args[:i-1], args[i:]
+		if strings.HasPrefix(arg, "--") && i > 0 {
+			return args[:i], args[i:]
 		} else if strings.HasPrefix(arg, "--") {
 			return nil, args
 		}

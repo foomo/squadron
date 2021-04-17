@@ -20,7 +20,6 @@ var (
 		Use:     "up [UNIT...]",
 		Short:   "installs the squadron or given units",
 		Example: "  squadron up frontend backend --namespace demo --build --push -- --dry-run",
-		Args:    cobra.MinimumNArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return up(args, cwd, flagNamespace, flagBuild, flagPush, flagDiff, flagFiles)
 		},
@@ -35,6 +34,7 @@ func up(args []string, cwd, namespace string, build, push, diff bool, files []st
 
 	args, helmArgs := parseExtraArgs(args)
 	units, err := parseUnitArgs(args, sq.GetUnits())
+
 	if err != nil {
 		return err
 	}
