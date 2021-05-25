@@ -8,17 +8,15 @@ import (
 	"github.com/foomo/squadron"
 )
 
-var (
-	configCmd = &cobra.Command{
-		Use:     "config",
-		Short:   "generate and view the squadron config",
-		Example: "  squadron config --file squadron.yaml --file squadron.override.yaml",
-		Args:    cobra.MinimumNArgs(0),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return config(cwd, flagFiles)
-		},
-	}
-)
+var configCmd = &cobra.Command{
+	Use:     "config",
+	Short:   "generate and view the squadron config",
+	Example: "  squadron config --file squadron.yaml --file squadron.override.yaml",
+	Args:    cobra.MinimumNArgs(0),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return config(cwd, flagFiles)
+	},
+}
 
 func config(cwd string, files []string) error {
 	sq, err := squadron.New(cwd, "", files)

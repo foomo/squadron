@@ -10,17 +10,15 @@ func init() {
 	templateCmd.Flags().StringVarP(&flagNamespace, "namespace", "n", "default", "specifies the namespace")
 }
 
-var (
-	templateCmd = &cobra.Command{
-		Use:     "template [UNIT...]",
-		Short:   "render chart templates locally and display the output",
-		Example: "  squadron template frontend backend --namespace demo",
-		Args:    cobra.MinimumNArgs(0),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return template(args, cwd, flagNamespace, flagFiles)
-		},
-	}
-)
+var templateCmd = &cobra.Command{
+	Use:     "template [UNIT...]",
+	Short:   "render chart templates locally and display the output",
+	Example: "  squadron template frontend backend --namespace demo",
+	Args:    cobra.MinimumNArgs(0),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return template(args, cwd, flagNamespace, flagFiles)
+	},
+}
 
 func template(args []string, cwd, namespace string, files []string) error {
 	sq, err := squadron.New(cwd, namespace, files)

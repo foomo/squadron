@@ -9,12 +9,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/kylelemons/godebug/pretty"
 	"github.com/logrusorgru/aurora"
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v3"
 
 	"github.com/foomo/squadron/util"
 )
@@ -123,8 +122,8 @@ func (sq Squadron) Down(units map[string]Unit, helmArgs []string) error {
 			Run()
 		return err
 	}
-	for uName, _ := range units {
-		//todo use release prefix on install: squadron name or --name
+	for uName := range units {
+		// todo use release prefix on install: squadron name or --name
 		rName := fmt.Sprintf("%s-%s", sq.name, uName)
 		logrus.Infof("running helm uninstall for: %s", uName)
 		stdErr := bytes.NewBuffer([]byte{})
@@ -156,7 +155,7 @@ func (sq Squadron) Diff(units map[string]Unit, helmArgs []string) (string, error
 		return dmp.DiffPrettyText(dmp.DiffMain(string(manifest), string(template), false)), nil
 	}
 	for uName, u := range units {
-		//todo use release prefix on install: squadron name or --name
+		// todo use release prefix on install: squadron name or --name
 		rName := fmt.Sprintf("%s-%s", sq.name, uName)
 		logrus.Infof("running helm diff for: %s", uName)
 		manifest, err := exec.Command("helm", "get", "manifest", rName, "--namespace", sq.namespace).CombinedOutput()
@@ -205,7 +204,7 @@ func (sq Squadron) Up(units map[string]Unit, helmArgs []string) error {
 		return err
 	}
 	for uName, u := range units {
-		//todo use release prefix on install: squadron name or --name
+		// todo use release prefix on install: squadron name or --name
 		rName := fmt.Sprintf("%s-%s", sq.name, uName)
 		logrus.Infof("running helm upgrade for %s", uName)
 		cmd := util.NewHelmCommand().
@@ -237,7 +236,7 @@ func (sq Squadron) Template(units map[string]Unit, helmArgs []string) error {
 		return err
 	}
 	for uName, u := range units {
-		//todo use release prefix on install: squadron name or --name
+		// todo use release prefix on install: squadron name or --name
 		rName := fmt.Sprintf("%s-%s", sq.name, uName)
 		logrus.Infof("running helm template for chart: %s", uName)
 		cmd := util.NewHelmCommand().Args("template", rName).

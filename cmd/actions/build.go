@@ -10,17 +10,15 @@ func init() {
 	buildCmd.Flags().BoolVarP(&flagPush, "push", "p", false, "pushes built squadron units to the registry")
 }
 
-var (
-	buildCmd = &cobra.Command{
-		Use:     "build [UNIT...]",
-		Short:   "build or rebuild squadron units",
-		Example: "  squadron build frontend backend",
-		Args:    cobra.MinimumNArgs(0),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return build(args, cwd, flagFiles, flagPush)
-		},
-	}
-)
+var buildCmd = &cobra.Command{
+	Use:     "build [UNIT...]",
+	Short:   "build or rebuild squadron units",
+	Example: "  squadron build frontend backend",
+	Args:    cobra.MinimumNArgs(0),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return build(args, cwd, flagFiles, flagPush)
+	},
+}
 
 func build(args []string, cwd string, files []string, push bool) error {
 	sq, err := squadron.New(cwd, "", files)

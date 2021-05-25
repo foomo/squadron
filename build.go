@@ -3,9 +3,8 @@ package squadron
 import (
 	"fmt"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v3"
 
 	"github.com/foomo/squadron/util"
 )

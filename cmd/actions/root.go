@@ -4,12 +4,11 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 
 	"github.com/foomo/squadron"
 	"github.com/foomo/squadron/util"
-
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 )
 
 var (
