@@ -117,7 +117,7 @@ func replace(in interface{}) {
 	if value, ok := in.(map[string]interface{}); ok {
 		for k, v := range value {
 			if strings.Contains(k, "-") {
-				value[strings.Replace(k, "-", "_", -1)] = v
+				value[strings.ReplaceAll(k, "-", "_")] = v
 				delete(value, k)
 			}
 			replace(v)
@@ -171,7 +171,7 @@ func git(action string) (string, error) {
 
 func indent(spaces int, v string) string {
 	pad := strings.Repeat(" ", spaces)
-	return strings.Replace(v, "\n", "\n"+pad, -1)
+	return strings.ReplaceAll(v, "\n", "\n"+pad)
 }
 
 func onePassword(account, uuid, field string) (string, error) {
@@ -227,14 +227,14 @@ func onePasswordSignIn(account string) error {
 	}
 
 	if token := strings.TrimSuffix(stdoutBuf.String(), "\n"); token == "" {
-		fmt.Println(fmt.Sprintf("Failed to login into your '%s' account! Please refer to the manual:", account))
+		fmt.Printf("Failed to login into your '%s' account! Please refer to the manual:\n", account)
 		fmt.Println("https://support.1password.com/command-line-getting-started/#set-up-the-command-line-tool")
 		return errors.New("failed to retrieve 1password session token")
 	} else if err := os.Setenv(fmt.Sprintf("OP_SESSION_%s", account), token); err != nil {
 		return err
 	} else {
 		fmt.Println("NOTE: If you want to skip this step, run:")
-		fmt.Println(fmt.Sprintf("export OP_SESSION_%s=%s", account, token))
+		fmt.Printf("export OP_SESSION_%s=%s\n", account, token)
 	}
 
 	return nil
