@@ -5,8 +5,9 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/foomo/squadron/util"
 	"github.com/sirupsen/logrus"
+
+	"github.com/foomo/squadron/util"
 )
 
 type Build struct {
@@ -15,6 +16,7 @@ type Build struct {
 	Context    string   `yaml:"context,omitempty"`
 	Dockerfile string   `yaml:"dockerfile,omitempty"`
 	Args       []string `yaml:"args,omitempty"`
+	Secrets    []string `yaml:"secrets,omitempty"`
 	Labels     []string `yaml:"labels,omitempty"`
 	CacheFrom  []string `yaml:"cache_from,omitempty"`
 	Network    string   `yaml:"network,omitempty"`
@@ -35,6 +37,7 @@ func (b *Build) Build() error {
 		Arg("-t", fmt.Sprintf("%s:%s", b.Image, b.Tag)).
 		Arg("--file", b.Dockerfile).
 		ListArg("--build-arg", b.Args).
+		ListArg("--secrets", b.Secrets).
 		ListArg("--label", b.Labels).
 		ListArg("--cache-from", b.CacheFrom).
 		Arg("--network", b.Network).
