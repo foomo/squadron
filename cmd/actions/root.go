@@ -33,6 +33,7 @@ var (
 
 	cwd           string
 	flagVerbose   bool
+	flagNoRender  bool
 	flagNamespace string
 	flagBuild     bool
 	flagPush      bool

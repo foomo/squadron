@@ -21,13 +21,14 @@ var downCmd = &cobra.Command{
 }
 
 func down(args []string, cwd, namespace string, files []string) error {
-	sq, err := squadron.New(cwd, namespace, files)
-	if err != nil {
+	sq := squadron.New(cwd, "", files)
+
+	if err := sq.MergeConfigFiles(); err != nil {
 		return err
 	}
 
 	args, helmArgs := parseExtraArgs(args)
-	units, err := parseUnitArgs(args, sq.GetUnits())
+	units, err := parseUnitArgs(args, sq.GetConfig().Units)
 	if err != nil {
 		return err
 	}

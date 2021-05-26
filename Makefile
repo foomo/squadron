@@ -4,7 +4,7 @@
 
 ## Install binary
 install:
-	go build -o /usr/local/bin/squadron cmd/main.go
+	go build -o ${GOPATH}/bin/squadron cmd/main.go
 
 ## Build binary
 build:

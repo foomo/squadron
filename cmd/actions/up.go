@@ -25,13 +25,18 @@ var upCmd = &cobra.Command{
 }
 
 func up(args []string, cwd, namespace string, build, push, diff bool, files []string) error {
-	sq, err := squadron.New(cwd, namespace, files)
-	if err != nil {
+	sq := squadron.New(cwd, namespace, files)
+
+	if err := sq.MergeConfigFiles(); err != nil {
+		return err
+	}
+
+	if err := sq.RenderConfig(); err != nil {
 		return err
 	}
 
 	args, helmArgs := parseExtraArgs(args)
-	units, err := parseUnitArgs(args, sq.GetUnits())
+	units, err := parseUnitArgs(args, sq.GetConfig().Units)
 	if err != nil {
 		return err
 	}

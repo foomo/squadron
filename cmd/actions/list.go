@@ -14,17 +14,18 @@ var listCmd = &cobra.Command{
 	Example: "  squadron list",
 	Args:    cobra.MinimumNArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return list(cwd, flagNamespace, flagFiles)
+		return list(cwd, flagFiles)
 	},
 }
 
-func list(cwd, namespace string, files []string) error {
-	sq, err := squadron.New(cwd, namespace, files)
-	if err != nil {
+func list(cwd string, files []string) error {
+	sq := squadron.New(cwd, "", files)
+
+	if err := sq.MergeConfigFiles(); err != nil {
 		return err
 	}
 
-	for name := range sq.GetUnits() {
+	for name := range sq.GetConfig().Units {
 		fmt.Println(name)
 	}
 

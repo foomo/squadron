@@ -17,10 +17,15 @@ var generateCmd = &cobra.Command{
 }
 
 func generate(cwd string, files []string) error {
-	sq, err := squadron.New(cwd, "", files)
-	if err != nil {
+	sq := squadron.New(cwd, "", files)
+
+	if err := sq.MergeConfigFiles(); err != nil {
 		return err
 	}
 
-	return sq.Generate(sq.GetUnits())
+	if err := sq.RenderConfig(); err != nil {
+		return err
+	}
+
+	return sq.Generate(sq.GetConfig().Units)
 }

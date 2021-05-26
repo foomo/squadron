@@ -21,12 +21,17 @@ var buildCmd = &cobra.Command{
 }
 
 func build(args []string, cwd string, files []string, push bool) error {
-	sq, err := squadron.New(cwd, "", files)
-	if err != nil {
+	sq := squadron.New(cwd, "", files)
+
+	if err := sq.MergeConfigFiles(); err != nil {
 		return err
 	}
 
-	units, err := parseUnitArgs(args, sq.GetUnits())
+	if err := sq.RenderConfig(); err != nil {
+		return err
+	}
+
+	units, err := parseUnitArgs(args, sq.GetConfig().Units)
 	if err != nil {
 		return err
 	}

@@ -1,37 +1,31 @@
 package testutils
 
 import (
-	"bytes"
-	"encoding/json"
 	"io/ioutil"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // MustWriteSnapshot updates the snapshot file for a given test t.
-func MustWriteSnapshot(t *testing.T, name string, content []byte) {
-	Must(t, ioutil.WriteFile(name, content, 0600), "failed to update snapshot", name)
+func MustWriteSnapshot(t *testing.T, name string, content string) {
+	Must(t, ioutil.WriteFile(name, []byte(content), 0600), "failed to update snapshot", name)
 }
 
 // MustReadSnapshot reads the snapshot file for a given test t.
-func MustReadSnapshot(t *testing.T, name string) (content []byte) {
+func MustReadSnapshot(t *testing.T, name string) string {
 	g, err := ioutil.ReadFile(name)
 	Must(t, err, "failed reading file", name)
-	return g
+	return string(g)
 }
 
 // MustCheckSnapshot compares v with its snapshot file
-func MustCheckSnapshot(t *testing.T, name string, v interface{}) {
-	var err error
-	res, ok := v.([]byte)
-	if !ok {
-		res, err = json.Marshal(v)
-		Must(t, err)
-	}
+func MustCheckSnapshot(t *testing.T, name, yaml string) {
 	if *UpdateFlag {
-		MustWriteSnapshot(t, name, res)
+		MustWriteSnapshot(t, name, yaml)
 	}
-	g := MustReadSnapshot(t, name)
-	if !bytes.Equal(res, g) {
-		t.Fatalf("err: %s not equal to %s", res, g)
+	snapshot := MustReadSnapshot(t, name)
+	if !assert.YAMLEq(t, string(snapshot), yaml) {
+		t.Fatalf("err: %s not equal to %s", yaml, snapshot)
 	}
 }

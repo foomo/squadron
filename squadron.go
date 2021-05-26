@@ -11,6 +11,8 @@ import (
 
 	"github.com/kylelemons/godebug/pretty"
 	"github.com/logrusorgru/aurora"
+	"github.com/miracl/conflate"
+	"github.com/pkg/errors"
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
@@ -39,47 +41,93 @@ type Squadron struct {
 	name      string
 	basePath  string
 	namespace string
+	files     []string
+	config    string
 	c         Configuration
 }
 
-func New(basePath, namespace string, files []string) (*Squadron, error) {
-	sq := Squadron{
+func New(basePath, namespace string, files []string) *Squadron {
+	return &Squadron{
+		name:      filepath.Base(basePath),
 		basePath:  basePath,
 		namespace: namespace,
+		files:     files,
 		c:         Configuration{},
 	}
+}
 
-	tv := TemplateVars{}
-	if err := mergeSquadronFiles(files, &sq.c, tv); err != nil {
-		return nil, err
+func (sq *Squadron) GetConfig() Configuration {
+	return sq.c
+}
+
+func (sq *Squadron) GetConfigYAML() (string, error) {
+	return sq.config, nil
+	//var b bytes.Buffer
+	//yamlEncoder := yaml.NewEncoder(&b)
+	//yamlEncoder.SetIndent(2)
+	//if err := yamlEncoder.Encode(sq.c); err != nil {
+	//	return nil, err
+	//}
+	//return b.Bytes(), nil
+}
+
+func (sq *Squadron) MergeConfigFiles() error {
+	mergedFiles, err := conflate.FromFiles(sq.files...)
+	if err != nil {
+		return errors.Wrap(err, "failed to conflate files")
 	}
+	var data interface{}
+	if err := mergedFiles.Unmarshal(&data); err != nil {
+		return errors.Wrap(err, "failed to unmarshal data")
+	}
+	fileBytes, err := mergedFiles.MarshalYAML()
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal yaml")
+	}
+	if err := yaml.Unmarshal(fileBytes, &sq.c); err != nil {
+		return err
+	}
+	sq.config = string(fileBytes)
+	return nil
+}
 
-	sq.name = filepath.Base(basePath)
+func (sq *Squadron) RenderConfig() error {
+	tv := TemplateVars{}
+	// execute without errors to get existing values
+	out, err := executeFileTemplate(sq.config, tv, false)
+	if err != nil {
+		return errors.Wrap(err, "failed to execute initial file template")
+	}
+	var vars map[string]interface{}
+	if err := yaml.Unmarshal(out, &vars); err != nil {
+		return err
+	}
+	// execute again with loaded template vars
+	if value, ok := vars["global"]; ok {
+		replace(value)
+		tv.add("Global", value)
+	}
+	if value, ok := vars["squadron"]; ok {
+		replace(value)
+		tv.add("Squadron", value)
+	}
+	out, err = executeFileTemplate(sq.config, tv, true)
+	if err != nil {
+		return errors.Wrap(err, "failed to execute second file template")
+	}
+	if err := yaml.Unmarshal(out, &sq.c); err != nil {
+		return err
+	}
+	sq.config = string(out)
+
 	if sq.c.Name != "" {
 		sq.name = sq.c.Name
 	}
-	return &sq, nil
+
+	return nil
 }
 
-func (sq Squadron) GetUnits() map[string]Unit {
-	return sq.c.Units
-}
-
-func (sq Squadron) GetGlobal() map[string]interface{} {
-	return sq.c.Global
-}
-
-func (sq Squadron) GetConfigYAML() ([]byte, error) {
-	var b bytes.Buffer
-	yamlEncoder := yaml.NewEncoder(&b)
-	yamlEncoder.SetIndent(2)
-	if err := yamlEncoder.Encode(sq.c); err != nil {
-		return nil, err
-	}
-	return b.Bytes(), nil
-}
-
-func (sq Squadron) Generate(units map[string]Unit) error {
+func (sq *Squadron) Generate(units map[string]Unit) error {
 	logrus.Infof("recreating chart output dir %q", sq.chartPath())
 	if err := sq.cleanupOutput(sq.chartPath()); err != nil {
 		return err
@@ -96,7 +144,7 @@ func (sq Squadron) Generate(units map[string]Unit) error {
 	return nil
 }
 
-func (sq Squadron) generateUmbrellaChart(units map[string]Unit) error {
+func (sq *Squadron) generateUmbrellaChart(units map[string]Unit) error {
 	logrus.Infof("generating chart %q files in %q", sq.name, sq.chartPath())
 	if err := sq.generateChart(units, sq.chartPath(), sq.name, sq.c.Version); err != nil {
 		return err
@@ -106,13 +154,13 @@ func (sq Squadron) generateUmbrellaChart(units map[string]Unit) error {
 	return err
 }
 
-func (sq Squadron) Package() error {
+func (sq *Squadron) Package() error {
 	logrus.Infof("running helm package for chart: %v", sq.chartPath())
 	_, err := util.NewHelmCommand().Package(sq.name, sq.chartPath(), sq.basePath)
 	return err
 }
 
-func (sq Squadron) Down(units map[string]Unit, helmArgs []string) error {
+func (sq *Squadron) Down(units map[string]Unit, helmArgs []string) error {
 	if sq.c.Unite {
 		logrus.Infof("running helm uninstall for: %s", sq.chartPath())
 		_, err := util.NewHelmCommand().Args("uninstall", sq.name).
@@ -140,7 +188,7 @@ func (sq Squadron) Down(units map[string]Unit, helmArgs []string) error {
 	return nil
 }
 
-func (sq Squadron) Diff(units map[string]Unit, helmArgs []string) (string, error) {
+func (sq *Squadron) Diff(units map[string]Unit, helmArgs []string) (string, error) {
 	if sq.c.Unite {
 		logrus.Infof("running helm diff for: %s", sq.chartPath())
 		manifest, err := exec.Command("helm", "get", "manifest", sq.name, "--namespace", sq.namespace).Output()
@@ -179,7 +227,7 @@ func (sq Squadron) Diff(units map[string]Unit, helmArgs []string) (string, error
 	return "", nil
 }
 
-func (sq Squadron) computeDiff(formatter aurora.Aurora, a interface{}, b interface{}) string {
+func (sq *Squadron) computeDiff(formatter aurora.Aurora, a interface{}, b interface{}) string {
 	diffs := make([]string, 0)
 	for _, s := range strings.Split(pretty.Compare(a, b), "\n") {
 		switch {
@@ -192,7 +240,7 @@ func (sq Squadron) computeDiff(formatter aurora.Aurora, a interface{}, b interfa
 	return strings.Join(diffs, "\n")
 }
 
-func (sq Squadron) Up(units map[string]Unit, helmArgs []string) error {
+func (sq *Squadron) Up(units map[string]Unit, helmArgs []string) error {
 	if sq.c.Unite {
 		logrus.Infof("running helm upgrade for chart: %s", sq.chartPath())
 		_, err := util.NewHelmCommand().
@@ -225,7 +273,7 @@ func (sq Squadron) Up(units map[string]Unit, helmArgs []string) error {
 	return nil
 }
 
-func (sq Squadron) Template(units map[string]Unit, helmArgs []string) error {
+func (sq *Squadron) Template(units map[string]Unit, helmArgs []string) error {
 	if sq.c.Unite {
 		logrus.Infof("running helm template for chart: %s", sq.chartPath())
 		_, err := util.NewHelmCommand().Args("template", sq.name, sq.chartPath()).
@@ -256,11 +304,11 @@ func (sq Squadron) Template(units map[string]Unit, helmArgs []string) error {
 	return nil
 }
 
-func (sq Squadron) chartPath() string {
+func (sq *Squadron) chartPath() string {
 	return path.Join(sq.basePath, defaultOutputDir, sq.name)
 }
 
-func (sq Squadron) cleanupOutput(chartPath string) error {
+func (sq *Squadron) cleanupOutput(chartPath string) error {
 	if _, err := os.Stat(chartPath); err == nil {
 		if err := os.RemoveAll(chartPath); err != nil {
 			logrus.Warnf("could not delete chart output directory: %q", err)
@@ -274,11 +322,11 @@ func (sq Squadron) cleanupOutput(chartPath string) error {
 	return nil
 }
 
-func (sq Squadron) generateChart(units map[string]Unit, chartPath, chartName, version string) error {
+func (sq *Squadron) generateChart(units map[string]Unit, chartPath, chartName, version string) error {
 	chart := newChart(chartName, version)
 	values := map[string]interface{}{}
-	if sq.GetGlobal() != nil {
-		values["global"] = sq.GetGlobal()
+	if sq.c.Global != nil {
+		values["global"] = sq.c.Global
 	}
 	for name, unit := range units {
 		chart.addDependency(name, unit.Chart)
@@ -290,9 +338,9 @@ func (sq Squadron) generateChart(units map[string]Unit, chartPath, chartName, ve
 	return nil
 }
 
-func (sq Squadron) generateValues(values map[string]interface{}, vPath, vName string) error {
-	if sq.GetGlobal() != nil {
-		values["global"] = sq.GetGlobal()
+func (sq *Squadron) generateValues(values map[string]interface{}, vPath, vName string) error {
+	if sq.c.Global != nil {
+		values["global"] = sq.c.Global
 	}
 	if err := util.GenerateYaml(path.Join(vPath, vName+".yaml"), values); err != nil {
 		return err

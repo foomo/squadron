@@ -11,17 +11,14 @@ squadron:
       repository: http://helm.mycompany.com/repository
       version: 0.1.0
     values:
-      base64: MTIzNDU2Nzg5MA==
-      env: UTF-8
-      global: mycompany.com
+      base64: <% base64 "1234567890" %>
+      env: <% env "LC_CTYPE" %>
+      global: <% .Global.host %>
       image:
-        repository: docker.mycompany.com/mycomapny/frontend
-        tag: latest
+        repository: <% .Squadron.frontend.builds.default.image %>
+        tag: <% .Squadron.frontend.builds.default.tag %>
       values: |
-        foo: bar
-        bar:
-          - foo
-          - bar
+        <% file "testdata/config-template/values.yaml" | indent 8 %>
   frontend-admin:
     builds:
       default:
@@ -33,6 +30,6 @@ squadron:
       version: 0.1.0
     values:
       image:
-        repository: docker.mycompany.com/mycomapny/frontend-admin
-        tag: latest
+        repository: <% .Squadron.frontend_admin.builds.default.image %>
+        tag: <% .Squadron.frontend_admin.builds.default.tag %>
 version: "1.0"

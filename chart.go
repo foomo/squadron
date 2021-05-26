@@ -18,25 +18,24 @@ type ChartDependency struct {
 }
 
 func (cd *ChartDependency) UnmarshalYAML(value *yaml.Node) error {
-	if value.Tag == "!!map" {
+	switch value.Tag {
+	case "!!map":
 		type wrapper ChartDependency
 		return value.Decode((*wrapper)(cd))
-	}
-	if value.Tag == "!!str" {
+	case "!!str":
 		var vString string
 		if err := value.Decode(&vString); err != nil {
 			return err
 		}
-		localChart, err := loadChart(path.Join(vString, chartFile))
-		if err != nil {
-			return fmt.Errorf("unable to load chart path %q, error: %v", vString, err)
+		if localChart, err := loadChart(path.Join(vString, chartFile)); err == nil {
+			cd.Name = localChart.Name
+			cd.Repository = fmt.Sprintf("file://%v", vString)
+			cd.Version = localChart.Version
 		}
-		cd.Name = localChart.Name
-		cd.Repository = fmt.Sprintf("file://%v", vString)
-		cd.Version = localChart.Version
 		return nil
+	default:
+		return fmt.Errorf("unsupported node tag type for %T: %q", cd, value.Tag)
 	}
-	return fmt.Errorf("unsupported node tag type for %T: %q", cd, value.Tag)
 }
 
 type Chart struct {
