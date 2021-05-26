@@ -27,7 +27,7 @@ func (c KubeCmd) WaitForRollout(deployment, timeout string) *Cmd {
 }
 
 func (c KubeCmd) GetMostRecentPodBySelectors(selectors map[string]string) (string, error) {
-	var selector []string
+	var selector []string //nolint:prealloc
 	for k, v := range selectors {
 		selector = append(selector, fmt.Sprintf("%v=%v", k, v))
 	}
@@ -37,7 +37,7 @@ func (c KubeCmd) GetMostRecentPodBySelectors(selectors map[string]string) (strin
 		return "", err
 	}
 
-	pods, err := parseResources(out, "\n", "pod/")
+	pods, err := parseResources(out, "pod/")
 	if err != nil {
 		return "", err
 	}
@@ -101,7 +101,7 @@ func (c KubeCmd) GetNamespaces() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	return parseResources(out, "\n", "namespace/")
+	return parseResources(out, "namespace/")
 }
 
 func (c KubeCmd) GetDeployments() ([]string, error) {
@@ -109,11 +109,11 @@ func (c KubeCmd) GetDeployments() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	return parseResources(out, "\n", "deployment.apps/")
+	return parseResources(out, "deployment.apps/")
 }
 
 func (c KubeCmd) GetPods(selectors map[string]string) ([]string, error) {
-	var selector []string
+	var selector []string //nolint:prealloc
 	for k, v := range selectors {
 		selector = append(selector, fmt.Sprintf("%v=%v", k, v))
 	}
@@ -123,13 +123,13 @@ func (c KubeCmd) GetPods(selectors map[string]string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	return parseResources(out, "\n", "pod/")
+	return parseResources(out, "pod/")
 }
 
 func (c KubeCmd) GetContainers(deployment v1.Deployment) []string {
-	var containers []string
-	for _, c := range deployment.Spec.Template.Spec.Containers {
-		containers = append(containers, c.Name)
+	containers := make([]string, len(deployment.Spec.Template.Spec.Containers))
+	for i, c := range deployment.Spec.Template.Spec.Containers {
+		containers[i] = c.Name
 	}
 	return containers
 }
@@ -139,7 +139,7 @@ func (c KubeCmd) GetPodsByLabels(labels []string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	return parseResources(out, "\n", "pod/")
+	return parseResources(out, "pod/")
 }
 
 func (c KubeCmd) RestartDeployment(deployment string) *Cmd {
@@ -176,14 +176,14 @@ func (c KubeCmd) GetConfigMapKey(name, key string) (string, error) {
 	return out, nil
 }
 
-func parseResources(out, delimiter, prefix string) ([]string, error) {
-	var res []string
+func parseResources(out, prefix string) ([]string, error) {
+	var res []string //nolint:prealloc
 	if out == "" {
 		return res, nil
 	}
-	lines := strings.Split(out, delimiter)
+	lines := strings.Split(out, "\n")
 	if len(lines) == 1 && lines[0] == "" {
-		return nil, fmt.Errorf("delimiter %q not found in %q", delimiter, out)
+		return nil, fmt.Errorf("delimiter %q not found in %q", "\n", out)
 	}
 	for _, line := range lines {
 		if line == "" {

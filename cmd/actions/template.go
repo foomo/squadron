@@ -21,7 +21,7 @@ var templateCmd = &cobra.Command{
 }
 
 func template(args []string, cwd, namespace string, files []string) error {
-	sq := squadron.New(cwd, "", files)
+	sq := squadron.New(cwd, namespace, files)
 
 	if err := sq.MergeConfigFiles(); err != nil {
 		return err

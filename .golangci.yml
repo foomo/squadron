@@ -11,14 +11,11 @@ linters-settings:
   gocritic:
     enabled-tags:
       - diagnostic
-      - performance
       - style
     disabled-tags:
+      - performance
       - experimental
       - opinionated
-    settings:
-      hugeParam:
-        sizeThreshold: 512
   lll:
     line-length: 150
 

@@ -73,8 +73,5 @@ func testConfigSnapshot(t *testing.T, configs []string, snapshot string, render 
 		testutils.Must(t, sq.RenderConfig(), "failed to render config")
 	}
 
-	yaml, err := sq.GetConfigYAML()
-	testutils.Must(t, err, "failed to parse config")
-
-	testutils.MustCheckSnapshot(t, snapshot, yaml)
+	testutils.MustCheckSnapshot(t, snapshot, sq.GetConfigYAML())
 }

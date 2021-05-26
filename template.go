@@ -54,11 +54,11 @@ func executeFileTemplate(text string, templateVars interface{}, errorOnMissing b
 }
 
 func env(name string) (string, error) {
-	if value := os.Getenv(name); value == "" {
+	value := os.Getenv(name)
+	if value == "" {
 		return "", fmt.Errorf("env variable %q was empty", name)
-	} else {
-		return value, nil
 	}
+	return value, nil
 }
 
 func file(v string) (string, error) {

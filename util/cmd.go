@@ -130,7 +130,7 @@ func (c *Cmd) PostEnd(f func() error) *Cmd {
 }
 
 func (c *Cmd) Run() (string, error) {
-	cmd := exec.Command(c.command[0], c.command[1:]...)
+	cmd := exec.Command(c.command[0], c.command[1:]...) //nolint:gosec
 	cmd.Env = append(os.Environ(), c.env...)
 	if c.cwd != "" {
 		cmd.Dir = c.cwd

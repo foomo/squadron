@@ -25,7 +25,7 @@ func MustCheckSnapshot(t *testing.T, name, yaml string) {
 		MustWriteSnapshot(t, name, yaml)
 	}
 	snapshot := MustReadSnapshot(t, name)
-	if !assert.YAMLEq(t, string(snapshot), yaml) {
+	if !assert.YAMLEq(t, snapshot, yaml) {
 		t.Fatalf("err: %s not equal to %s", yaml, snapshot)
 	}
 }

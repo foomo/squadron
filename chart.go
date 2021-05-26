@@ -49,7 +49,7 @@ type Chart struct {
 
 func newChart(name, version string) *Chart {
 	return &Chart{
-		APIVersion:  chartApiVersionV2,
+		APIVersion:  chartAPIVersionV2,
 		Name:        name,
 		Description: fmt.Sprintf("A helm parent chart for squadron %v", name),
 		Type:        defaultChartType,

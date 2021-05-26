@@ -9,8 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/kylelemons/godebug/pretty"
-	"github.com/logrusorgru/aurora"
 	"github.com/miracl/conflate"
 	"github.com/pkg/errors"
 	"github.com/sergi/go-diff/diffmatchpatch"
@@ -22,7 +20,7 @@ import (
 
 const (
 	defaultOutputDir  = ".squadron"
-	chartApiVersionV2 = "v2"
+	chartAPIVersionV2 = "v2"
 	defaultChartType  = "application" // application or library
 	chartFile         = "Chart.yaml"
 	valuesFile        = "values.yaml"
@@ -60,15 +58,8 @@ func (sq *Squadron) GetConfig() Configuration {
 	return sq.c
 }
 
-func (sq *Squadron) GetConfigYAML() (string, error) {
-	return sq.config, nil
-	//var b bytes.Buffer
-	//yamlEncoder := yaml.NewEncoder(&b)
-	//yamlEncoder.SetIndent(2)
-	//if err := yamlEncoder.Encode(sq.c); err != nil {
-	//	return nil, err
-	//}
-	//return b.Bytes(), nil
+func (sq *Squadron) GetConfigYAML() string {
+	return sq.config
 }
 
 func (sq *Squadron) MergeConfigFiles() error {
@@ -180,7 +171,8 @@ func (sq *Squadron) Down(units map[string]Unit, helmArgs []string) error {
 			Stdout(os.Stdout).
 			Args("--namespace", sq.namespace).
 			Args(helmArgs...).
-			Run(); err != nil && string(bytes.TrimSpace(stdErr.Bytes())) != fmt.Sprintf("Error: uninstall: Release not loaded: %s: release: not found", uName) {
+			Run(); err != nil &&
+			string(bytes.TrimSpace(stdErr.Bytes())) != fmt.Sprintf("Error: uninstall: Release not loaded: %s: release: not found", uName) {
 			return err
 		}
 	}
@@ -191,11 +183,11 @@ func (sq *Squadron) Down(units map[string]Unit, helmArgs []string) error {
 func (sq *Squadron) Diff(units map[string]Unit, helmArgs []string) (string, error) {
 	if sq.c.Unite {
 		logrus.Infof("running helm diff for: %s", sq.chartPath())
-		manifest, err := exec.Command("helm", "get", "manifest", sq.name, "--namespace", sq.namespace).Output()
+		manifest, err := exec.Command("helm", "get", "manifest", sq.name, "--namespace", sq.namespace).Output() //nolint:gosec
 		if err != nil {
 			return "", err
 		}
-		template, err := exec.Command("helm", "upgrade", sq.name, sq.chartPath(), "--namespace", sq.namespace, "--dry-run").Output()
+		template, err := exec.Command("helm", "upgrade", sq.name, sq.chartPath(), "--namespace", sq.namespace, "--dry-run").Output() //nolint:gosec
 		if err != nil {
 			return "", err
 		}
@@ -212,7 +204,7 @@ func (sq *Squadron) Diff(units map[string]Unit, helmArgs []string) (string, erro
 		}
 		cmd := exec.Command("helm", "upgrade", rName, "--install", "--namespace", sq.namespace, "-f", path.Join(sq.chartPath(), uName+".yaml"), "--dry-run")
 		if strings.Contains(u.Chart.Repository, "file://") {
-			cmd.Args = append(cmd.Args, "/"+strings.TrimLeft(u.Chart.Repository, "file://"))
+			cmd.Args = append(cmd.Args, "/"+strings.TrimPrefix(u.Chart.Repository, "file://"))
 		} else {
 			cmd.Args = append(cmd.Args, u.Chart.Name, "--repo", u.Chart.Repository)
 		}
@@ -225,19 +217,6 @@ func (sq *Squadron) Diff(units map[string]Unit, helmArgs []string) (string, erro
 	}
 
 	return "", nil
-}
-
-func (sq *Squadron) computeDiff(formatter aurora.Aurora, a interface{}, b interface{}) string {
-	diffs := make([]string, 0)
-	for _, s := range strings.Split(pretty.Compare(a, b), "\n") {
-		switch {
-		case strings.HasPrefix(s, "+"):
-			diffs = append(diffs, formatter.Bold(formatter.Green(s)).String())
-		case strings.HasPrefix(s, "-"):
-			diffs = append(diffs, formatter.Bold(formatter.Red(s)).String())
-		}
-	}
-	return strings.Join(diffs, "\n")
 }
 
 func (sq *Squadron) Up(units map[string]Unit, helmArgs []string) error {
@@ -262,7 +241,7 @@ func (sq *Squadron) Up(units map[string]Unit, helmArgs []string) error {
 			Args("-f", path.Join(sq.chartPath(), uName+".yaml")).
 			Args(helmArgs...)
 		if strings.Contains(u.Chart.Repository, "file://") {
-			cmd.Args("/" + strings.TrimLeft(u.Chart.Repository, "file://"))
+			cmd.Args("/" + strings.TrimPrefix(u.Chart.Repository, "file://"))
 		} else {
 			cmd.Args(u.Chart.Name, "--repo", u.Chart.Repository)
 		}
@@ -293,7 +272,7 @@ func (sq *Squadron) Template(units map[string]Unit, helmArgs []string) error {
 			Args("-f", path.Join(sq.chartPath(), uName+".yaml")).
 			Args(helmArgs...)
 		if strings.Contains(u.Chart.Repository, "file://") {
-			cmd.Args("/" + strings.TrimLeft(u.Chart.Repository, "file://"))
+			cmd.Args("/" + strings.TrimPrefix(u.Chart.Repository, "file://"))
 		} else {
 			cmd.Args(u.Chart.Name, "--repo", u.Chart.Repository)
 		}

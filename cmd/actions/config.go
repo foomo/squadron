@@ -35,11 +35,6 @@ func config(cwd string, files []string, noRender bool) error {
 		}
 	}
 
-	cf, err := sq.GetConfigYAML()
-	if err != nil {
-		return err
-	}
-
-	fmt.Println(cf)
+	fmt.Println(sq.GetConfigYAML())
 	return nil
 }
