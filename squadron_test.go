@@ -19,6 +19,16 @@ func TestConfigSimpleSnapshot(t *testing.T) {
 	)
 }
 
+func TestConfigNoValuesSnapshot(t *testing.T) {
+	testConfigSnapshot(t,
+		[]string{
+			path.Join("testdata", "config-no-values", "squadron.yaml"),
+		},
+		path.Join("testdata", "config-no-values", "squadron.yaml.snapshot"),
+		true,
+	)
+}
+
 func TestConfigOverrideSnapshot(t *testing.T) {
 	testConfigSnapshot(t,
 		[]string{

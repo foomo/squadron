@@ -1,0 +1,15 @@
+squadron:
+  frontend:
+    builds:
+      service:
+        args:
+        - foo=foo
+        - bar=bar
+        dockerfile: Dockerfile
+        image: docker.mycompany.com/mycomapny/frontend
+        tag: latest
+    chart:
+      name: mychart
+      repository: http://helm.mycompany.com/repository
+      version: 0.1.0
+version: "1.0"
