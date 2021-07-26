@@ -1,6 +1,8 @@
 # Squadron
 
-![Travis CI: build status](https://travis-ci.org/foomo/squadron.svg?branch=master) ![GoReportCard](https://goreportcard.com/badge/github.com/foomo/squadron) ![godoc](https://godoc.org/github.com/foomo/squadron?status.svg) ![goreleaser](https://github.com/foomo/squadron/workflows/goreleaser/badge.svg)
+[![Go Report Card](https://goreportcard.com/badge/github.com/foomo/squadron)](https://goreportcard.com/report/github.com/foomo/squadron)
+[![godoc](https://godoc.org/github.com/foomo/squadron?status.svg)](https://godoc.org/github.com/foomo/squadron)
+[![goreleaser](https://github.com/foomo/squadron/workflows/goreleaser/badge.svg)](https://github.com/foomo/squadron/actions)
 
 Application for managing kubernetes microservice environments.
 
