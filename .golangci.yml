@@ -33,7 +33,7 @@ linters:
     - gofmt
     - gofumpt
     - goimports
-    - golint
+    - revive
     - goprintffuncname
     - govet
     - ineffassign
