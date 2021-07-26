@@ -58,3 +58,11 @@ $ squadron help
 ## See also
 
 Sometimes as a sailor or a pirate you might need to get a grapple : go get [github.com/foomo/gograpple/...](https//:github.com/foomo/gograpple)
+
+## How to Contribute
+
+Make a pull request...
+
+## License
+
+Distributed under MIT License, please see license file within the code for more details.
