@@ -19,15 +19,11 @@ var (
 			if flagVerbose {
 				logrus.SetLevel(logrus.TraceLevel)
 			}
-			var err error
 			if cmd.Name() == "help" || cmd.Name() == "init" || cmd.Name() == "version" {
 				return nil
 			}
 			// cwd
-			if err = util.ValidatePath(".", &cwd); err != nil {
-				return err
-			}
-			return nil
+			return util.ValidatePath(".", &cwd)
 		},
 	}
 

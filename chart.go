@@ -80,8 +80,5 @@ func (c Chart) generate(chartPath string, overrides interface{}) error {
 		return err
 	}
 	// generate values.yaml
-	if err := util.GenerateYaml(path.Join(chartPath, valuesFile), overrides); err != nil {
-		return err
-	}
-	return nil
+	return util.GenerateYaml(path.Join(chartPath, valuesFile), overrides)
 }

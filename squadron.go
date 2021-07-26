@@ -325,18 +325,15 @@ func (sq *Squadron) generateChart(units map[string]Unit, chartPath, chartName, v
 		chart.addDependency(name, unit.Chart)
 		values[name] = unit.Values
 	}
-	if err := chart.generate(chartPath, values); err != nil {
-		return err
-	}
-	return nil
+	return chart.generate(chartPath, values)
 }
 
 func (sq *Squadron) generateValues(values map[string]interface{}, vPath, vName string) error {
+	if values == nil {
+		values = map[string]interface{}{}
+	}
 	if sq.c.Global != nil {
 		values["global"] = sq.c.Global
 	}
-	if err := util.GenerateYaml(path.Join(vPath, vName+".yaml"), values); err != nil {
-		return err
-	}
-	return nil
+	return util.GenerateYaml(path.Join(vPath, vName+".yaml"), values)
 }
