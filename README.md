@@ -55,6 +55,14 @@ $ squadron down
 $ squadron help
 ```
 
+## Docker Buildx
+
+To use docker buildx command define your platforms through the `SQUADRON_DOCKER_BUILDX` env var: 
+
+```bash
+$ export SQUADRON_DOCKER_BUILDX=linux/amd64
+```
+
 ## See also
 
 Sometimes as a sailor or a pirate you might need to get a grapple : go get [github.com/foomo/gograpple/...](https//:github.com/foomo/gograpple)
