@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"path"
 
+	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
 	"github.com/foomo/squadron/util"
@@ -27,11 +28,17 @@ func (cd *ChartDependency) UnmarshalYAML(value *yaml.Node) error {
 		if err := value.Decode(&vString); err != nil {
 			return err
 		}
-		if localChart, err := loadChart(path.Join(vString, chartFile)); err == nil {
-			cd.Name = localChart.Name
-			cd.Repository = fmt.Sprintf("file://%v", vString)
-			cd.Version = localChart.Version
+		vBytes, err := executeFileTemplate(vString, nil, true)
+		if err != nil {
+			return errors.Wrap(err, "failed to render chart string")
 		}
+		localChart, err := loadChart(path.Join(string(vBytes), chartFile))
+		if err != nil {
+			return fmt.Errorf("failed to load local chart: " + vString)
+		}
+		cd.Name = localChart.Name
+		cd.Repository = fmt.Sprintf("file://%v", vString)
+		cd.Version = localChart.Version
 		return nil
 	default:
 		return fmt.Errorf("unsupported node tag type for %T: %q", cd, value.Tag)
