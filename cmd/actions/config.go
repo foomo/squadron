@@ -13,20 +13,31 @@ func init() {
 }
 
 var configCmd = &cobra.Command{
-	Use:     "config",
+	Use:     "config [UNIT...]",
 	Short:   "generate and view the squadron config",
 	Example: "  squadron config --file squadron.yaml --file squadron.override.yaml",
 	Args:    cobra.MinimumNArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return config(cwd, flagFiles, flagNoRender)
+		return config(args, cwd, flagFiles, flagNoRender)
 	},
 }
 
-func config(cwd string, files []string, noRender bool) error {
+func config(args []string, cwd string, files []string, noRender bool) error {
 	sq := squadron.New(cwd, "", files)
 
 	if err := sq.MergeConfigFiles(); err != nil {
 		return err
+	}
+
+	unitsNames, err := parseUnitNames(args, sq.GetConfig().Units)
+	if err != nil {
+		return err
+	}
+
+	if unitsNames != nil {
+		if err := sq.FilterConfig(unitsNames); err != nil {
+			return err
+		}
 	}
 
 	if !noRender {

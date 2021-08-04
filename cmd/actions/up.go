@@ -31,11 +31,23 @@ func up(args []string, cwd, namespace string, build, push, diff bool, files []st
 		return err
 	}
 
+	unitsNames, err := parseUnitNames(args, sq.GetConfig().Units)
+	if err != nil {
+		return err
+	}
+
+	if unitsNames != nil {
+		if err := sq.FilterConfig(unitsNames); err != nil {
+			return err
+		}
+	}
+
 	if err := sq.RenderConfig(); err != nil {
 		return err
 	}
 
 	args, helmArgs := parseExtraArgs(args)
+
 	units, err := parseUnitArgs(args, sq.GetConfig().Units)
 	if err != nil {
 		return err

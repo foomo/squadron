@@ -1,0 +1,21 @@
+global:
+  host: mycompany.com
+squadron:
+  frontend:
+    builds:
+      default:
+        image: docker.mycompany.com/mycomapny/frontend
+        tag: latest
+    chart:
+      name: my-chart
+      repository: file://./testdata/config-template-frontend/my-chart
+      version: 0.1.0
+    values:
+      env:
+        BASE64: MTIzNDU2Nzg5MA==
+        ENV: UTF-8
+        GLOBAL: mycompany.com
+      image:
+        repository: docker.mycompany.com/mycomapny/frontend
+        tag: latest
+version: "1.0"

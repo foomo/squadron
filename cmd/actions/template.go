@@ -27,6 +27,17 @@ func template(args []string, cwd, namespace string, files []string) error {
 		return err
 	}
 
+	unitsNames, err := parseUnitNames(args, sq.GetConfig().Units)
+	if err != nil {
+		return err
+	}
+
+	if unitsNames != nil {
+		if err := sq.FilterConfig(unitsNames); err != nil {
+			return err
+		}
+	}
+
 	if err := sq.RenderConfig(); err != nil {
 		return err
 	}

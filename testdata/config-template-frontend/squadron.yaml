@@ -5,10 +5,11 @@ global:
 
 squadron:
   frontend:
-    chart:
-      name: mychart
-      version: 0.1.0
-      repository: http://helm.mycompany.com/repository
+    chart: ./testdata/config-template-frontend/my-chart
+#    chart:
+#      name: mychart
+#      version: 0.1.0
+#      repository: http://helm.mycompany.com/repository
     builds:
       default:
         tag: latest
@@ -21,8 +22,6 @@ squadron:
         ENV: <% env "LC_CTYPE" %>
         GLOBAL: <% .Global.host %>
         BASE64: <% base64 "1234567890" %>
-      values: |
-        <% file "testdata/config-template/values.yaml" | indent 8 %>
   frontend-admin:
     chart:
       name: mychart
@@ -36,3 +35,5 @@ squadron:
       image:
         tag: <% .Squadron.frontend_admin.builds.default.tag %>
         repository: <% .Squadron.frontend_admin.builds.default.image %>
+      env:
+        ENV: <% env "LC_CTYPE" %>

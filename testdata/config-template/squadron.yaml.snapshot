@@ -11,9 +11,10 @@ squadron:
       repository: http://helm.mycompany.com/repository
       version: 0.1.0
     values:
-      base64: MTIzNDU2Nzg5MA==
-      env: UTF-8
-      global: mycompany.com
+      env:
+        BASE64: MTIzNDU2Nzg5MA==
+        ENV: UTF-8
+        GLOBAL: mycompany.com
       image:
         repository: docker.mycompany.com/mycomapny/frontend
         tag: latest

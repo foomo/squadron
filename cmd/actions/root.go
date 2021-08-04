@@ -77,3 +77,18 @@ func parseUnitArgs(args []string, units map[string]squadron.Unit) (map[string]sq
 	}
 	return ret, nil
 }
+
+func parseUnitNames(args []string, units map[string]squadron.Unit) ([]string, error) {
+	if len(args) == 0 {
+		return nil, nil
+	}
+	ret := make([]string, 0, len(args))
+	for _, arg := range args {
+		if _, ok := units[arg]; ok {
+			ret = append(ret, arg)
+		} else {
+			return nil, errors.Errorf("unknown unit name %s", arg)
+		}
+	}
+	return ret, nil
+}

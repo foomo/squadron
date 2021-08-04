@@ -82,6 +82,25 @@ func (sq *Squadron) MergeConfigFiles() error {
 	return nil
 }
 
+func (sq *Squadron) FilterConfig(units []string) error {
+	unitsMap := make(map[string]bool, len(units))
+	for _, unit := range units {
+		unitsMap[unit] = true
+	}
+
+	for name := range sq.c.Units {
+		if _, ok := unitsMap[name]; !ok {
+			delete(sq.c.Units, name)
+		}
+	}
+	value, err := yaml.Marshal(sq.c)
+	if err != nil {
+		return err
+	}
+	sq.config = string(value)
+	return nil
+}
+
 func (sq *Squadron) RenderConfig() error {
 	tv := TemplateVars{}
 	// execute without errors to get existing values
