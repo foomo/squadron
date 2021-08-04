@@ -171,27 +171,30 @@ func (sq *Squadron) Package() error {
 }
 
 func (sq *Squadron) Down(units map[string]Unit, helmArgs []string) error {
+	stdErr := bytes.NewBuffer([]byte{})
 	if sq.c.Unite {
 		logrus.Infof("running helm uninstall for: %s", sq.chartPath())
-		_, err := util.NewHelmCommand().Args("uninstall", sq.name).
+		if _, err := util.NewHelmCommand().Args("uninstall", sq.name).
+			Stderr(stdErr).
 			Stdout(os.Stdout).
 			Args("--namespace", sq.namespace).
 			Args(helmArgs...).
-			Run()
-		return err
+			Run(); err != nil &&
+			string(bytes.TrimSpace(stdErr.Bytes())) != fmt.Sprintf("Error: uninstall: Release not loaded: %s: release: not found", sq.name) {
+			return err
+		}
 	}
 	for uName := range units {
 		// todo use release prefix on install: squadron name or --name
 		rName := fmt.Sprintf("%s-%s", sq.name, uName)
 		logrus.Infof("running helm uninstall for: %s", uName)
-		stdErr := bytes.NewBuffer([]byte{})
 		if _, err := util.NewHelmCommand().Args("uninstall", rName).
 			Stderr(stdErr).
 			Stdout(os.Stdout).
 			Args("--namespace", sq.namespace).
 			Args(helmArgs...).
 			Run(); err != nil &&
-			string(bytes.TrimSpace(stdErr.Bytes())) != fmt.Sprintf("Error: uninstall: Release not loaded: %s: release: not found", uName) {
+			string(bytes.TrimSpace(stdErr.Bytes())) != fmt.Sprintf("Error: uninstall: Release not loaded: %s: release: not found", rName) {
 			return err
 		}
 	}
