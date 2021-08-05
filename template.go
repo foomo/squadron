@@ -36,7 +36,7 @@ func executeFileTemplate(text string, templateVars interface{}, errorOnMissing b
 	templateFunctions["base64"] = base64
 	templateFunctions["default"] = defaultIndex
 	templateFunctions["indent"] = indent
-	templateFunctions["file"] = file
+	templateFunctions["file"] = file(templateVars, errorOnMissing)
 	templateFunctions["git"] = git
 
 	tpl, err := template.New("squadron").Delims("<%", "%>").Funcs(templateFunctions).Parse(text)
@@ -61,13 +61,17 @@ func env(name string) (string, error) {
 	return value, nil
 }
 
-func file(v string) (string, error) {
-	if v == "" {
-		return "", nil
-	} else if bs, err := ioutil.ReadFile(v); err != nil {
-		return "", err
-	} else {
-		return string(bytes.TrimSpace(bs)), nil
+func file(templateVars interface{}, errorOnMissing bool) func(v string) (string, error) {
+	return func(v string) (string, error) {
+		if v == "" {
+			return "", nil
+		} else if fileBytes, err := ioutil.ReadFile(v); err != nil {
+			return "", errors.Wrap(err, "failed to read file")
+		} else if renderedBytes, err := executeFileTemplate(string(fileBytes), templateVars, errorOnMissing); err != nil {
+			return "", errors.Wrap(err, "failed to render file")
+		} else {
+			return string(bytes.TrimSpace(renderedBytes)), nil
+		}
 	}
 }
 

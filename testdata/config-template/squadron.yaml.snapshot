@@ -23,6 +23,9 @@ squadron:
         bar:
           - foo
           - bar
+        env: UTF-8
+        global: mycompany.com
+        base64: MTIzNDU2Nzg5MA==
   frontend-admin:
     builds:
       default:

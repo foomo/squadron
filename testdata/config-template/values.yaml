@@ -2,3 +2,6 @@ foo: bar
 bar:
   - foo
   - bar
+env: <% env "LC_CTYPE" %>
+global: <% .Global.host %>
+base64: <% base64 "1234567890" %>
