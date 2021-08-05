@@ -19,11 +19,12 @@ import (
 )
 
 const (
-	defaultOutputDir  = ".squadron"
-	chartAPIVersionV2 = "v2"
-	defaultChartType  = "application" // application or library
-	chartFile         = "Chart.yaml"
-	valuesFile        = "values.yaml"
+	defaultOutputDir       = ".squadron"
+	chartAPIVersionV2      = "v2"
+	defaultChartType       = "application" // application or library
+	chartFile              = "Chart.yaml"
+	valuesFile             = "values.yaml"
+	errHelmReleaseNotFound = "Error: release: not found"
 )
 
 type Configuration struct {
@@ -222,7 +223,7 @@ func (sq *Squadron) Diff(units map[string]Unit, helmArgs []string) (string, erro
 		rName := fmt.Sprintf("%s-%s", sq.name, uName)
 		logrus.Infof("running helm diff for: %s", uName)
 		manifest, err := exec.Command("helm", "get", "manifest", rName, "--namespace", sq.namespace).CombinedOutput()
-		if err != nil && string(bytes.TrimSpace(manifest)) != "Error: release: not found" {
+		if err != nil && string(bytes.TrimSpace(manifest)) != errHelmReleaseNotFound {
 			return "", err
 		}
 		cmd := exec.Command("helm", "upgrade", rName, "--install", "--namespace", sq.namespace, "-f", path.Join(sq.chartPath(), uName+".yaml"), "--dry-run")
@@ -254,7 +255,7 @@ func (sq *Squadron) Status(units map[string]Unit, helmArgs []string) error {
 			Args("--namespace", sq.namespace).
 			Args(helmArgs...).
 			Run(); err != nil &&
-			string(bytes.TrimSpace(stdErr.Bytes())) == "Error: release: not found" {
+			string(bytes.TrimSpace(stdErr.Bytes())) == errHelmReleaseNotFound {
 			stdOut.WriteString("NAME: " + sq.name + "\n")
 			stdOut.WriteString("STATUS: not installed\n")
 		} else if err != nil {
@@ -272,7 +273,7 @@ func (sq *Squadron) Status(units map[string]Unit, helmArgs []string) error {
 			Stdout(stdOut).
 			Args("--namespace", sq.namespace).
 			Args(helmArgs...).Run(); err != nil &&
-			string(bytes.TrimSpace(stdErr.Bytes())) == "Error: release: not found" {
+			string(bytes.TrimSpace(stdErr.Bytes())) == errHelmReleaseNotFound {
 			stdOut.WriteString("NAME: " + rName + "\n")
 			stdOut.WriteString("STATUS: not installed\n")
 		} else if err != nil {
