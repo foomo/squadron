@@ -27,6 +27,8 @@ func template(args []string, cwd, namespace string, files []string) error {
 		return err
 	}
 
+	args, helmArgs := parseExtraArgs(args)
+
 	unitsNames, err := parseUnitNames(args, sq.GetConfig().Units)
 	if err != nil {
 		return err
@@ -42,7 +44,6 @@ func template(args []string, cwd, namespace string, files []string) error {
 		return err
 	}
 
-	args, helmArgs := parseExtraArgs(args)
 	units, err := parseUnitArgs(args, sq.GetConfig().Units)
 	if err != nil {
 		return err
