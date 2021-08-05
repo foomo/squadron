@@ -171,9 +171,9 @@ func (sq *Squadron) Package() error {
 }
 
 func (sq *Squadron) Down(units map[string]Unit, helmArgs []string) error {
-	stdErr := bytes.NewBuffer([]byte{})
 	if sq.c.Unite {
 		logrus.Infof("running helm uninstall for: %s", sq.chartPath())
+		stdErr := bytes.NewBuffer([]byte{})
 		if _, err := util.NewHelmCommand().Args("uninstall", sq.name).
 			Stderr(stdErr).
 			Stdout(os.Stdout).
@@ -188,6 +188,7 @@ func (sq *Squadron) Down(units map[string]Unit, helmArgs []string) error {
 		// todo use release prefix on install: squadron name or --name
 		rName := fmt.Sprintf("%s-%s", sq.name, uName)
 		logrus.Infof("running helm uninstall for: %s", uName)
+		stdErr := bytes.NewBuffer([]byte{})
 		if _, err := util.NewHelmCommand().Args("uninstall", rName).
 			Stderr(stdErr).
 			Stdout(os.Stdout).
@@ -239,6 +240,47 @@ func (sq *Squadron) Diff(units map[string]Unit, helmArgs []string) (string, erro
 	}
 
 	return "", nil
+}
+
+func (sq *Squadron) Status(units map[string]Unit, helmArgs []string) error {
+	stdOut := bytes.NewBuffer([]byte{})
+	if sq.c.Unite {
+		stdOut.WriteString("==== " + sq.name + strings.Repeat("=", 20-len(sq.name)) + "\n")
+		logrus.Infof("running helm status for chart: %s", sq.chartPath())
+		stdErr := bytes.NewBuffer([]byte{})
+		if _, err := util.NewHelmCommand().Args("status", sq.name).
+			Stderr(stdErr).
+			Stdout(stdOut).
+			Args("--namespace", sq.namespace).
+			Args(helmArgs...).
+			Run(); err != nil &&
+			string(bytes.TrimSpace(stdErr.Bytes())) == "Error: release: not found" {
+			stdOut.WriteString("NAME: " + sq.name + "\n")
+			stdOut.WriteString("STATUS: not installed\n")
+		} else if err != nil {
+			return err
+		}
+	}
+	for uName := range units {
+		stdOut.WriteString("==== " + uName + " " + strings.Repeat("=", 60-len(uName)) + "\n")
+		// todo use release prefix on install: squadron name or --name
+		rName := fmt.Sprintf("%s-%s", sq.name, uName)
+		logrus.Infof("running helm status for %s", uName)
+		stdErr := bytes.NewBuffer([]byte{})
+		if _, err := util.NewHelmCommand().Args("status", rName).
+			Stderr(stdErr).
+			Stdout(stdOut).
+			Args("--namespace", sq.namespace).
+			Args(helmArgs...).Run(); err != nil &&
+			string(bytes.TrimSpace(stdErr.Bytes())) == "Error: release: not found" {
+			stdOut.WriteString("NAME: " + rName + "\n")
+			stdOut.WriteString("STATUS: not installed\n")
+		} else if err != nil {
+			return err
+		}
+	}
+	fmt.Println(strings.ReplaceAll(stdOut.String(), "\\n", "\n"))
+	return nil
 }
 
 func (sq *Squadron) Up(units map[string]Unit, helmArgs []string) error {
