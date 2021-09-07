@@ -13,10 +13,10 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/sirupsen/logrus"
+	yamlv2 "gopkg.in/yaml.v2"
 	"gopkg.in/yaml.v3"
 
 	"github.com/foomo/squadron/util"
-	yamlv2 "gopkg.in/yaml.v2"
 )
 
 func init() {
@@ -378,7 +378,7 @@ func (sq *Squadron) cleanupOutput(chartPath string) error {
 		}
 	}
 	if _, err := os.Stat(chartPath); os.IsNotExist(err) {
-		if err := os.MkdirAll(chartPath, 0744); err != nil {
+		if err := os.MkdirAll(chartPath, 0o744); err != nil {
 			return fmt.Errorf("could not create chart output directory: %w", err)
 		}
 	}

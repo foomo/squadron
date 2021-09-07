@@ -9,7 +9,7 @@ import (
 
 // MustWriteSnapshot updates the snapshot file for a given test t.
 func MustWriteSnapshot(t *testing.T, name string, content string) {
-	Must(t, ioutil.WriteFile(name, []byte(content), 0600), "failed to update snapshot", name)
+	Must(t, ioutil.WriteFile(name, []byte(content), 0o600), "failed to update snapshot", name)
 }
 
 // MustReadSnapshot reads the snapshot file for a given test t.
