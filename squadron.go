@@ -16,7 +16,12 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/foomo/squadron/util"
+	yamlv2 "gopkg.in/yaml.v2"
 )
+
+func init() {
+	yamlv2.FutureLineWrap()
+}
 
 const (
 	defaultOutputDir       = ".squadron"
