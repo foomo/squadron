@@ -63,11 +63,11 @@ func parseExtraArgs(args []string) (out []string, extraArgs []string) {
 }
 
 // parseUnitArgs helper
-func parseUnitArgs(args []string, units map[string]squadron.Unit) (map[string]squadron.Unit, error) {
+func parseUnitArgs(args []string, units map[string]*squadron.Unit) (map[string]*squadron.Unit, error) {
 	if len(args) == 0 {
 		return units, nil
 	}
-	ret := map[string]squadron.Unit{}
+	ret := map[string]*squadron.Unit{}
 	for _, arg := range args {
 		if unit, ok := units[arg]; ok {
 			ret[arg] = unit
@@ -78,7 +78,7 @@ func parseUnitArgs(args []string, units map[string]squadron.Unit) (map[string]sq
 	return ret, nil
 }
 
-func parseUnitNames(args []string, units map[string]squadron.Unit) ([]string, error) {
+func parseUnitNames(args []string, units map[string]*squadron.Unit) ([]string, error) {
 	if len(args) == 0 {
 		return nil, nil
 	}

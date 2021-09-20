@@ -38,7 +38,7 @@ type Configuration struct {
 	Prefix  string                 `yaml:"prefix,omitempty"`
 	Unite   bool                   `yaml:"unite,omitempty"`
 	Global  map[string]interface{} `yaml:"global,omitempty"`
-	Units   map[string]Unit        `yaml:"squadron,omitempty"`
+	Units   map[string]*Unit       `yaml:"squadron,omitempty"`
 }
 
 type Squadron struct {
@@ -66,6 +66,28 @@ func (sq *Squadron) GetConfig() Configuration {
 
 func (sq *Squadron) GetConfigYAML() string {
 	return sq.config
+}
+
+// UnmarshalYAML ...
+func (c *Configuration) UnmarshalYAML(value *yaml.Node) error {
+	if value.Tag == "!!map" {
+		type wrapper Configuration
+		err := value.Decode((*wrapper)(c))
+		if err == nil {
+			// if the decode is successful, remove units that are nil
+			c.removeNilUnits()
+		}
+		return err
+	}
+	return fmt.Errorf("unsupported node tag type for %T: %q", c, value.Tag)
+}
+
+func (c *Configuration) removeNilUnits() {
+	for uName, u := range c.Units {
+		if u == nil {
+			delete(c.Units, uName)
+		}
+	}
 }
 
 func (sq *Squadron) MergeConfigFiles() error {
@@ -143,7 +165,7 @@ func (sq *Squadron) RenderConfig() error {
 	return nil
 }
 
-func (sq *Squadron) Generate(units map[string]Unit) error {
+func (sq *Squadron) Generate(units map[string]*Unit) error {
 	logrus.Infof("recreating chart output dir %q", sq.chartPath())
 	if err := sq.cleanupOutput(sq.chartPath()); err != nil {
 		return err
@@ -160,7 +182,7 @@ func (sq *Squadron) Generate(units map[string]Unit) error {
 	return nil
 }
 
-func (sq *Squadron) generateUmbrellaChart(units map[string]Unit) error {
+func (sq *Squadron) generateUmbrellaChart(units map[string]*Unit) error {
 	logrus.Infof("generating chart %q files in %q", sq.name, sq.chartPath())
 	if err := sq.generateChart(units, sq.chartPath(), sq.name, sq.c.Version); err != nil {
 		return err
@@ -176,7 +198,7 @@ func (sq *Squadron) Package() error {
 	return err
 }
 
-func (sq *Squadron) Down(units map[string]Unit, helmArgs []string) error {
+func (sq *Squadron) Down(units map[string]*Unit, helmArgs []string) error {
 	if sq.c.Unite {
 		logrus.Infof("running helm uninstall for: %s", sq.chartPath())
 		stdErr := bytes.NewBuffer([]byte{})
@@ -209,7 +231,7 @@ func (sq *Squadron) Down(units map[string]Unit, helmArgs []string) error {
 	return nil
 }
 
-func (sq *Squadron) Diff(units map[string]Unit, helmArgs []string) (string, error) {
+func (sq *Squadron) Diff(units map[string]*Unit, helmArgs []string) (string, error) {
 	if sq.c.Unite {
 		logrus.Infof("running helm diff for: %s", sq.chartPath())
 		manifest, err := exec.Command("helm", "get", "manifest", sq.name, "--namespace", sq.namespace).Output() //nolint:gosec
@@ -248,7 +270,7 @@ func (sq *Squadron) Diff(units map[string]Unit, helmArgs []string) (string, erro
 	return "", nil
 }
 
-func (sq *Squadron) Status(units map[string]Unit, helmArgs []string) error {
+func (sq *Squadron) Status(units map[string]*Unit, helmArgs []string) error {
 	stdOut := bytes.NewBuffer([]byte{})
 	if sq.c.Unite {
 		stdOut.WriteString("==== " + sq.name + strings.Repeat("=", 20-len(sq.name)) + "\n")
@@ -289,7 +311,7 @@ func (sq *Squadron) Status(units map[string]Unit, helmArgs []string) error {
 	return nil
 }
 
-func (sq *Squadron) Up(units map[string]Unit, helmArgs []string) error {
+func (sq *Squadron) Up(units map[string]*Unit, helmArgs []string) error {
 	if sq.c.Unite {
 		logrus.Infof("running helm upgrade for chart: %s", sq.chartPath())
 		_, err := util.NewHelmCommand().
@@ -336,7 +358,7 @@ func (sq *Squadron) Up(units map[string]Unit, helmArgs []string) error {
 	return nil
 }
 
-func (sq *Squadron) Template(units map[string]Unit, helmArgs []string) error {
+func (sq *Squadron) Template(units map[string]*Unit, helmArgs []string) error {
 	if sq.c.Unite {
 		logrus.Infof("running helm template for chart: %s", sq.chartPath())
 		_, err := util.NewHelmCommand().Args("template", sq.name, sq.chartPath()).
@@ -385,7 +407,7 @@ func (sq *Squadron) cleanupOutput(chartPath string) error {
 	return nil
 }
 
-func (sq *Squadron) generateChart(units map[string]Unit, chartPath, chartName, version string) error {
+func (sq *Squadron) generateChart(units map[string]*Unit, chartPath, chartName, version string) error {
 	chart := newChart(chartName, version)
 	values := map[string]interface{}{}
 	if sq.c.Global != nil {
