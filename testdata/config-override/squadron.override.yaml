@@ -19,3 +19,4 @@ squadron:
           - name: mycompany.com
             path: /foo
             port: 8080
+  backend: ~
