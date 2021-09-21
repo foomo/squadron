@@ -20,10 +20,10 @@ type ChartDependency struct {
 
 func (cd *ChartDependency) UnmarshalYAML(value *yaml.Node) error {
 	switch value.Tag {
-	case "!!map":
+	case TagMap:
 		type wrapper ChartDependency
 		return value.Decode((*wrapper)(cd))
-	case "!!str":
+	case TagString:
 		var vString string
 		if err := value.Decode(&vString); err != nil {
 			return err

@@ -9,6 +9,11 @@ import (
 	"github.com/foomo/squadron/util"
 )
 
+const (
+	TagMap    = "!!map"
+	TagString = "!!str"
+)
+
 type Build struct {
 	Image      string   `yaml:"image,omitempty"`
 	Tag        string   `yaml:"tag,omitempty"`
@@ -56,11 +61,11 @@ func (b *Build) Push() error {
 
 // UnmarshalYAML ...
 func (b *Build) UnmarshalYAML(value *yaml.Node) error {
-	if value.Tag == "!!map" {
+	if value.Tag == TagMap {
 		type wrapper Build
 		return value.Decode((*wrapper)(b))
 	}
-	if value.Tag == "!!str" {
+	if value.Tag == TagString {
 		var vString string
 		if err := value.Decode(&vString); err != nil {
 			return err

@@ -70,7 +70,7 @@ func (sq *Squadron) GetConfigYAML() string {
 
 // UnmarshalYAML ...
 func (c *Configuration) UnmarshalYAML(value *yaml.Node) error {
-	if value.Tag == "!!map" {
+	if value.Tag == TagMap {
 		type wrapper Configuration
 		err := value.Decode((*wrapper)(c))
 		if err == nil {
