@@ -88,6 +88,18 @@ func TestConfigNoRenderSnapshot(t *testing.T) {
 	)
 }
 
+func TestConfigOverrideSnapshotNulled(t *testing.T) {
+	testConfigSnapshot(t,
+		[]string{
+			path.Join("testdata", "config-override-null", "squadron.yaml"),
+			path.Join("testdata", "config-override-null", "squadron.override.yaml"),
+		},
+		path.Join("testdata", "config-override-null", "squadron.yaml.snapshot"),
+		nil,
+		true,
+	)
+}
+
 func testConfigSnapshot(t *testing.T, configs []string, snapshot string, units []string, render bool) {
 	var cwd string
 	testutils.Must(t, util.ValidatePath(".", &cwd))
