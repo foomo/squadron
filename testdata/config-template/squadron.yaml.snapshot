@@ -13,7 +13,7 @@ squadron:
     values:
       env:
         BASE64: MTIzNDU2Nzg5MA==
-        ENV: UTF-8
+        ENV: /bin/zsh
         GLOBAL: mycompany.com
       image:
         repository: docker.mycompany.com/mycomapny/frontend
@@ -23,7 +23,7 @@ squadron:
         bar:
           - foo
           - bar
-        env: UTF-8
+        env: /bin/zsh
         global: mycompany.com
         base64: MTIzNDU2Nzg5MA==
   frontend-admin:

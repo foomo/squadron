@@ -18,9 +18,12 @@ squadron:
         tag: <% .Squadron.frontend.builds.default.tag %>
         repository: <% .Squadron.frontend.builds.default.image %>
       env:
-        ENV: <% env "LC_CTYPE" %>
+        ENV: <% env "SHELL" %>
         GLOBAL: <% .Global.host %>
         BASE64: <% base64 "1234567890" %>
+        # ONE_PASSWORD: <% op "ACCOUNT_NAME" "UUID" "FIELD" %>
+        # ONE_PASSWORD: <% op "ACCOUNT_NAME" "Secret name" "FIELD" %>
+        # ONE_PASSWORD: <% op "ACCOUNT_NAME" "Secret name wit global {{ .Global.host }}" "FIELD" %>
       values: |
         <% file "testdata/config-template/values.yaml" | indent 8 %>
   frontend-admin:

@@ -2,13 +2,13 @@ squadron:
   backend:
     chart:
       name: mychart
-      version: 0.1.0
       repository: http://helm.mycompany.com/repository
+      version: 0.1.0
     values:
       ingress:
         hosts:
-          - name: mycompany.com
-            path: /
-            port: 80
-  frontend: ~
+        - name: mycompany.com
+          path: /
+          port: 80
+  frontend: null
 version: "1.0"

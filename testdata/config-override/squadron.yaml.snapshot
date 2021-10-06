@@ -1,4 +1,5 @@
 squadron:
+  backend: null
   frontend:
     builds:
       service:

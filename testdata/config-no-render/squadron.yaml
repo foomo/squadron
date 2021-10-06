@@ -17,7 +17,7 @@ squadron:
       image:
         tag: <% .Squadron.frontend.builds.default.tag %>
         repository: <% .Squadron.frontend.builds.default.image %>
-      env: <% env "LC_CTYPE" %>
+      env: <% env "SHELL" %>
       global: <% .Global.host %>
       base64: <% base64 "1234567890" %>
       values: |

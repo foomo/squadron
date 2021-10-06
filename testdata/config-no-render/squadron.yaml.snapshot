@@ -12,7 +12,7 @@ squadron:
       version: 0.1.0
     values:
       base64: <% base64 "1234567890" %>
-      env: <% env "LC_CTYPE" %>
+      env: <% env "SHELL" %>
       global: <% .Global.host %>
       image:
         repository: <% .Squadron.frontend.builds.default.image %>

@@ -8,6 +8,10 @@ linters-settings:
     min-confidence: 0
   goimports:
     local-prefixes: github.com/foomo/squadron
+  revive:
+    rules:
+      - name: indent-error-flow
+        disabled: true
   gocritic:
     enabled-tags:
       - diagnostic

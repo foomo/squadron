@@ -32,7 +32,7 @@ func (tv *TemplateVars) add(name string, value interface{}) {
 func executeFileTemplate(text string, templateVars interface{}, errorOnMissing bool) ([]byte, error) {
 	templateFunctions := template.FuncMap{}
 	templateFunctions["env"] = env
-	templateFunctions["op"] = onePassword
+	templateFunctions["op"] = onePassword(templateVars, errorOnMissing)
 	templateFunctions["base64"] = base64
 	templateFunctions["default"] = defaultIndex
 	templateFunctions["indent"] = indent
@@ -123,33 +123,60 @@ func indent(spaces int, v string) string {
 	return strings.ReplaceAll(v, "\n", "\n"+pad)
 }
 
-func onePassword(account, uuid, field string) (string, error) {
-	// validate command
-	if _, err := exec.LookPath("op"); err != nil {
-		fmt.Println("Your templates includes a call to 1Password, please install it:")
-		fmt.Println("https://support.1password.com/command-line-getting-started/#set-up-the-command-line-tool")
+func render(name, text string, data interface{}, errorOnMissing bool) (string, error) {
+	var opts []string
+	if !errorOnMissing {
+		opts = append(opts, "missingkey=error")
+	}
+	out := bytes.NewBuffer([]byte{})
+	if uuidTpl, err := template.New(name).Option(opts...).Parse(text); err != nil {
+		return "", err
+	} else if err := uuidTpl.Execute(out, data); err != nil {
 		return "", err
 	}
+	return out.String(), nil
+}
 
-	// validate session
-	if os.Getenv(fmt.Sprintf("OP_SESSION_%s", account)) == "" {
-		if err := onePasswordSignIn(account); err != nil {
+func onePassword(templateVars interface{}, errorOnMissing bool) func(account, uuid, field string) (string, error) {
+	return func(account, uuid, field string) (string, error) {
+		if value, err := render("op", uuid, templateVars, errorOnMissing); err != nil {
+			return "", err
+		} else {
+			uuid = value
+		}
+		if value, err := render("op", field, templateVars, errorOnMissing); err != nil {
+			return "", err
+		} else {
+			field = value
+		}
+
+		// validate command
+		if _, err := exec.LookPath("op"); err != nil {
+			fmt.Println("Your templates includes a call to 1Password, please install it:")
+			fmt.Println("https://support.1password.com/command-line-getting-started/#set-up-the-command-line-tool")
 			return "", err
 		}
-	}
 
-	res, err := onePasswordGet(uuid, field)
-	if err != nil && strings.Contains(res, "You are not currently signed in") {
-		// retry with login
-		if err := onePasswordSignIn(account); err != nil {
-			return "", err
-		} else if res, err = onePasswordGet(uuid, field); err != nil {
+		// validate session
+		if os.Getenv(fmt.Sprintf("OP_SESSION_%s", account)) == "" {
+			if err := onePasswordSignIn(account); err != nil {
+				return "", err
+			}
+		}
+
+		res, err := onePasswordGet(uuid, field)
+		if err != nil && strings.Contains(res, "You are not currently signed in") {
+			// retry with login
+			if err := onePasswordSignIn(account); err != nil {
+				return "", err
+			} else if res, err = onePasswordGet(uuid, field); err != nil {
+				return "", err
+			}
+		} else if err != nil {
 			return "", err
 		}
-	} else if err != nil {
-		return "", err
+		return res, nil
 	}
-	return res, nil
 }
 
 func onePasswordGet(uuid, field string) (string, error) {

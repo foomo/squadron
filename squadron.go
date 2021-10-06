@@ -130,17 +130,32 @@ func (sq *Squadron) FilterConfig(units []string) error {
 }
 
 func (sq *Squadron) RenderConfig() error {
-	tv := TemplateVars{}
+	var tv TemplateVars
+	var vars map[string]interface{}
+	if err := yaml.Unmarshal([]byte(sq.config), &vars); err != nil {
+		return err
+	}
+	// execute again with loaded template vars
+	tv = TemplateVars{}
+	if value, ok := vars["global"]; ok {
+		replace(value)
+		tv.add("Global", value)
+	}
+	if value, ok := vars["squadron"]; ok {
+		replace(value)
+		tv.add("Squadron", value)
+	}
 	// execute without errors to get existing values
 	out, err := executeFileTemplate(sq.config, tv, false)
 	if err != nil {
 		return errors.Wrap(err, "failed to execute initial file template")
 	}
-	var vars map[string]interface{}
+
 	if err := yaml.Unmarshal(out, &vars); err != nil {
 		return err
 	}
 	// execute again with loaded template vars
+	tv = TemplateVars{}
 	if value, ok := vars["global"]; ok {
 		replace(value)
 		tv.add("Global", value)
