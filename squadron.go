@@ -326,13 +326,18 @@ func (sq *Squadron) Status(units map[string]*Unit, helmArgs []string) error {
 	return nil
 }
 
-func (sq *Squadron) Up(units map[string]*Unit, helmArgs []string) error {
+func (sq *Squadron) Up(units map[string]*Unit, helmArgs []string, username, version, commit string) error {
+	description := fmt.Sprintf("\nManaged-By: Squadron %s\nDeployed-By: %s\nGit-Commit: %s", version, username, commit)
+
 	if sq.c.Unite {
 		logrus.Infof("running helm upgrade for chart: %s", sq.chartPath())
 		_, err := util.NewHelmCommand().
 			Stdout(os.Stdout).
-			Args("upgrade", sq.name, sq.chartPath(), "--install").
+			Args("upgrade", sq.name, sq.chartPath()).
 			Args("--namespace", sq.namespace).
+			Args("--dependency-update").
+			Args("--description", description).
+			Args("--install").
 			Args(helmArgs...).
 			Run()
 		return err
@@ -340,25 +345,28 @@ func (sq *Squadron) Up(units map[string]*Unit, helmArgs []string) error {
 	for uName, u := range units {
 		// todo use release prefix on install: squadron name or --name
 		rName := fmt.Sprintf("%s-%s", sq.name, uName)
-		logrus.Infof(
-			"running helm dependency update for %s in %s",
-			uName,
-			strings.TrimPrefix(u.Chart.Repository, "file://"),
-		)
-		if strings.Contains(u.Chart.Repository, "file://") {
-			if _, err := util.NewHelmCommand().
-				Args("dependency", "update").
-				Cwd(strings.TrimPrefix(u.Chart.Repository, "file://")).
-				Stdout(os.Stdout).
-				Run(); err != nil {
-				return err
-			}
-		}
+		//logrus.Infof(
+		//	"running helm dependency update for %s in %s",
+		//	uName,
+		//	strings.TrimPrefix(u.Chart.Repository, "file://"),
+		//)
+		//if strings.Contains(u.Chart.Repository, "file://") {
+		//	if _, err := util.NewHelmCommand().
+		//		Args("dependency", "update").
+		//		Cwd(strings.TrimPrefix(u.Chart.Repository, "file://")).
+		//		Stdout(os.Stdout).
+		//		Run(); err != nil {
+		//		return err
+		//	}
+		//}
 		logrus.Infof("running helm upgrade for %s", uName)
 		cmd := util.NewHelmCommand().
 			Stdout(os.Stdout).
 			Args("upgrade", rName, "--install").
+			Args("--description", description).
 			Args("--namespace", sq.namespace).
+			Args("--dependency-update").
+			Args("--install").
 			Args("-f", path.Join(sq.chartPath(), uName+".yaml")).
 			Args(helmArgs...)
 		if strings.Contains(u.Chart.Repository, "file://") {

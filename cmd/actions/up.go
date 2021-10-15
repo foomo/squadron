@@ -2,10 +2,13 @@ package actions
 
 import (
 	"fmt"
+	"os/user"
+	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/foomo/squadron"
+	"github.com/foomo/squadron/util"
 )
 
 func init() {
@@ -73,8 +76,20 @@ func up(args []string, cwd, namespace string, build, push, diff bool, files []st
 		return err
 	}
 
+	username := "unknown"
+	if value, err := util.NewCommand("git").Args("config", "user.name").Run(); err == nil {
+		username = strings.TrimSpace(value)
+	} else if value, err := user.Current(); err == nil {
+		username = strings.TrimSpace(value.Name)
+	}
+
+	commit := ""
+	if value, err := util.NewCommand("git").Args("rev-parse", "--short", "HEAD").Run(); err == nil {
+		commit = strings.TrimSpace(value)
+	}
+
 	if !diff {
-		return sq.Up(units, helmArgs)
+		return sq.Up(units, helmArgs, username, version, commit)
 	} else if out, err := sq.Diff(units, helmArgs); err != nil {
 		return err
 	} else {
