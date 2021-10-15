@@ -345,20 +345,20 @@ func (sq *Squadron) Up(units map[string]*Unit, helmArgs []string, username, vers
 	for uName, u := range units {
 		// todo use release prefix on install: squadron name or --name
 		rName := fmt.Sprintf("%s-%s", sq.name, uName)
-		//logrus.Infof(
-		//	"running helm dependency update for %s in %s",
-		//	uName,
-		//	strings.TrimPrefix(u.Chart.Repository, "file://"),
-		//)
-		//if strings.Contains(u.Chart.Repository, "file://") {
-		//	if _, err := util.NewHelmCommand().
-		//		Args("dependency", "update").
-		//		Cwd(strings.TrimPrefix(u.Chart.Repository, "file://")).
-		//		Stdout(os.Stdout).
-		//		Run(); err != nil {
-		//		return err
-		//	}
-		//}
+		// logrus.Infof(
+		// 	"running helm dependency update for %s in %s",
+		// 	uName,
+		// 	strings.TrimPrefix(u.Chart.Repository, "file://"),
+		// )
+		// if strings.Contains(u.Chart.Repository, "file://") {
+		// 	if _, err := util.NewHelmCommand().
+		// 		Args("dependency", "update").
+		// 		Cwd(strings.TrimPrefix(u.Chart.Repository, "file://")).
+		// 		Stdout(os.Stdout).
+		// 		Run(); err != nil {
+		// 		return err
+		// 	}
+		// }
 		logrus.Infof("running helm upgrade for %s", uName)
 		cmd := util.NewHelmCommand().
 			Stdout(os.Stdout).

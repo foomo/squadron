@@ -11,6 +11,12 @@ build:
 	mkdir -p bin
 	go build -o bin/squadron cmd/main.go
 
+.PHONY: check
+## Run lint & tests
+check:
+	$(MAKE) lint
+	$(MAKE) test
+
 .PHONY: test
 ## Run tests
 test:
