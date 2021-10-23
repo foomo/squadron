@@ -2,6 +2,7 @@ package util
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"os"
 	"os/exec"
@@ -129,8 +130,8 @@ func (c *Cmd) PostEnd(f func() error) *Cmd {
 	return c
 }
 
-func (c *Cmd) Run() (string, error) {
-	cmd := exec.Command(c.command[0], c.command[1:]...) //nolint:gosec
+func (c *Cmd) Run(ctx context.Context) (string, error) {
+	cmd := exec.CommandContext(ctx, c.command[0], c.command[1:]...) //nolint:gosec
 	cmd.Env = append(os.Environ(), c.env...)
 	if c.cwd != "" {
 		cmd.Dir = c.cwd

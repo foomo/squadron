@@ -2,6 +2,7 @@ package squadron
 
 import (
 	"bytes"
+	"context"
 	b64 "encoding/base64"
 	"fmt"
 	"io"
@@ -29,14 +30,15 @@ func (tv *TemplateVars) add(name string, value interface{}) {
 	(*tv)[name] = value
 }
 
-func executeFileTemplate(text string, templateVars interface{}, errorOnMissing bool) ([]byte, error) {
+func executeFileTemplate(ctx context.Context, text string, templateVars interface{}, errorOnMissing bool) ([]byte, error) {
 	templateFunctions := template.FuncMap{}
 	templateFunctions["env"] = env
-	templateFunctions["op"] = onePassword(templateVars, errorOnMissing)
+	templateFunctions["op"] = onePassword(ctx, templateVars, errorOnMissing)
 	templateFunctions["base64"] = base64
-	templateFunctions["default"] = defaultIndex
+	templateFunctions["default"] = defaultValue
+	templateFunctions["defaultIndex"] = defaultIndexValue
 	templateFunctions["indent"] = indent
-	templateFunctions["file"] = file(templateVars, errorOnMissing)
+	templateFunctions["file"] = file(ctx, templateVars, errorOnMissing)
 	templateFunctions["git"] = git
 
 	tpl, err := template.New("squadron").Delims("<%", "%>").Funcs(templateFunctions).Parse(text)
@@ -61,13 +63,13 @@ func env(name string) (string, error) {
 	return value, nil
 }
 
-func file(templateVars interface{}, errorOnMissing bool) func(v string) (string, error) {
+func file(ctx context.Context, templateVars interface{}, errorOnMissing bool) func(v string) (string, error) {
 	return func(v string) (string, error) {
 		if v == "" {
 			return "", nil
 		} else if fileBytes, err := ioutil.ReadFile(v); err != nil {
 			return "", errors.Wrap(err, "failed to read file")
-		} else if renderedBytes, err := executeFileTemplate(string(fileBytes), templateVars, errorOnMissing); err != nil {
+		} else if renderedBytes, err := executeFileTemplate(ctx, string(fileBytes), templateVars, errorOnMissing); err != nil {
 			return "", errors.Wrap(err, "failed to render file")
 		} else {
 			return string(bytes.TrimSpace(renderedBytes)), nil
@@ -75,7 +77,14 @@ func file(templateVars interface{}, errorOnMissing bool) func(v string) (string,
 	}
 }
 
-func defaultIndex(v map[string]interface{}, index string, def interface{}) interface{} {
+func defaultValue(value string, def interface{}) interface{} {
+	if value == "" {
+		return def
+	}
+	return value
+}
+
+func defaultIndexValue(v map[string]interface{}, index string, def interface{}) interface{} {
 	var ok bool
 	if _, ok = v[index]; ok {
 		return v[index]
@@ -99,8 +108,8 @@ func replace(in interface{}) {
 	}
 }
 
-func git(action string) (string, error) {
-	cmd := exec.Command("git")
+func git(ctx context.Context, action string) (string, error) {
+	cmd := exec.CommandContext(ctx, "git")
 
 	switch action {
 	case "tag":
@@ -137,7 +146,7 @@ func render(name, text string, data interface{}, errorOnMissing bool) (string, e
 	return out.String(), nil
 }
 
-func onePassword(templateVars interface{}, errorOnMissing bool) func(account, uuid, field string) (string, error) {
+func onePassword(ctx context.Context, templateVars interface{}, errorOnMissing bool) func(account, uuid, field string) (string, error) {
 	cache := map[string]string{}
 	return func(account, uuid, field string) (string, error) {
 		// validate command
@@ -149,7 +158,7 @@ func onePassword(templateVars interface{}, errorOnMissing bool) func(account, uu
 
 		// validate session
 		if os.Getenv(fmt.Sprintf("OP_SESSION_%s", account)) == "" {
-			if err := onePasswordSignIn(account); err != nil {
+			if err := onePasswordSignIn(ctx, account); err != nil {
 				return "", err
 			}
 		}
@@ -171,11 +180,11 @@ func onePassword(templateVars interface{}, errorOnMissing bool) func(account, uu
 
 		if value, ok := cache[cacheKey]; ok {
 			return value, nil
-		} else if res, err := onePasswordGet(uuid, field); err != nil && strings.Contains(res, "You are not currently signed in") {
+		} else if res, err := onePasswordGet(ctx, uuid, field); err != nil && strings.Contains(res, "You are not currently signed in") {
 			// retry with login
-			if err := onePasswordSignIn(account); err != nil {
+			if err := onePasswordSignIn(ctx, account); err != nil {
 				return "", err
-			} else if res, err = onePasswordGet(uuid, field); err != nil {
+			} else if res, err = onePasswordGet(ctx, uuid, field); err != nil {
 				return "", err
 			} else {
 				cache[cacheKey] = res
@@ -190,16 +199,16 @@ func onePassword(templateVars interface{}, errorOnMissing bool) func(account, uu
 	}
 }
 
-func onePasswordGet(uuid, field string) (string, error) {
-	res, err := exec.Command("op", "--cache", "get", "item", uuid, "--fields", field).CombinedOutput()
+func onePasswordGet(ctx context.Context, uuid, field string) (string, error) {
+	res, err := exec.CommandContext(ctx, "op", "--cache", "get", "item", uuid, "--fields", field).CombinedOutput()
 	return string(res), err
 }
 
-func onePasswordSignIn(account string) error {
+func onePasswordSignIn(ctx context.Context, account string) error {
 	fmt.Println("Your templates includes a call to 1Password, please sign to retrieve your session token:")
 
 	// create command
-	cmd := exec.Command("op", "signin", account, "--raw")
+	cmd := exec.CommandContext(ctx, "op", "signin", account, "--raw")
 
 	// use multi writer to handle password prompt
 	var stdoutBuf bytes.Buffer

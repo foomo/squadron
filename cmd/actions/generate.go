@@ -1,6 +1,8 @@
 package actions
 
 import (
+	"context"
+
 	"github.com/spf13/cobra"
 
 	"github.com/foomo/squadron"
@@ -12,11 +14,11 @@ var generateCmd = &cobra.Command{
 	Example: "  squadron generate fronted backend",
 	Args:    cobra.MinimumNArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return generate(args, cwd, flagFiles)
+		return generate(cmd.Context(), args, cwd, flagFiles)
 	},
 }
 
-func generate(args []string, cwd string, files []string) error {
+func generate(ctx context.Context, args []string, cwd string, files []string) error {
 	sq := squadron.New(cwd, "", files)
 
 	if err := sq.MergeConfigFiles(); err != nil {
@@ -34,9 +36,9 @@ func generate(args []string, cwd string, files []string) error {
 		}
 	}
 
-	if err := sq.RenderConfig(); err != nil {
+	if err := sq.RenderConfig(ctx); err != nil {
 		return err
 	}
 
-	return sq.Generate(sq.GetConfig().Units)
+	return sq.Generate(ctx, sq.GetConfig().Units)
 }

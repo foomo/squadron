@@ -2,6 +2,7 @@ package squadron
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -129,7 +130,7 @@ func (sq *Squadron) FilterConfig(units []string) error {
 	return nil
 }
 
-func (sq *Squadron) RenderConfig() error {
+func (sq *Squadron) RenderConfig(ctx context.Context) error {
 	var tv TemplateVars
 	var vars map[string]interface{}
 	if err := yaml.Unmarshal([]byte(sq.config), &vars); err != nil {
@@ -146,7 +147,7 @@ func (sq *Squadron) RenderConfig() error {
 		tv.add("Squadron", value)
 	}
 	// execute without errors to get existing values
-	out, err := executeFileTemplate(sq.config, tv, false)
+	out, err := executeFileTemplate(ctx, sq.config, tv, false)
 	if err != nil {
 		return errors.Wrap(err, "failed to execute initial file template")
 	}
@@ -164,7 +165,7 @@ func (sq *Squadron) RenderConfig() error {
 		replace(value)
 		tv.add("Squadron", value)
 	}
-	out, err = executeFileTemplate(sq.config, tv, true)
+	out, err = executeFileTemplate(ctx, sq.config, tv, true)
 	if err != nil {
 		return errors.Wrap(err, "failed to execute second file template")
 	}
@@ -180,13 +181,13 @@ func (sq *Squadron) RenderConfig() error {
 	return nil
 }
 
-func (sq *Squadron) Generate(units map[string]*Unit) error {
+func (sq *Squadron) Generate(ctx context.Context, units map[string]*Unit) error {
 	logrus.Infof("recreating chart output dir %q", sq.chartPath())
 	if err := sq.cleanupOutput(sq.chartPath()); err != nil {
 		return err
 	}
 	if sq.c.Unite {
-		return sq.generateUmbrellaChart(units)
+		return sq.generateUmbrellaChart(ctx, units)
 	}
 	for uName, u := range units {
 		logrus.Infof("generating %q value overrides file in %q", uName, sq.chartPath())
@@ -197,23 +198,23 @@ func (sq *Squadron) Generate(units map[string]*Unit) error {
 	return nil
 }
 
-func (sq *Squadron) generateUmbrellaChart(units map[string]*Unit) error {
+func (sq *Squadron) generateUmbrellaChart(ctx context.Context, units map[string]*Unit) error {
 	logrus.Infof("generating chart %q files in %q", sq.name, sq.chartPath())
 	if err := sq.generateChart(units, sq.chartPath(), sq.name, sq.c.Version); err != nil {
 		return err
 	}
 	logrus.Infof("running helm dependency update for chart: %v", sq.chartPath())
-	_, err := util.NewHelmCommand().UpdateDependency(sq.name, sq.chartPath())
+	_, err := util.NewHelmCommand().UpdateDependency(ctx, sq.chartPath())
 	return err
 }
 
-func (sq *Squadron) Package() error {
+func (sq *Squadron) Package(ctx context.Context) error {
 	logrus.Infof("running helm package for chart: %v", sq.chartPath())
-	_, err := util.NewHelmCommand().Package(sq.name, sq.chartPath(), sq.basePath)
+	_, err := util.NewHelmCommand().Package(ctx, sq.chartPath(), sq.basePath)
 	return err
 }
 
-func (sq *Squadron) Down(units map[string]*Unit, helmArgs []string) error {
+func (sq *Squadron) Down(ctx context.Context, units map[string]*Unit, helmArgs []string) error {
 	if sq.c.Unite {
 		logrus.Infof("running helm uninstall for: %s", sq.chartPath())
 		stdErr := bytes.NewBuffer([]byte{})
@@ -222,7 +223,7 @@ func (sq *Squadron) Down(units map[string]*Unit, helmArgs []string) error {
 			Stdout(os.Stdout).
 			Args("--namespace", sq.namespace).
 			Args(helmArgs...).
-			Run(); err != nil &&
+			Run(ctx); err != nil &&
 			string(bytes.TrimSpace(stdErr.Bytes())) != fmt.Sprintf("Error: uninstall: Release not loaded: %s: release: not found", sq.name) {
 			return err
 		}
@@ -237,7 +238,7 @@ func (sq *Squadron) Down(units map[string]*Unit, helmArgs []string) error {
 			Stdout(os.Stdout).
 			Args("--namespace", sq.namespace).
 			Args(helmArgs...).
-			Run(); err != nil &&
+			Run(ctx); err != nil &&
 			string(bytes.TrimSpace(stdErr.Bytes())) != fmt.Sprintf("Error: uninstall: Release not loaded: %s: release: not found", rName) {
 			return err
 		}
@@ -246,14 +247,14 @@ func (sq *Squadron) Down(units map[string]*Unit, helmArgs []string) error {
 	return nil
 }
 
-func (sq *Squadron) Diff(units map[string]*Unit, helmArgs []string) (string, error) {
+func (sq *Squadron) Diff(ctx context.Context, units map[string]*Unit, helmArgs []string) (string, error) {
 	if sq.c.Unite {
 		logrus.Infof("running helm diff for: %s", sq.chartPath())
-		manifest, err := exec.Command("helm", "get", "manifest", sq.name, "--namespace", sq.namespace).Output() //nolint:gosec
+		manifest, err := exec.CommandContext(ctx, "helm", "get", "manifest", sq.name, "--namespace", sq.namespace).Output() //nolint:gosec
 		if err != nil {
 			return "", err
 		}
-		template, err := exec.Command("helm", "upgrade", sq.name, sq.chartPath(), "--namespace", sq.namespace, "--dry-run").Output() //nolint:gosec
+		template, err := exec.CommandContext(ctx, "helm", "upgrade", sq.name, sq.chartPath(), "--namespace", sq.namespace, "--dry-run").Output() //nolint:gosec
 		if err != nil {
 			return "", err
 		}
@@ -264,11 +265,11 @@ func (sq *Squadron) Diff(units map[string]*Unit, helmArgs []string) (string, err
 		// todo use release prefix on install: squadron name or --name
 		rName := fmt.Sprintf("%s-%s", sq.name, uName)
 		logrus.Infof("running helm diff for: %s", uName)
-		manifest, err := exec.Command("helm", "get", "manifest", rName, "--namespace", sq.namespace).CombinedOutput()
+		manifest, err := exec.CommandContext(ctx, "helm", "get", "manifest", rName, "--namespace", sq.namespace).CombinedOutput()
 		if err != nil && string(bytes.TrimSpace(manifest)) != errHelmReleaseNotFound {
 			return "", err
 		}
-		cmd := exec.Command("helm", "upgrade", rName, "--install", "--namespace", sq.namespace, "-f", path.Join(sq.chartPath(), uName+".yaml"), "--dry-run")
+		cmd := exec.CommandContext(ctx, "helm", "upgrade", rName, "--install", "--namespace", sq.namespace, "-f", path.Join(sq.chartPath(), uName+".yaml"), "--dry-run")
 		if strings.Contains(u.Chart.Repository, "file://") {
 			cmd.Args = append(cmd.Args, "/"+strings.TrimPrefix(u.Chart.Repository, "file://"))
 		} else {
@@ -285,7 +286,7 @@ func (sq *Squadron) Diff(units map[string]*Unit, helmArgs []string) (string, err
 	return "", nil
 }
 
-func (sq *Squadron) Status(units map[string]*Unit, helmArgs []string) error {
+func (sq *Squadron) Status(ctx context.Context, units map[string]*Unit, helmArgs []string) error {
 	stdOut := bytes.NewBuffer([]byte{})
 	if sq.c.Unite {
 		stdOut.WriteString("==== " + sq.name + strings.Repeat("=", 20-len(sq.name)) + "\n")
@@ -296,7 +297,7 @@ func (sq *Squadron) Status(units map[string]*Unit, helmArgs []string) error {
 			Stdout(stdOut).
 			Args("--namespace", sq.namespace).
 			Args(helmArgs...).
-			Run(); err != nil &&
+			Run(ctx); err != nil &&
 			string(bytes.TrimSpace(stdErr.Bytes())) == errHelmReleaseNotFound {
 			stdOut.WriteString("NAME: " + sq.name + "\n")
 			stdOut.WriteString("STATUS: not installed\n")
@@ -314,7 +315,7 @@ func (sq *Squadron) Status(units map[string]*Unit, helmArgs []string) error {
 			Stderr(stdErr).
 			Stdout(stdOut).
 			Args("--namespace", sq.namespace).
-			Args(helmArgs...).Run(); err != nil &&
+			Args(helmArgs...).Run(ctx); err != nil &&
 			string(bytes.TrimSpace(stdErr.Bytes())) == errHelmReleaseNotFound {
 			stdOut.WriteString("NAME: " + rName + "\n")
 			stdOut.WriteString("STATUS: not installed\n")
@@ -326,8 +327,8 @@ func (sq *Squadron) Status(units map[string]*Unit, helmArgs []string) error {
 	return nil
 }
 
-func (sq *Squadron) Up(units map[string]*Unit, helmArgs []string, username, version, commit string) error {
-	description := fmt.Sprintf("\nManaged-By: Squadron %s\nDeployed-By: %s\nGit-Commit: %s", version, username, commit)
+func (sq *Squadron) Up(ctx context.Context, units map[string]*Unit, helmArgs []string, username, version, commit string) error {
+	description := fmt.Sprintf("\nDeployed-By: %s\nManaged-By: Squadron %s\nGit-Commit: %s", version, username, commit)
 
 	if sq.c.Unite {
 		logrus.Infof("running helm upgrade for chart: %s", sq.chartPath())
@@ -339,7 +340,7 @@ func (sq *Squadron) Up(units map[string]*Unit, helmArgs []string, username, vers
 			Args("--description", description).
 			Args("--install").
 			Args(helmArgs...).
-			Run()
+			Run(ctx)
 		return err
 	}
 	for uName, u := range units {
@@ -355,7 +356,7 @@ func (sq *Squadron) Up(units map[string]*Unit, helmArgs []string, username, vers
 		// 		Args("dependency", "update").
 		// 		Cwd(strings.TrimPrefix(u.Chart.Repository, "file://")).
 		// 		Stdout(os.Stdout).
-		// 		Run(); err != nil {
+		// 		Run(ctx); err != nil {
 		// 		return err
 		// 	}
 		// }
@@ -374,21 +375,21 @@ func (sq *Squadron) Up(units map[string]*Unit, helmArgs []string, username, vers
 		} else {
 			cmd.Args(u.Chart.Name, "--repo", u.Chart.Repository)
 		}
-		if _, err := cmd.Run(); err != nil {
+		if _, err := cmd.Run(ctx); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (sq *Squadron) Template(units map[string]*Unit, helmArgs []string) error {
+func (sq *Squadron) Template(ctx context.Context, units map[string]*Unit, helmArgs []string) error {
 	if sq.c.Unite {
 		logrus.Infof("running helm template for chart: %s", sq.chartPath())
 		_, err := util.NewHelmCommand().Args("template", sq.name, sq.chartPath()).
 			Stdout(os.Stdout).
 			Args("--namespace", sq.namespace).
 			Args(helmArgs...).
-			Run()
+			Run(ctx)
 		return err
 	}
 	for uName, u := range units {
@@ -405,7 +406,7 @@ func (sq *Squadron) Template(units map[string]*Unit, helmArgs []string) error {
 		} else {
 			cmd.Args(u.Chart.Name, "--repo", u.Chart.Repository)
 		}
-		if _, err := cmd.Run(); err != nil {
+		if _, err := cmd.Run(ctx); err != nil {
 			return err
 		}
 	}

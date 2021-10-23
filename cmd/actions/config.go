@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -18,11 +19,11 @@ var configCmd = &cobra.Command{
 	Example: "  squadron config --file squadron.yaml --file squadron.override.yaml",
 	Args:    cobra.MinimumNArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return config(args, cwd, flagFiles, flagNoRender)
+		return config(cmd.Context(), args, cwd, flagFiles, flagNoRender)
 	},
 }
 
-func config(args []string, cwd string, files []string, noRender bool) error {
+func config(ctx context.Context, args []string, cwd string, files []string, noRender bool) error {
 	sq := squadron.New(cwd, "", files)
 
 	if err := sq.MergeConfigFiles(); err != nil {
@@ -41,7 +42,7 @@ func config(args []string, cwd string, files []string, noRender bool) error {
 	}
 
 	if !noRender {
-		if err := sq.RenderConfig(); err != nil {
+		if err := sq.RenderConfig(ctx); err != nil {
 			return err
 		}
 	}

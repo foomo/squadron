@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -14,11 +15,11 @@ var listCmd = &cobra.Command{
 	Example: "  squadron list",
 	Args:    cobra.MinimumNArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return list(cwd, flagFiles)
+		return list(cmd.Context(), cwd, flagFiles)
 	},
 }
 
-func list(cwd string, files []string) error {
+func list(ctx context.Context, cwd string, files []string) error {
 	sq := squadron.New(cwd, "", files)
 
 	if err := sq.MergeConfigFiles(); err != nil {

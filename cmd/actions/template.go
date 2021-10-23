@@ -1,6 +1,8 @@
 package actions
 
 import (
+	"context"
+
 	"github.com/spf13/cobra"
 
 	"github.com/foomo/squadron"
@@ -16,11 +18,11 @@ var templateCmd = &cobra.Command{
 	Example: "  squadron template frontend backend --namespace demo",
 	Args:    cobra.MinimumNArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return template(args, cwd, flagNamespace, flagFiles)
+		return template(cmd.Context(), args, cwd, flagNamespace, flagFiles)
 	},
 }
 
-func template(args []string, cwd, namespace string, files []string) error {
+func template(ctx context.Context, args []string, cwd, namespace string, files []string) error {
 	sq := squadron.New(cwd, namespace, files)
 
 	if err := sq.MergeConfigFiles(); err != nil {
@@ -40,7 +42,7 @@ func template(args []string, cwd, namespace string, files []string) error {
 		}
 	}
 
-	if err := sq.RenderConfig(); err != nil {
+	if err := sq.RenderConfig(ctx); err != nil {
 		return err
 	}
 
@@ -49,9 +51,9 @@ func template(args []string, cwd, namespace string, files []string) error {
 		return err
 	}
 
-	if err := sq.Generate(sq.GetConfig().Units); err != nil {
+	if err := sq.Generate(ctx, sq.GetConfig().Units); err != nil {
 		return err
-	} else if err := sq.Template(units, helmArgs); err != nil {
+	} else if err := sq.Template(ctx, units, helmArgs); err != nil {
 		return err
 	}
 

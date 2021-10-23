@@ -1,6 +1,7 @@
 package squadron
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/sirupsen/logrus"
@@ -35,7 +36,7 @@ type Build struct {
 // ------------------------------------------------------------------------------------------------
 
 // Build ...
-func (b *Build) Build() error {
+func (b *Build) Build(ctx context.Context) error {
 	logrus.Infof("running docker build for %q", b.Context)
 	_, err := util.NewDockerCommand().Build(b.Context).
 		Arg("-t", fmt.Sprintf("%s:%s", b.Image, b.Tag)).
@@ -48,14 +49,14 @@ func (b *Build) Build() error {
 		Arg("--target", b.Target).
 		Arg("--shm-size", b.ShmSize).
 		ListArg("--add-host", b.ExtraHosts).
-		Arg("--isolation", b.Isolation).Run()
+		Arg("--isolation", b.Isolation).Run(ctx)
 	return err
 }
 
 // Push ...
-func (b *Build) Push() error {
+func (b *Build) Push(ctx context.Context) error {
 	logrus.Infof("running docker push for %s:%s", b.Image, b.Tag)
-	_, err := util.NewDockerCommand().Push(b.Image, b.Tag)
+	_, err := util.NewDockerCommand().Push(ctx, b.Image, b.Tag)
 	return err
 }
 

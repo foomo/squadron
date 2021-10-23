@@ -1,6 +1,7 @@
 package util
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -26,13 +27,13 @@ func (c KubeCmd) WaitForRollout(deployment, timeout string) *Cmd {
 		"-w", "--timeout", timeout)
 }
 
-func (c KubeCmd) GetMostRecentPodBySelectors(selectors map[string]string) (string, error) {
+func (c KubeCmd) GetMostRecentPodBySelectors(ctx context.Context, selectors map[string]string) (string, error) {
 	var selector []string //nolint:prealloc
 	for k, v := range selectors {
 		selector = append(selector, fmt.Sprintf("%v=%v", k, v))
 	}
 	out, err := c.Args("--selector", strings.Join(selector, ","),
-		"get", "pods", "--sort-by=.status.startTime", "-o", "name").Run()
+		"get", "pods", "--sort-by=.status.startTime", "-o", "name").Run(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -84,8 +85,8 @@ func (c KubeCmd) DeleteService(service string) *Cmd {
 	return c.Args("delete", "service", service)
 }
 
-func (c KubeCmd) GetDeployment(deployment string) (*v1.Deployment, error) {
-	out, err := c.Args("get", "deployment", deployment, "-o", "json").Run()
+func (c KubeCmd) GetDeployment(ctx context.Context, deployment string) (*v1.Deployment, error) {
+	out, err := c.Args("get", "deployment", deployment, "-o", "json").Run(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -96,30 +97,30 @@ func (c KubeCmd) GetDeployment(deployment string) (*v1.Deployment, error) {
 	return &d, nil
 }
 
-func (c KubeCmd) GetNamespaces() ([]string, error) {
-	out, err := c.Args("get", "namespace", "-o", "name").Run()
+func (c KubeCmd) GetNamespaces(ctx context.Context) ([]string, error) {
+	out, err := c.Args("get", "namespace", "-o", "name").Run(ctx)
 	if err != nil {
 		return nil, err
 	}
 	return parseResources(out, "namespace/")
 }
 
-func (c KubeCmd) GetDeployments() ([]string, error) {
-	out, err := c.Args("get", "deployment", "-o", "name").Run()
+func (c KubeCmd) GetDeployments(ctx context.Context) ([]string, error) {
+	out, err := c.Args("get", "deployment", "-o", "name").Run(ctx)
 	if err != nil {
 		return nil, err
 	}
 	return parseResources(out, "deployment.apps/")
 }
 
-func (c KubeCmd) GetPods(selectors map[string]string) ([]string, error) {
+func (c KubeCmd) GetPods(ctx context.Context, selectors map[string]string) ([]string, error) {
 	var selector []string //nolint:prealloc
 	for k, v := range selectors {
 		selector = append(selector, fmt.Sprintf("%v=%v", k, v))
 	}
 	out, err := c.Args("--selector", strings.Join(selector, ","),
 		"get", "pods", "--sort-by=.status.startTime",
-		"-o", "name").Run()
+		"-o", "name").Run(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -134,8 +135,8 @@ func (c KubeCmd) GetContainers(deployment v1.Deployment) []string {
 	return containers
 }
 
-func (c KubeCmd) GetPodsByLabels(labels []string) ([]string, error) {
-	out, err := c.Args("get", "pods", "-l", strings.Join(labels, ","), "-o", "name", "-A").Run()
+func (c KubeCmd) GetPodsByLabels(ctx context.Context, labels []string) ([]string, error) {
+	out, err := c.Args("get", "pods", "-l", strings.Join(labels, ","), "-o", "name", "-A").Run(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -146,27 +147,27 @@ func (c KubeCmd) RestartDeployment(deployment string) *Cmd {
 	return c.Args("rollout", "restart", fmt.Sprintf("deployment/%v", deployment))
 }
 
-func (c KubeCmd) CreateConfigMapFromFile(name, path string) (string, error) {
-	return c.Args("create", "configmap", name, "--from-file", path).Run()
+func (c KubeCmd) CreateConfigMapFromFile(ctx context.Context, name, path string) (string, error) {
+	return c.Args("create", "configmap", name, "--from-file", path).Run(ctx)
 }
 
-func (c KubeCmd) CreateConfigMap(name string, keyMap map[string]string) (string, error) {
+func (c KubeCmd) CreateConfigMap(ctx context.Context, name string, keyMap map[string]string) (string, error) {
 	c.Args("create", "configmap", name)
 	for key, value := range keyMap {
 		c.Args(fmt.Sprintf("--from-literal=%v=%v", key, value))
 	}
-	return c.Run()
+	return c.Run(ctx)
 }
 
-func (c KubeCmd) DeleteConfigMap(name string) (string, error) {
-	return c.Args("delete", "configmap", name).Run()
+func (c KubeCmd) DeleteConfigMap(ctx context.Context, name string) (string, error) {
+	return c.Args("delete", "configmap", name).Run(ctx)
 }
 
-func (c KubeCmd) GetConfigMapKey(name, key string) (string, error) {
+func (c KubeCmd) GetConfigMapKey(ctx context.Context, name, key string) (string, error) {
 	key = strings.ReplaceAll(key, ".", "\\.")
 	// jsonpath map key is not very fond of dots
 	out, err := c.Args("get", "configmap", name, "-o",
-		fmt.Sprintf("jsonpath={.data.%v}", key)).Run()
+		fmt.Sprintf("jsonpath={.data.%v}", key)).Run(ctx)
 	if err != nil {
 		return out, err
 	}

@@ -1,6 +1,8 @@
 package actions
 
 import (
+	"context"
+
 	"github.com/spf13/cobra"
 
 	"github.com/foomo/squadron"
@@ -15,11 +17,11 @@ var statusCmd = &cobra.Command{
 	Short:   "installs the squadron or given units",
 	Example: "  squadron status frontend backend --namespace demo --build --push -- --dry-run",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return status(args, cwd, flagNamespace, flagFiles)
+		return status(cmd.Context(), args, cwd, flagNamespace, flagFiles)
 	},
 }
 
-func status(args []string, cwd, namespace string, files []string) error {
+func status(ctx context.Context, args []string, cwd, namespace string, files []string) error {
 	sq := squadron.New(cwd, namespace, files)
 
 	if err := sq.MergeConfigFiles(); err != nil {
@@ -39,7 +41,7 @@ func status(args []string, cwd, namespace string, files []string) error {
 		}
 	}
 
-	if err := sq.RenderConfig(); err != nil {
+	if err := sq.RenderConfig(ctx); err != nil {
 		return err
 	}
 
@@ -48,5 +50,5 @@ func status(args []string, cwd, namespace string, files []string) error {
 		return err
 	}
 
-	return sq.Status(units, helmArgs)
+	return sq.Status(ctx, units, helmArgs)
 }

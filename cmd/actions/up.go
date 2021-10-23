@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"context"
 	"fmt"
 	"os/user"
 	"strings"
@@ -23,11 +24,11 @@ var upCmd = &cobra.Command{
 	Short:   "installs the squadron or given units",
 	Example: "  squadron up frontend backend --namespace demo --build --push -- --dry-run",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return up(args, cwd, flagNamespace, flagBuild, flagPush, flagDiff, flagFiles)
+		return up(cmd.Context(), args, cwd, flagNamespace, flagBuild, flagPush, flagDiff, flagFiles)
 	},
 }
 
-func up(args []string, cwd, namespace string, build, push, diff bool, files []string) error {
+func up(ctx context.Context, args []string, cwd, namespace string, build, push, diff bool, files []string) error {
 	sq := squadron.New(cwd, namespace, files)
 
 	if err := sq.MergeConfigFiles(); err != nil {
@@ -47,7 +48,7 @@ func up(args []string, cwd, namespace string, build, push, diff bool, files []st
 		}
 	}
 
-	if err := sq.RenderConfig(); err != nil {
+	if err := sq.RenderConfig(ctx); err != nil {
 		return err
 	}
 
@@ -58,7 +59,7 @@ func up(args []string, cwd, namespace string, build, push, diff bool, files []st
 
 	if build {
 		for _, unit := range units {
-			if err := unit.Build(); err != nil {
+			if err := unit.Build(ctx); err != nil {
 				return err
 			}
 		}
@@ -66,31 +67,31 @@ func up(args []string, cwd, namespace string, build, push, diff bool, files []st
 
 	if push {
 		for _, unit := range units {
-			if err := unit.Push(); err != nil {
+			if err := unit.Push(ctx); err != nil {
 				return err
 			}
 		}
 	}
 
-	if err := sq.Generate(units); err != nil {
+	if err := sq.Generate(ctx, units); err != nil {
 		return err
 	}
 
 	username := "unknown"
-	if value, err := util.NewCommand("git").Args("config", "user.name").Run(); err == nil {
+	if value, err := util.NewCommand("git").Args("config", "user.name").Run(ctx); err == nil {
 		username = strings.TrimSpace(value)
 	} else if value, err := user.Current(); err == nil {
 		username = strings.TrimSpace(value.Name)
 	}
 
 	commit := ""
-	if value, err := util.NewCommand("git").Args("rev-parse", "--short", "HEAD").Run(); err == nil {
+	if value, err := util.NewCommand("git").Args("rev-parse", "--short", "HEAD").Run(ctx); err == nil {
 		commit = strings.TrimSpace(value)
 	}
 
 	if !diff {
-		return sq.Up(units, helmArgs, username, version, commit)
-	} else if out, err := sq.Diff(units, helmArgs); err != nil {
+		return sq.Up(ctx, units, helmArgs, username, version, commit)
+	} else if out, err := sq.Diff(ctx, units, helmArgs); err != nil {
 		return err
 	} else {
 		fmt.Println(out)

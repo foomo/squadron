@@ -1,6 +1,7 @@
 package squadron
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"path"
@@ -28,7 +29,7 @@ func (cd *ChartDependency) UnmarshalYAML(value *yaml.Node) error {
 		if err := value.Decode(&vString); err != nil {
 			return err
 		}
-		vBytes, err := executeFileTemplate(vString, nil, true)
+		vBytes, err := executeFileTemplate(context.Background(), vString, nil, true)
 		if err != nil {
 			return errors.Wrap(err, "failed to render chart string")
 		}

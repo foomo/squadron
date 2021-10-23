@@ -1,6 +1,8 @@
 package actions
 
 import (
+	"context"
+
 	"github.com/spf13/cobra"
 
 	"github.com/foomo/squadron"
@@ -16,11 +18,11 @@ var downCmd = &cobra.Command{
 	Example: "  squadron down frontend backend --namespace demo",
 	Args:    cobra.MinimumNArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return down(args, cwd, flagNamespace, flagFiles)
+		return down(cmd.Context(), args, cwd, flagNamespace, flagFiles)
 	},
 }
 
-func down(args []string, cwd, namespace string, files []string) error {
+func down(ctx context.Context, args []string, cwd, namespace string, files []string) error {
 	sq := squadron.New(cwd, namespace, files)
 
 	if err := sq.MergeConfigFiles(); err != nil {
@@ -33,5 +35,5 @@ func down(args []string, cwd, namespace string, files []string) error {
 		return err
 	}
 
-	return sq.Down(units, helmArgs)
+	return sq.Down(ctx, units, helmArgs)
 }

@@ -1,6 +1,8 @@
 package actions
 
 import (
+	"context"
+
 	"github.com/spf13/cobra"
 
 	"github.com/foomo/squadron"
@@ -16,11 +18,11 @@ var pushCmd = &cobra.Command{
 	Short:   "pushes the squadron or given units",
 	Example: "  squadron push frontend backend --namespace demo --build",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return push(args, cwd, flagNamespace, flagBuild, flagFiles)
+		return push(cmd.Context(), args, cwd, flagNamespace, flagBuild, flagFiles)
 	},
 }
 
-func push(args []string, cwd, namespace string, build bool, files []string) error {
+func push(ctx context.Context, args []string, cwd, namespace string, build bool, files []string) error {
 	sq := squadron.New(cwd, namespace, files)
 
 	if err := sq.MergeConfigFiles(); err != nil {
@@ -38,7 +40,7 @@ func push(args []string, cwd, namespace string, build bool, files []string) erro
 		}
 	}
 
-	if err := sq.RenderConfig(); err != nil {
+	if err := sq.RenderConfig(ctx); err != nil {
 		return err
 	}
 
@@ -49,14 +51,14 @@ func push(args []string, cwd, namespace string, build bool, files []string) erro
 
 	if build {
 		for _, unit := range units {
-			if err := unit.Build(); err != nil {
+			if err := unit.Build(ctx); err != nil {
 				return err
 			}
 		}
 	}
 
 	for _, unit := range units {
-		if err := unit.Push(); err != nil {
+		if err := unit.Push(ctx); err != nil {
 			return err
 		}
 	}

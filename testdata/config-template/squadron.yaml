@@ -21,6 +21,8 @@ squadron:
         ENV: <% env "SHELL" %>
         GLOBAL: <% .Global.host %>
         BASE64: <% base64 "1234567890" %>
+        DEFAULT_VALUE: <% "" | default "fallback" %>
+        DEFAULT_INDEX_VALUE: <% defaultIndex global "notexists" "fallback" %>
         # ONE_PASSWORD: <% op "ACCOUNT_NAME" "UUID" "FIELD" %>
         # ONE_PASSWORD: <% op "ACCOUNT_NAME" "Secret name" "FIELD" %>
         # ONE_PASSWORD: <% op "ACCOUNT_NAME" "Secret name wit global {{ .Global.host }}" "FIELD" %>

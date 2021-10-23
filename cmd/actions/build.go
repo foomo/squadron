@@ -1,6 +1,8 @@
 package actions
 
 import (
+	"context"
+
 	"github.com/spf13/cobra"
 
 	"github.com/foomo/squadron"
@@ -16,11 +18,11 @@ var buildCmd = &cobra.Command{
 	Example: "  squadron build frontend backend",
 	Args:    cobra.MinimumNArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return build(args, cwd, flagFiles, flagPush)
+		return build(cmd.Context(), args, cwd, flagFiles, flagPush)
 	},
 }
 
-func build(args []string, cwd string, files []string, push bool) error {
+func build(ctx context.Context, args []string, cwd string, files []string, push bool) error {
 	sq := squadron.New(cwd, "", files)
 
 	if err := sq.MergeConfigFiles(); err != nil {
@@ -38,7 +40,7 @@ func build(args []string, cwd string, files []string, push bool) error {
 		}
 	}
 
-	if err := sq.RenderConfig(); err != nil {
+	if err := sq.RenderConfig(ctx); err != nil {
 		return err
 	}
 
@@ -48,14 +50,14 @@ func build(args []string, cwd string, files []string, push bool) error {
 	}
 
 	for _, unit := range units {
-		if err := unit.Build(); err != nil {
+		if err := unit.Build(ctx); err != nil {
 			return err
 		}
 	}
 
 	if push {
 		for _, unit := range units {
-			if err := unit.Push(); err != nil {
+			if err := unit.Push(ctx); err != nil {
 				return err
 			}
 		}

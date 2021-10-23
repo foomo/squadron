@@ -1,6 +1,7 @@
 package util
 
 import (
+	"context"
 	"fmt"
 	"os"
 )
@@ -23,6 +24,6 @@ func (c *DockerCmd) Build(workDir string) *Cmd {
 	return c.Cwd(workDir).Args(args...)
 }
 
-func (c *DockerCmd) Push(image, tag string) (string, error) {
-	return c.Args("push", fmt.Sprintf("%s:%s", image, tag)).Run()
+func (c *DockerCmd) Push(ctx context.Context, image, tag string) (string, error) {
+	return c.Args("push", fmt.Sprintf("%s:%s", image, tag)).Run(ctx)
 }
