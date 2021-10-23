@@ -138,18 +138,8 @@ func render(name, text string, data interface{}, errorOnMissing bool) (string, e
 }
 
 func onePassword(templateVars interface{}, errorOnMissing bool) func(account, uuid, field string) (string, error) {
+	cache := map[string]string{}
 	return func(account, uuid, field string) (string, error) {
-		if value, err := render("op", uuid, templateVars, errorOnMissing); err != nil {
-			return "", err
-		} else {
-			uuid = value
-		}
-		if value, err := render("op", field, templateVars, errorOnMissing); err != nil {
-			return "", err
-		} else {
-			field = value
-		}
-
 		// validate command
 		if _, err := exec.LookPath("op"); err != nil {
 			fmt.Println("Your templates includes a call to 1Password, please install it:")
@@ -164,23 +154,44 @@ func onePassword(templateVars interface{}, errorOnMissing bool) func(account, uu
 			}
 		}
 
-		res, err := onePasswordGet(uuid, field)
-		if err != nil && strings.Contains(res, "You are not currently signed in") {
+		// render uuid & field params
+		if value, err := render("op", uuid, templateVars, errorOnMissing); err != nil {
+			return "", err
+		} else {
+			uuid = value
+		}
+		if value, err := render("op", field, templateVars, errorOnMissing); err != nil {
+			return "", err
+		} else {
+			field = value
+		}
+
+		// create cache key
+		cacheKey := strings.Join([]string{account, uuid, field}, "-")
+
+		if value, ok := cache[cacheKey]; ok {
+			return value, nil
+		} else if res, err := onePasswordGet(uuid, field); err != nil && strings.Contains(res, "You are not currently signed in") {
 			// retry with login
 			if err := onePasswordSignIn(account); err != nil {
 				return "", err
 			} else if res, err = onePasswordGet(uuid, field); err != nil {
 				return "", err
+			} else {
+				cache[cacheKey] = res
+				return res, nil
 			}
 		} else if err != nil {
 			return "", err
+		} else {
+			cache[cacheKey] = res
+			return res, nil
 		}
-		return res, nil
 	}
 }
 
 func onePasswordGet(uuid, field string) (string, error) {
-	res, err := exec.Command("op", "get", "item", uuid, "--fields", field).CombinedOutput()
+	res, err := exec.Command("op", "--cache", "get", "item", uuid, "--fields", field).CombinedOutput()
 	return string(res), err
 }
 
@@ -212,6 +223,5 @@ func onePasswordSignIn(account string) error {
 		fmt.Println("NOTE: If you want to skip this step, run:")
 		fmt.Printf("export OP_SESSION_%s=%s\n", account, token)
 	}
-
 	return nil
 }
