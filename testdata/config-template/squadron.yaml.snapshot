@@ -13,6 +13,8 @@ squadron:
     values:
       env:
         BASE64: MTIzNDU2Nzg5MA==
+        DEFAULT_INDEX_VALUE: fallback
+        DEFAULT_VALUE: fallback
         ENV: /bin/zsh
         GLOBAL: mycompany.com
       image:

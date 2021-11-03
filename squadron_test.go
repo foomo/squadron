@@ -1,6 +1,7 @@
 package squadron_test
 
 import (
+	"context"
 	"path"
 	"testing"
 
@@ -113,7 +114,7 @@ func testConfigSnapshot(t *testing.T, configs []string, snapshot string, units [
 	}
 
 	if render {
-		testutils.Must(t, sq.RenderConfig(), "failed to render config")
+		testutils.Must(t, sq.RenderConfig(context.Background()), "failed to render config")
 	}
 
 	testutils.MustCheckSnapshot(t, snapshot, sq.GetConfigYAML())
