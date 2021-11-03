@@ -136,30 +136,29 @@ func (c *Cmd) Run(ctx context.Context) (string, error) {
 	if c.cwd != "" {
 		cmd.Dir = c.cwd
 	}
-	logrus.Tracef("executing %q", cmd.String())
+	logrus.Debugf("executing %q", cmd.String())
 
 	combinedBuf := new(bytes.Buffer)
 	traceWriter := logrus.New().WriterLevel(logrus.TraceLevel)
-	warnWriter := logrus.New().WriterLevel(logrus.WarnLevel)
 
-	c.stdoutWriters = append(c.stdoutWriters, combinedBuf, traceWriter)
-	c.stderrWriters = append(c.stderrWriters, combinedBuf, warnWriter)
-	cmd.Stdout = io.MultiWriter(c.stdoutWriters...)
-	cmd.Stderr = io.MultiWriter(c.stderrWriters...)
+	cmd.Stdout = io.MultiWriter(append(c.stdoutWriters, combinedBuf, traceWriter)...)
+	cmd.Stderr = io.MultiWriter(append(c.stderrWriters, combinedBuf, traceWriter)...)
 
 	if c.preStartFunc != nil {
+		logrus.Debug("executing pre start func")
 		if err := c.preStartFunc(); err != nil {
-			return "", err
+			return combinedBuf.String(), err
 		}
 	}
 
 	if err := cmd.Start(); err != nil {
-		return "", err
+		return combinedBuf.String(), err
 	}
 
 	if c.postStartFunc != nil {
+		logrus.Debug("executing post start func")
 		if err := c.postStartFunc(); err != nil {
-			return "", err
+			return combinedBuf.String(), err
 		}
 	}
 
@@ -173,12 +172,12 @@ func (c *Cmd) Run(ctx context.Context) (string, error) {
 
 		if err := cmd.Wait(); err != nil {
 			if c.timeout == 0 {
-				return "", err
+				return combinedBuf.String(), err
 			}
 		}
 		if c.postEndFunc != nil {
 			if err := c.postEndFunc(); err != nil {
-				return "", err
+				return combinedBuf.String(), err
 			}
 		}
 	}

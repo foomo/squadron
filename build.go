@@ -36,9 +36,9 @@ type Build struct {
 // ------------------------------------------------------------------------------------------------
 
 // Build ...
-func (b *Build) Build(ctx context.Context) error {
-	logrus.Infof("running docker build for %q", b.Context)
-	_, err := util.NewDockerCommand().Build(b.Context).
+func (b *Build) Build(ctx context.Context) (string, error) {
+	logrus.Debugf("running docker build for %q", b.Context)
+	return util.NewDockerCommand().Build(b.Context).
 		Arg("-t", fmt.Sprintf("%s:%s", b.Image, b.Tag)).
 		Arg("--file", b.Dockerfile).
 		ListArg("--build-arg", b.Args).
@@ -50,14 +50,12 @@ func (b *Build) Build(ctx context.Context) error {
 		Arg("--shm-size", b.ShmSize).
 		ListArg("--add-host", b.ExtraHosts).
 		Arg("--isolation", b.Isolation).Run(ctx)
-	return err
 }
 
 // Push ...
-func (b *Build) Push(ctx context.Context) error {
-	logrus.Infof("running docker push for %s:%s", b.Image, b.Tag)
-	_, err := util.NewDockerCommand().Push(ctx, b.Image, b.Tag)
-	return err
+func (b *Build) Push(ctx context.Context) (string, error) {
+	logrus.Debugf("running docker push for %s:%s", b.Image, b.Tag)
+	return util.NewDockerCommand().Push(ctx, b.Image, b.Tag)
 }
 
 // UnmarshalYAML ...

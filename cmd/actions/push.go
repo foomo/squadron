@@ -3,6 +3,8 @@ package actions
 import (
 	"context"
 
+	"github.com/neilotoole/errgroup"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"github.com/foomo/squadron"
@@ -11,6 +13,7 @@ import (
 func init() {
 	pushCmd.Flags().StringVarP(&flagNamespace, "namespace", "n", "default", "specifies the namespace")
 	pushCmd.Flags().BoolVarP(&flagBuild, "build", "b", false, "builds or rebuilds units")
+	pushCmd.Flags().IntVar(&flagParallel, "parallel", 1, "run command in parallel")
 }
 
 var pushCmd = &cobra.Command{
@@ -18,11 +21,11 @@ var pushCmd = &cobra.Command{
 	Short:   "pushes the squadron or given units",
 	Example: "  squadron push frontend backend --namespace demo --build",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return push(cmd.Context(), args, cwd, flagNamespace, flagBuild, flagFiles)
+		return push(cmd.Context(), args, cwd, flagNamespace, flagBuild, flagParallel, flagFiles)
 	},
 }
 
-func push(ctx context.Context, args []string, cwd, namespace string, build bool, files []string) error {
+func push(ctx context.Context, args []string, cwd, namespace string, build bool, parallel int, files []string) error {
 	sq := squadron.New(cwd, namespace, files)
 
 	if err := sq.MergeConfigFiles(); err != nil {
@@ -50,15 +53,37 @@ func push(ctx context.Context, args []string, cwd, namespace string, build bool,
 	}
 
 	if build {
-		for _, unit := range units {
-			if err := unit.Build(ctx); err != nil {
-				return err
-			}
+		wg, wgCtx := errgroup.WithContextN(ctx, parallel, len(units))
+		for n, u := range units {
+			name := n
+			unit := u
+			wg.Go(func() error {
+				if out, err := unit.Build(wgCtx, sq.Name(), name); err != nil {
+					return errors.Wrap(err, out)
+				}
+				return nil
+			})
+		}
+
+		if err := wg.Wait(); err != nil {
+			return err
 		}
 	}
 
-	for _, unit := range units {
-		if err := unit.Push(ctx); err != nil {
+	{
+		wg, wgCtx := errgroup.WithContextN(ctx, parallel, len(units))
+		for n, u := range units {
+			name := n
+			unit := u
+			wg.Go(func() error {
+				if out, err := unit.Push(wgCtx, sq.Name(), name); err != nil {
+					return errors.Wrap(err, out)
+				}
+				return nil
+			})
+		}
+
+		if err := wg.Wait(); err != nil {
 			return err
 		}
 	}

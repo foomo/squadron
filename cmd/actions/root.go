@@ -1,9 +1,11 @@
 package actions
 
 import (
+	"os"
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
@@ -13,11 +15,16 @@ import (
 
 var (
 	rootCmd = &cobra.Command{
-		Use: "squadron",
+		Use:           "squadron",
+		SilenceUsage:  true,
+		SilenceErrors: true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			logrus.SetLevel(logrus.InfoLevel)
-			if flagVerbose {
+			if flagDebug {
 				logrus.SetLevel(logrus.TraceLevel)
+			} else if flagVerbose {
+				logrus.SetLevel(logrus.InfoLevel)
+			} else {
+				logrus.SetLevel(logrus.WarnLevel)
 			}
 			if cmd.Name() == "help" || cmd.Name() == "init" || cmd.Name() == "version" {
 				return nil
@@ -28,25 +35,33 @@ var (
 	}
 
 	cwd           string
+	flagDebug     bool
 	flagVerbose   bool
 	flagNoRender  bool
 	flagNamespace string
 	flagBuild     bool
 	flagPush      bool
+	flagParallel  int
 	flagDiff      bool
 	flagFiles     []string
 )
 
 func init() {
+	rootCmd.PersistentFlags().BoolVarP(&flagDebug, "debug", "d", false, "show all output")
 	rootCmd.PersistentFlags().BoolVarP(&flagVerbose, "verbose", "v", false, "show more output")
 	rootCmd.PersistentFlags().StringSliceVarP(&flagFiles, "file", "f", []string{"squadron.yaml"}, "specify alternative squadron files")
 
 	rootCmd.AddCommand(upCmd, downCmd, buildCmd, pushCmd, listCmd, generateCmd, statusCmd, configCmd, versionCmd, completionCmd, templateCmd)
+
+	pterm.Info = *pterm.Info.WithPrefix(pterm.Prefix{Text: "INFO", Style: pterm.Info.Prefix.Style})
+	pterm.Error = *pterm.Info.WithPrefix(pterm.Prefix{Text: "ERROR", Style: pterm.Error.Prefix.Style})
+	pterm.Warning = *pterm.Info.WithPrefix(pterm.Prefix{Text: "WARNING", Style: pterm.Warning.Prefix.Style})
 }
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		logrus.Fatal(err)
+		pterm.FgRed.Println(err.Error())
+		os.Exit(1)
 	}
 }
 

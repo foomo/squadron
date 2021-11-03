@@ -6,6 +6,8 @@ import (
 	"os/user"
 	"strings"
 
+	"github.com/neilotoole/errgroup"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"github.com/foomo/squadron"
@@ -17,6 +19,7 @@ func init() {
 	upCmd.Flags().BoolVarP(&flagBuild, "build", "b", false, "builds or rebuilds units")
 	upCmd.Flags().BoolVarP(&flagPush, "push", "p", false, "pushes units to the registry")
 	upCmd.Flags().BoolVar(&flagDiff, "diff", false, "preview upgrade as a coloured diff")
+	upCmd.Flags().IntVar(&flagParallel, "parallel", 1, "run command in parallel")
 }
 
 var upCmd = &cobra.Command{
@@ -24,11 +27,11 @@ var upCmd = &cobra.Command{
 	Short:   "installs the squadron or given units",
 	Example: "  squadron up frontend backend --namespace demo --build --push -- --dry-run",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return up(cmd.Context(), args, cwd, flagNamespace, flagBuild, flagPush, flagDiff, flagFiles)
+		return up(cmd.Context(), args, cwd, flagNamespace, flagBuild, flagPush, flagDiff, flagParallel, flagFiles)
 	},
 }
 
-func up(ctx context.Context, args []string, cwd, namespace string, build, push, diff bool, files []string) error {
+func up(ctx context.Context, args []string, cwd, namespace string, build, push, diff bool, parallel int, files []string) error {
 	sq := squadron.New(cwd, namespace, files)
 
 	if err := sq.MergeConfigFiles(); err != nil {
@@ -58,18 +61,36 @@ func up(ctx context.Context, args []string, cwd, namespace string, build, push, 
 	}
 
 	if build {
-		for _, unit := range units {
-			if err := unit.Build(ctx); err != nil {
-				return err
-			}
+		wg, wgCtx := errgroup.WithContextN(ctx, parallel, len(units))
+		for n, u := range units {
+			name := n
+			unit := u
+			wg.Go(func() error {
+				if out, err := unit.Build(wgCtx, sq.Name(), name); err != nil {
+					return errors.Wrap(err, out)
+				}
+				return nil
+			})
+		}
+		if err := wg.Wait(); err != nil {
+			return err
 		}
 	}
 
 	if push {
-		for _, unit := range units {
-			if err := unit.Push(ctx); err != nil {
-				return err
-			}
+		wg, wgCtx := errgroup.WithContextN(ctx, parallel, len(units))
+		for n, u := range units {
+			name := n
+			unit := u
+			wg.Go(func() error {
+				if out, err := unit.Push(wgCtx, sq.Name(), name); err != nil {
+					return errors.Wrap(err, out)
+				}
+				return nil
+			})
+		}
+		if err := wg.Wait(); err != nil {
+			return err
 		}
 	}
 

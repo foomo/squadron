@@ -61,6 +61,10 @@ func New(basePath, namespace string, files []string) *Squadron {
 	}
 }
 
+func (sq *Squadron) Name() string {
+	return sq.name
+}
+
 func (sq *Squadron) GetConfig() Configuration {
 	return sq.c
 }
@@ -92,6 +96,8 @@ func (c *Configuration) removeNilUnits() {
 }
 
 func (sq *Squadron) MergeConfigFiles() error {
+	logrus.Info("merging config files")
+	logrus.WithField("files", sq.files).Debug("using files")
 	mergedFiles, err := conflate.FromFiles(sq.files...)
 	if err != nil {
 		return errors.Wrap(err, "failed to conflate files")
@@ -131,6 +137,7 @@ func (sq *Squadron) FilterConfig(units []string) error {
 }
 
 func (sq *Squadron) RenderConfig(ctx context.Context) error {
+	logrus.Info("rendering config")
 	var tv TemplateVars
 	var vars map[string]interface{}
 	if err := yaml.Unmarshal([]byte(sq.config), &vars); err != nil {
@@ -182,7 +189,7 @@ func (sq *Squadron) RenderConfig(ctx context.Context) error {
 }
 
 func (sq *Squadron) Generate(ctx context.Context, units map[string]*Unit) error {
-	logrus.Infof("recreating chart output dir %q", sq.chartPath())
+	logrus.WithField("path", sq.chartPath()).Infof("generating charts")
 	if err := sq.cleanupOutput(sq.chartPath()); err != nil {
 		return err
 	}

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	b64 "encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -39,7 +40,7 @@ func executeFileTemplate(ctx context.Context, text string, templateVars interfac
 	templateFunctions["defaultIndex"] = defaultIndexValue
 	templateFunctions["indent"] = indent
 	templateFunctions["file"] = file(ctx, templateVars, errorOnMissing)
-	templateFunctions["git"] = git
+	templateFunctions["git"] = git(ctx)
 
 	tpl, err := template.New("squadron").Delims("<%", "%>").Funcs(templateFunctions).Parse(text)
 	if err != nil {
@@ -108,23 +109,25 @@ func replace(in interface{}) {
 	}
 }
 
-func git(ctx context.Context, action string) (string, error) {
-	cmd := exec.CommandContext(ctx, "git")
+func git(ctx context.Context) func(action string) (string, error) {
+	return func(action string) (string, error) {
+		cmd := exec.CommandContext(ctx, "git")
 
-	switch action {
-	case "tag":
-		cmd.Args = append(cmd.Args, "describe", "--tags", "--always")
-	case "commitsha":
-		cmd.Args = append(cmd.Args, "rev-list", "-1", "HEAD")
-	case "abbrevcommitsha":
-		cmd.Args = append(cmd.Args, "rev-list", "-1", "HEAD", "--abbrev-commit")
-	}
-	res, err := cmd.Output()
-	if err != nil {
-		return "", err
-	}
+		switch action {
+		case "commitsha":
+			cmd.Args = append(cmd.Args, "rev-list", "-1", "HEAD")
+		case "abbrevcommitsha":
+			cmd.Args = append(cmd.Args, "rev-list", "-1", "HEAD", "--abbrev-commit")
+		default:
+			cmd.Args = append(cmd.Args, "describe", "--tags", "--always")
+		}
+		res, err := cmd.Output()
+		if err != nil {
+			return "", err
+		}
 
-	return string(bytes.TrimSpace(res)), nil
+		return string(bytes.TrimSpace(res)), nil
+	}
 }
 
 func indent(spaces int, v string) string {
@@ -146,8 +149,12 @@ func render(name, text string, data interface{}, errorOnMissing bool) (string, e
 	return out.String(), nil
 }
 
+var onePasswordCache map[string]map[string]string
+
 func onePassword(ctx context.Context, templateVars interface{}, errorOnMissing bool) func(account, uuid, field string) (string, error) {
-	cache := map[string]string{}
+	if onePasswordCache == nil {
+		onePasswordCache = map[string]map[string]string{}
+	}
 	return func(account, uuid, field string) (string, error) {
 		// validate command
 		if _, err := exec.LookPath("op"); err != nil {
@@ -176,32 +183,70 @@ func onePassword(ctx context.Context, templateVars interface{}, errorOnMissing b
 		}
 
 		// create cache key
-		cacheKey := strings.Join([]string{account, uuid, field}, "-")
+		cacheKey := strings.Join([]string{account, uuid}, "-")
 
-		if value, ok := cache[cacheKey]; ok {
-			return value, nil
-		} else if res, err := onePasswordGet(ctx, uuid, field); err != nil && strings.Contains(res, "You are not currently signed in") {
-			// retry with login
-			if err := onePasswordSignIn(ctx, account); err != nil {
-				return "", err
-			} else if res, err = onePasswordGet(ctx, uuid, field); err != nil {
-				return "", err
+		if _, ok := onePasswordCache[cacheKey]; !ok {
+			if res, err := onePasswordGet(ctx, uuid); errors.Is(err, ErrOnePasswordNotSignedIn) {
+				// retry with login
+				if err := onePasswordSignIn(ctx, account); err != nil {
+					return "", err
+				} else if res, err = onePasswordGet(ctx, uuid); err != nil {
+					return "", err
+				} else {
+					onePasswordCache[cacheKey] = res
+				}
 			} else {
-				cache[cacheKey] = res
-				return res, nil
+				onePasswordCache[cacheKey] = res
 			}
-		} else if err != nil {
-			return "", err
+		}
+
+		if value, ok := onePasswordCache[cacheKey][field]; !ok {
+			return "", nil
 		} else {
-			cache[cacheKey] = res
-			return res, nil
+			return value, nil
 		}
 	}
 }
 
-func onePasswordGet(ctx context.Context, uuid, field string) (string, error) {
-	res, err := exec.CommandContext(ctx, "op", "--cache", "get", "item", uuid, "--fields", field).CombinedOutput()
-	return string(res), err
+var ErrOnePasswordNotSignedIn = errors.New("not signed in")
+
+func onePasswordGet(ctx context.Context, uuid string) (map[string]string, error) {
+	var v struct {
+		Details struct {
+			Password string `json:"password"`
+			Sections []struct {
+				Fields []struct {
+					Name  string `json:"t"`
+					Value string `json:"v"`
+				} `json:"fields"`
+			} `json:"sections"`
+			Fields []struct {
+				Name  string `json:"name"`
+				Value string `json:"value"`
+			} `json:"fields"`
+		} `json:"details"`
+	}
+	if res, err := exec.CommandContext(ctx, "op", "--cache", "get", "item", uuid).CombinedOutput(); err != nil {
+		return nil, err
+	} else if strings.Contains(string(res), "You are not currently signed in") {
+		return nil, ErrOnePasswordNotSignedIn
+	} else if err := json.Unmarshal(res, &v); err != nil {
+		return nil, err
+	} else {
+		ret := map[string]string{}
+		for _, field := range v.Details.Fields {
+			ret[field.Name] = field.Value
+		}
+		for _, section := range v.Details.Sections {
+			for _, field := range section.Fields {
+				ret[field.Name] = field.Value
+			}
+		}
+		if v.Details.Password != "" {
+			ret["password"] = v.Details.Password
+		}
+		return ret, nil
+	}
 }
 
 func onePasswordSignIn(ctx context.Context, account string) error {

@@ -4,7 +4,9 @@ go 1.16
 
 require (
 	github.com/miracl/conflate v1.2.1
+	github.com/neilotoole/errgroup v0.1.6
 	github.com/pkg/errors v0.9.1
+	github.com/pterm/pterm v0.12.33
 	github.com/sergi/go-diff v1.2.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.2.1
