@@ -21,7 +21,7 @@ linters-settings:
       - experimental
       - opinionated
   lll:
-    line-length: 150
+    line-length: 200
 
 linters:
   disable-all: true
