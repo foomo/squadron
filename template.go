@@ -195,6 +195,8 @@ func onePassword(ctx context.Context, templateVars interface{}, errorOnMissing b
 				} else {
 					onePasswordCache[cacheKey] = res
 				}
+			} else if err != nil {
+				return "", err
 			} else {
 				onePasswordCache[cacheKey] = res
 			}
@@ -226,10 +228,10 @@ func onePasswordGet(ctx context.Context, uuid string) (map[string]string, error)
 			} `json:"fields"`
 		} `json:"details"`
 	}
-	if res, err := exec.CommandContext(ctx, "op", "--cache", "get", "item", uuid).CombinedOutput(); err != nil {
-		return nil, err
-	} else if strings.Contains(string(res), "You are not currently signed in") {
+	if res, err := exec.CommandContext(ctx, "op", "--cache", "get", "item", uuid).CombinedOutput(); err != nil && strings.Contains(string(res), "You are not currently signed in") {
 		return nil, ErrOnePasswordNotSignedIn
+	} else if err != nil {
+		return nil, err
 	} else if err := json.Unmarshal(res, &v); err != nil {
 		return nil, err
 	} else {
