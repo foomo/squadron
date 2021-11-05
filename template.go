@@ -186,16 +186,15 @@ func onePassword(ctx context.Context, templateVars interface{}, errorOnMissing b
 		cacheKey := strings.Join([]string{account, uuid}, "-")
 
 		if _, ok := onePasswordCache[cacheKey]; !ok {
-			if res, err := onePasswordGet(ctx, uuid); errors.Is(err, ErrOnePasswordNotSignedIn) {
-				// retry with login
-				if err := onePasswordSignIn(ctx, account); err != nil {
-					return "", err
-				} else if res, err = onePasswordGet(ctx, uuid); err != nil {
+			if res, err := onePasswordGet(ctx, uuid); !errors.Is(err, ErrOnePasswordNotSignedIn) {
+				if err != nil {
 					return "", err
 				} else {
 					onePasswordCache[cacheKey] = res
 				}
-			} else if err != nil {
+			} else if err := onePasswordSignIn(ctx, account); err != nil {
+				return "", err
+			} else if res, err = onePasswordGet(ctx, uuid); err != nil {
 				return "", err
 			} else {
 				onePasswordCache[cacheKey] = res
