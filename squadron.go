@@ -211,28 +211,32 @@ func (sq *Squadron) generateUmbrellaChart(ctx context.Context, units map[string]
 		return err
 	}
 	logrus.Infof("running helm dependency update for chart: %v", sq.chartPath())
-	_, err := util.NewHelmCommand().UpdateDependency(ctx, sq.chartPath())
-	return err
+	if out, err := util.NewHelmCommand().UpdateDependency(ctx, sq.chartPath()); err != nil {
+		return errors.Wrap(err, out)
+	}
+	return nil
 }
 
 func (sq *Squadron) Package(ctx context.Context) error {
 	logrus.Infof("running helm package for chart: %v", sq.chartPath())
-	_, err := util.NewHelmCommand().Package(ctx, sq.chartPath(), sq.basePath)
-	return err
+	if out, err := util.NewHelmCommand().Package(ctx, sq.chartPath(), sq.basePath); err != nil {
+		return errors.Wrap(err, out)
+	}
+	return nil
 }
 
 func (sq *Squadron) Down(ctx context.Context, units map[string]*Unit, helmArgs []string) error {
 	if sq.c.Unite {
 		logrus.Infof("running helm uninstall for: %s", sq.chartPath())
 		stdErr := bytes.NewBuffer([]byte{})
-		if _, err := util.NewHelmCommand().Args("uninstall", sq.name).
+		if out, err := util.NewHelmCommand().Args("uninstall", sq.name).
 			Stderr(stdErr).
 			Stdout(os.Stdout).
 			Args("--namespace", sq.namespace).
 			Args(helmArgs...).
 			Run(ctx); err != nil &&
 			string(bytes.TrimSpace(stdErr.Bytes())) != fmt.Sprintf("Error: uninstall: Release not loaded: %s: release: not found", sq.name) {
-			return err
+			return errors.Wrap(err, out)
 		}
 	}
 	for uName := range units {
@@ -240,14 +244,14 @@ func (sq *Squadron) Down(ctx context.Context, units map[string]*Unit, helmArgs [
 		rName := fmt.Sprintf("%s-%s", sq.name, uName)
 		logrus.Infof("running helm uninstall for: %s", uName)
 		stdErr := bytes.NewBuffer([]byte{})
-		if _, err := util.NewHelmCommand().Args("uninstall", rName).
+		if out, err := util.NewHelmCommand().Args("uninstall", rName).
 			Stderr(stdErr).
 			Stdout(os.Stdout).
 			Args("--namespace", sq.namespace).
 			Args(helmArgs...).
 			Run(ctx); err != nil &&
 			string(bytes.TrimSpace(stdErr.Bytes())) != fmt.Sprintf("Error: uninstall: Release not loaded: %s: release: not found", rName) {
-			return err
+			return errors.Wrap(err, out)
 		}
 	}
 
@@ -280,7 +284,7 @@ func (sq *Squadron) Diff(ctx context.Context, units map[string]*Unit, helmArgs [
 		if strings.Contains(u.Chart.Repository, "file://") {
 			cmd.Args = append(cmd.Args, "/"+strings.TrimPrefix(u.Chart.Repository, "file://"))
 		} else {
-			cmd.Args = append(cmd.Args, u.Chart.Name, "--repo", u.Chart.Repository)
+			cmd.Args = append(cmd.Args, u.Chart.Name, "--repo", u.Chart.Repository, "--version", u.Chart.Version)
 		}
 		template, err := cmd.Output()
 		if err != nil {
@@ -299,7 +303,7 @@ func (sq *Squadron) Status(ctx context.Context, units map[string]*Unit, helmArgs
 		stdOut.WriteString("==== " + sq.name + strings.Repeat("=", 20-len(sq.name)) + "\n")
 		logrus.Infof("running helm status for chart: %s", sq.chartPath())
 		stdErr := bytes.NewBuffer([]byte{})
-		if _, err := util.NewHelmCommand().Args("status", sq.name).
+		if out, err := util.NewHelmCommand().Args("status", sq.name).
 			Stderr(stdErr).
 			Stdout(stdOut).
 			Args("--namespace", sq.namespace).
@@ -309,7 +313,7 @@ func (sq *Squadron) Status(ctx context.Context, units map[string]*Unit, helmArgs
 			stdOut.WriteString("NAME: " + sq.name + "\n")
 			stdOut.WriteString("STATUS: not installed\n")
 		} else if err != nil {
-			return err
+			return errors.Wrap(err, out)
 		}
 	}
 	for uName := range units {
@@ -318,7 +322,7 @@ func (sq *Squadron) Status(ctx context.Context, units map[string]*Unit, helmArgs
 		rName := fmt.Sprintf("%s-%s", sq.name, uName)
 		logrus.Infof("running helm status for %s", uName)
 		stdErr := bytes.NewBuffer([]byte{})
-		if _, err := util.NewHelmCommand().Args("status", rName).
+		if out, err := util.NewHelmCommand().Args("status", rName).
 			Stderr(stdErr).
 			Stdout(stdOut).
 			Args("--namespace", sq.namespace).
@@ -327,7 +331,7 @@ func (sq *Squadron) Status(ctx context.Context, units map[string]*Unit, helmArgs
 			stdOut.WriteString("NAME: " + rName + "\n")
 			stdOut.WriteString("STATUS: not installed\n")
 		} else if err != nil {
-			return err
+			return errors.Wrap(err, out)
 		}
 	}
 	fmt.Println(strings.ReplaceAll(stdOut.String(), "\\n", "\n"))
@@ -339,7 +343,7 @@ func (sq *Squadron) Up(ctx context.Context, units map[string]*Unit, helmArgs []s
 
 	if sq.c.Unite {
 		logrus.Infof("running helm upgrade for chart: %s", sq.chartPath())
-		_, err := util.NewHelmCommand().
+		if out, err := util.NewHelmCommand().
 			Stdout(os.Stdout).
 			Args("upgrade", sq.name, sq.chartPath()).
 			Args("--namespace", sq.namespace).
@@ -347,8 +351,10 @@ func (sq *Squadron) Up(ctx context.Context, units map[string]*Unit, helmArgs []s
 			Args("--description", description).
 			Args("--install").
 			Args(helmArgs...).
-			Run(ctx)
-		return err
+			Run(ctx); err != nil {
+			return errors.Wrap(err, out)
+		}
+		return nil
 	}
 	for uName, u := range units {
 		// todo use release prefix on install: squadron name or --name
@@ -367,6 +373,7 @@ func (sq *Squadron) Up(ctx context.Context, units map[string]*Unit, helmArgs []s
 		// 		return err
 		// 	}
 		// }
+		fmt.Println("")
 		logrus.Infof("running helm upgrade for %s", uName)
 		cmd := util.NewHelmCommand().
 			Stdout(os.Stdout).
@@ -380,10 +387,10 @@ func (sq *Squadron) Up(ctx context.Context, units map[string]*Unit, helmArgs []s
 		if strings.Contains(u.Chart.Repository, "file://") {
 			cmd.Args(strings.TrimPrefix(u.Chart.Repository, "file://"))
 		} else {
-			cmd.Args(u.Chart.Name, "--repo", u.Chart.Repository)
+			cmd.Args(u.Chart.Name, "--repo", u.Chart.Repository, "--version", u.Chart.Version)
 		}
-		if _, err := cmd.Run(ctx); err != nil {
-			return err
+		if out, err := cmd.Run(ctx); err != nil {
+			return errors.Wrap(err, out)
 		}
 	}
 	return nil
@@ -392,12 +399,14 @@ func (sq *Squadron) Up(ctx context.Context, units map[string]*Unit, helmArgs []s
 func (sq *Squadron) Template(ctx context.Context, units map[string]*Unit, helmArgs []string) error {
 	if sq.c.Unite {
 		logrus.Infof("running helm template for chart: %s", sq.chartPath())
-		_, err := util.NewHelmCommand().Args("template", sq.name, sq.chartPath()).
+		if out, err := util.NewHelmCommand().Args("template", sq.name, sq.chartPath()).
 			Stdout(os.Stdout).
 			Args("--namespace", sq.namespace).
 			Args(helmArgs...).
-			Run(ctx)
-		return err
+			Run(ctx); err != nil {
+			return errors.Wrap(err, out)
+		}
+		return nil
 	}
 	for uName, u := range units {
 		// todo use release prefix on install: squadron name or --name
@@ -411,10 +420,10 @@ func (sq *Squadron) Template(ctx context.Context, units map[string]*Unit, helmAr
 		if strings.Contains(u.Chart.Repository, "file://") {
 			cmd.Args("/" + strings.TrimPrefix(u.Chart.Repository, "file://"))
 		} else {
-			cmd.Args(u.Chart.Name, "--repo", u.Chart.Repository)
+			cmd.Args(u.Chart.Name, "--repo", u.Chart.Repository, "--version", u.Chart.Version)
 		}
-		if _, err := cmd.Run(ctx); err != nil {
-			return err
+		if out, err := cmd.Run(ctx); err != nil {
+			return errors.Wrap(err, out)
 		}
 	}
 	return nil

@@ -3,9 +3,10 @@ package actions
 import (
 	"context"
 
-	"github.com/neilotoole/errgroup"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
+	"golang.org/x/sync/semaphore"
 
 	"github.com/foomo/squadron"
 )
@@ -53,11 +54,17 @@ func build(ctx context.Context, args []string, cwd string, files []string, push 
 	}
 
 	{
-		wg, wgCtx := errgroup.WithContextN(ctx, parallel, len(units))
+		sem := semaphore.NewWeighted(int64(parallel))
+		wg, wgCtx := errgroup.WithContext(ctx)
+
 		for n, u := range units {
 			name := n
 			unit := u
 			wg.Go(func() error {
+				if err := sem.Acquire(wgCtx, 1); err != nil {
+					return err
+				}
+				defer sem.Release(1)
 				if out, err := unit.Build(wgCtx, sq.Name(), name); err != nil {
 					return errors.Wrap(err, out)
 				}
@@ -71,11 +78,16 @@ func build(ctx context.Context, args []string, cwd string, files []string, push 
 	}
 
 	if push {
-		wg, wgCtx := errgroup.WithContextN(ctx, parallel, len(units))
+		sem := semaphore.NewWeighted(int64(parallel))
+		wg, wgCtx := errgroup.WithContext(ctx)
 		for n, u := range units {
 			name := n
 			unit := u
 			wg.Go(func() error {
+				if err := sem.Acquire(wgCtx, 1); err != nil {
+					return err
+				}
+				defer sem.Release(1)
 				if out, err := unit.Push(wgCtx, sq.Name(), name); err != nil {
 					return errors.Wrap(err, out)
 				}

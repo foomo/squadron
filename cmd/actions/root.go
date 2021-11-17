@@ -60,7 +60,7 @@ func init() {
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		pterm.FgRed.Println(err.Error())
+		pterm.Error.Println(err.Error())
 		os.Exit(1)
 	}
 }
