@@ -251,7 +251,7 @@ func onePasswordGet(ctx context.Context, uuid string) (map[string]string, error)
 }
 
 func onePasswordSignIn(ctx context.Context, account string) error {
-	fmt.Println("Your templates includes a call to 1Password, please sign to retrieve your session token:")
+	fmt.Println("Your templates includes a call to 1Password, please sign in to retrieve your session token:")
 
 	// create command
 	cmd := exec.CommandContext(ctx, "op", "signin", account, "--raw")
