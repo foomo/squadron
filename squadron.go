@@ -102,10 +102,6 @@ func (sq *Squadron) MergeConfigFiles() error {
 	if err != nil {
 		return errors.Wrap(err, "failed to conflate files")
 	}
-	var data interface{}
-	if err := mergedFiles.Unmarshal(&data); err != nil {
-		return errors.Wrap(err, "failed to unmarshal data")
-	}
 	fileBytes, err := mergedFiles.MarshalYAML()
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal yaml")
