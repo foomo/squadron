@@ -41,6 +41,7 @@ func executeFileTemplate(ctx context.Context, text string, templateVars interfac
 	templateFunctions["indent"] = indent
 	templateFunctions["file"] = file(ctx, templateVars, errorOnMissing)
 	templateFunctions["git"] = git(ctx)
+	templateFunctions["quote"] = quote
 
 	tpl, err := template.New("squadron").Delims("<%", "%>").Funcs(templateFunctions).Parse(text)
 	if err != nil {
@@ -133,6 +134,10 @@ func git(ctx context.Context) func(action string) (string, error) {
 func indent(spaces int, v string) string {
 	pad := strings.Repeat(" ", spaces)
 	return strings.ReplaceAll(v, "\n", "\n"+pad)
+}
+
+func quote(v string) string {
+	return "\"" + v + "\""
 }
 
 func render(name, text string, data interface{}, errorOnMissing bool) (string, error) {

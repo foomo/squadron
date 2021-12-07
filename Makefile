@@ -37,7 +37,6 @@ lint:
 lint.fix:
 	golangci-lint run --fix
 
-
 ## === Utils ===
 
 ## Show help text
