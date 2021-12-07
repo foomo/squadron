@@ -139,7 +139,7 @@ func (c *Cmd) Run(ctx context.Context) (string, error) {
 	logrus.Debugf("executing %q", cmd.String())
 
 	combinedBuf := new(bytes.Buffer)
-	traceWriter := logrus.New().WriterLevel(logrus.TraceLevel)
+	traceWriter := logrus.StandardLogger().WriterLevel(logrus.TraceLevel)
 
 	cmd.Stdout = io.MultiWriter(append(c.stdoutWriters, combinedBuf, traceWriter)...)
 	cmd.Stderr = io.MultiWriter(append(c.stderrWriters, combinedBuf, traceWriter)...)
