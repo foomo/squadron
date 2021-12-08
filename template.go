@@ -16,7 +16,6 @@ import (
 
 	"github.com/1Password/connect-sdk-go/connect"
 	"github.com/1Password/connect-sdk-go/onepassword"
-
 	"github.com/miracl/conflate"
 	"github.com/pkg/errors"
 )
@@ -158,8 +157,10 @@ func render(name, text string, data interface{}, errorOnMissing bool) (string, e
 	return out.String(), nil
 }
 
-var onePasswordCache map[string]map[string]string
-var onePasswordUUID = regexp.MustCompile(`^[a-z0-9]{26}$`)
+var (
+	onePasswordCache map[string]map[string]string
+	onePasswordUUID  = regexp.MustCompile(`^[a-z0-9]{26}$`)
+)
 
 func onePassword(ctx context.Context, templateVars interface{}, errorOnMissing bool) func(account, vaultUUID, itemUUID, field string) (string, error) {
 	if onePasswordCache == nil {
