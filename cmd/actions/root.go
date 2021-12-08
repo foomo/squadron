@@ -19,7 +19,9 @@ var (
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			if flagDebug {
+			if flagSilent {
+				logrus.SetLevel(logrus.ErrorLevel)
+			} else if flagDebug {
 				logrus.SetLevel(logrus.TraceLevel)
 			} else if flagVerbose {
 				logrus.SetLevel(logrus.InfoLevel)
@@ -35,6 +37,7 @@ var (
 	}
 
 	cwd           string
+	flagSilent    bool
 	flagDebug     bool
 	flagVerbose   bool
 	flagNoRender  bool
@@ -47,6 +50,7 @@ var (
 )
 
 func init() {
+	rootCmd.PersistentFlags().BoolVarP(&flagSilent, "silent", "s", false, "only show errors")
 	rootCmd.PersistentFlags().BoolVarP(&flagDebug, "debug", "d", false, "show all output")
 	rootCmd.PersistentFlags().BoolVarP(&flagVerbose, "verbose", "v", false, "show more output")
 	rootCmd.PersistentFlags().StringSliceVarP(&flagFiles, "file", "f", []string{"squadron.yaml"}, "specify alternative squadron files")

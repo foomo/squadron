@@ -10,8 +10,12 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"text/template"
+
+	"github.com/1Password/connect-sdk-go/connect"
+	"github.com/1Password/connect-sdk-go/onepassword"
 
 	"github.com/miracl/conflate"
 	"github.com/pkg/errors"
@@ -155,12 +159,13 @@ func render(name, text string, data interface{}, errorOnMissing bool) (string, e
 }
 
 var onePasswordCache map[string]map[string]string
+var onePasswordUUID = regexp.MustCompile(`^[a-z0-9]{26}$`)
 
-func onePassword(ctx context.Context, templateVars interface{}, errorOnMissing bool) func(account, uuid, field string) (string, error) {
+func onePassword(ctx context.Context, templateVars interface{}, errorOnMissing bool) func(account, vaultUUID, itemUUID, field string) (string, error) {
 	if onePasswordCache == nil {
 		onePasswordCache = map[string]map[string]string{}
 	}
-	return func(account, uuid, field string) (string, error) {
+	return func(account, vaultUUID, itemUUID, field string) (string, error) {
 		// validate command
 		if _, err := exec.LookPath("op"); err != nil {
 			fmt.Println("Your templates includes a call to 1Password, please install it:")
@@ -176,10 +181,10 @@ func onePassword(ctx context.Context, templateVars interface{}, errorOnMissing b
 		}
 
 		// render uuid & field params
-		if value, err := render("op", uuid, templateVars, errorOnMissing); err != nil {
+		if value, err := render("op", itemUUID, templateVars, errorOnMissing); err != nil {
 			return "", err
 		} else {
-			uuid = value
+			itemUUID = value
 		}
 		if value, err := render("op", field, templateVars, errorOnMissing); err != nil {
 			return "", err
@@ -188,21 +193,35 @@ func onePassword(ctx context.Context, templateVars interface{}, errorOnMissing b
 		}
 
 		// create cache key
-		cacheKey := strings.Join([]string{account, uuid}, "-")
+		cacheKey := strings.Join([]string{account, vaultUUID, itemUUID}, "#")
 
-		if _, ok := onePasswordCache[cacheKey]; !ok {
-			if res, err := onePasswordGet(ctx, uuid); !errors.Is(err, ErrOnePasswordNotSignedIn) {
+		if mode := os.Getenv("OP_MODE"); mode == "ci" {
+			if _, ok := onePasswordCache[cacheKey]; !ok {
+				client, err := connect.NewClientFromEnvironment()
 				if err != nil {
+					return "", err
+				}
+				if res, err := onePasswordCIGet(client, vaultUUID, itemUUID); err != nil {
 					return "", err
 				} else {
 					onePasswordCache[cacheKey] = res
 				}
-			} else if err := onePasswordSignIn(ctx, account); err != nil {
-				return "", err
-			} else if res, err = onePasswordGet(ctx, uuid); err != nil {
-				return "", err
-			} else {
-				onePasswordCache[cacheKey] = res
+			}
+		} else {
+			if _, ok := onePasswordCache[cacheKey]; !ok {
+				if res, err := onePasswordGet(ctx, itemUUID); !errors.Is(err, ErrOnePasswordNotSignedIn) {
+					if err != nil {
+						return "", err
+					} else {
+						onePasswordCache[cacheKey] = res
+					}
+				} else if err := onePasswordSignIn(ctx, account); err != nil {
+					return "", err
+				} else if res, err = onePasswordGet(ctx, itemUUID); err != nil {
+					return "", err
+				} else {
+					onePasswordCache[cacheKey] = res
+				}
 			}
 		}
 
@@ -216,13 +235,43 @@ func onePassword(ctx context.Context, templateVars interface{}, errorOnMissing b
 
 var ErrOnePasswordNotSignedIn = errors.New("not signed in")
 
+func onePasswordCIGet(client connect.Client, vaultUUID, itemUUID string) (map[string]string, error) {
+	var item *onepassword.Item
+	if onePasswordUUID.Match([]byte(itemUUID)) {
+		if v, err := client.GetItem(itemUUID, vaultUUID); err != nil {
+			return nil, err
+		} else {
+			item = v
+		}
+	} else {
+		if v, err := client.GetItemByTitle(itemUUID, vaultUUID); err != nil {
+			return nil, err
+		} else {
+			item = v
+		}
+	}
+
+	ret := map[string]string{}
+	for _, f := range item.Fields {
+		if f.Section != nil {
+			ret[f.Section.Label+"."+f.Label] = f.Value
+		} else {
+			ret[f.Label] = f.Value
+		}
+	}
+
+	return ret, nil
+}
+
 func onePasswordGet(ctx context.Context, uuid string) (map[string]string, error) {
 	var v struct {
 		Details struct {
+			Notes    string `json:"notesPlain"`
 			Password string `json:"password"`
 			Sections []struct {
+				Title  string `json:"title"`
 				Fields []struct {
-					Name  string `json:"t"`
+					Title string `json:"t"`
 					Value string `json:"v"`
 				} `json:"fields"`
 			} `json:"sections"`
@@ -245,11 +294,14 @@ func onePasswordGet(ctx context.Context, uuid string) (map[string]string, error)
 		}
 		for _, section := range v.Details.Sections {
 			for _, field := range section.Fields {
-				ret[field.Name] = field.Value
+				ret[section.Title+"."+field.Title] = field.Value
 			}
 		}
 		if v.Details.Password != "" {
 			ret["password"] = v.Details.Password
+		}
+		if v.Details.Notes != "" {
+			ret["notes"] = v.Details.Notes
 		}
 		return ret, nil
 	}

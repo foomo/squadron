@@ -3,6 +3,7 @@ module github.com/foomo/squadron
 go 1.16
 
 require (
+	github.com/1Password/connect-sdk-go v1.2.0
 	github.com/miracl/conflate v1.2.1
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.33
