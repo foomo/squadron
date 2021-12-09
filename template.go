@@ -254,11 +254,7 @@ func onePasswordCIGet(client connect.Client, vaultUUID, itemUUID string) (map[st
 
 	ret := map[string]string{}
 	for _, f := range item.Fields {
-		if f.Section != nil {
-			ret[f.Section.Label+"."+f.Label] = f.Value
-		} else {
-			ret[f.Label] = f.Value
-		}
+		ret[f.Label] = f.Value
 	}
 
 	return ret, nil
@@ -295,7 +291,7 @@ func onePasswordGet(ctx context.Context, uuid string) (map[string]string, error)
 		}
 		for _, section := range v.Details.Sections {
 			for _, field := range section.Fields {
-				ret[section.Title+"."+field.Title] = field.Value
+				ret[field.Title] = field.Value
 			}
 		}
 		if v.Details.Password != "" {
