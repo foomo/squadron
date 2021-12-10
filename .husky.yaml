@@ -1,9 +1,9 @@
 hooks:
   pre-commit:
     - golangci-lint run
-    - bin/husky lint-staged
+    - husky lint-staged
   commit-msg:
-    - bin/husky lint-commit
+    - husky lint-commit
 
 lint-staged:
   '*.go':
