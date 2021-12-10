@@ -21,6 +21,8 @@ func init() {
 	upCmd.Flags().BoolVarP(&flagPush, "push", "p", false, "pushes units to the registry")
 	upCmd.Flags().BoolVar(&flagDiff, "diff", false, "preview upgrade as a coloured diff")
 	upCmd.Flags().IntVar(&flagParallel, "parallel", 1, "run command in parallel")
+	upCmd.Flags().StringVar(&flagBuildArgs, "build-args", "", "additional docker buildx build args")
+	upCmd.Flags().StringVar(&flagPushArgs, "push-args", "", "additional docker push args")
 }
 
 var upCmd = &cobra.Command{
@@ -73,7 +75,7 @@ func up(ctx context.Context, args []string, cwd, namespace string, build, push, 
 					return err
 				}
 				defer sem.Release(1)
-				if out, err := unit.Build(wgCtx, sq.Name(), name); err != nil {
+				if out, err := unit.Build(wgCtx, sq.Name(), name, strings.Split(flagBuildArgs, " ")); err != nil {
 					return errors.Wrap(err, out)
 				}
 				return nil
@@ -96,7 +98,7 @@ func up(ctx context.Context, args []string, cwd, namespace string, build, push, 
 					return err
 				}
 				defer sem.Release(1)
-				if out, err := unit.Push(wgCtx, sq.Name(), name); err != nil {
+				if out, err := unit.Push(wgCtx, sq.Name(), name, strings.Split(flagPushArgs, " ")); err != nil {
 					return errors.Wrap(err, out)
 				}
 				return nil

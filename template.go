@@ -101,14 +101,14 @@ func base64(v string) string {
 	return b64.StdEncoding.EncodeToString([]byte(v))
 }
 
-func replace(in interface{}) {
+func toSnakeCaseKeys(in interface{}) {
 	if value, ok := in.(map[string]interface{}); ok {
 		for k, v := range value {
 			if strings.Contains(k, "-") {
 				value[strings.ReplaceAll(k, "-", "_")] = v
 				delete(value, k)
 			}
-			replace(v)
+			toSnakeCaseKeys(v)
 		}
 	}
 }
@@ -140,7 +140,7 @@ func indent(spaces int, v string) string {
 }
 
 func quote(v string) string {
-	return "\"" + v + "\""
+	return "'" + v + "'"
 }
 
 func render(name, text string, data interface{}, errorOnMissing bool) (string, error) {

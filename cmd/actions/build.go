@@ -2,6 +2,7 @@ package actions
 
 import (
 	"context"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -14,6 +15,8 @@ import (
 func init() {
 	buildCmd.Flags().BoolVarP(&flagPush, "push", "p", false, "pushes built squadron units to the registry")
 	buildCmd.Flags().IntVar(&flagParallel, "parallel", 1, "run command in parallel")
+	buildCmd.Flags().StringVar(&flagBuildArgs, "build-args", "", "additional docker buildx build args")
+	buildCmd.Flags().StringVar(&flagPushArgs, "push-args", "", "additional docker push args")
 }
 
 var buildCmd = &cobra.Command{
@@ -65,7 +68,7 @@ func build(ctx context.Context, args []string, cwd string, files []string, push 
 					return err
 				}
 				defer sem.Release(1)
-				if out, err := unit.Build(wgCtx, sq.Name(), name); err != nil {
+				if out, err := unit.Build(wgCtx, sq.Name(), name, strings.Split(flagBuildArgs, " ")); err != nil {
 					return errors.Wrap(err, out)
 				}
 				return nil
@@ -88,7 +91,7 @@ func build(ctx context.Context, args []string, cwd string, files []string, push 
 					return err
 				}
 				defer sem.Release(1)
-				if out, err := unit.Push(wgCtx, sq.Name(), name); err != nil {
+				if out, err := unit.Push(wgCtx, sq.Name(), name, strings.Split(flagPushArgs, " ")); err != nil {
 					return errors.Wrap(err, out)
 				}
 				return nil

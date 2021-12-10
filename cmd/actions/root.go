@@ -45,6 +45,8 @@ var (
 	flagBuild     bool
 	flagPush      bool
 	flagParallel  int
+	flagBuildArgs string
+	flagPushArgs  string
 	flagDiff      bool
 	flagFiles     []string
 )

@@ -1,9 +1,7 @@
 package util
 
 import (
-	"context"
 	"fmt"
-	"os"
 )
 
 type DockerCmd struct {
@@ -16,14 +14,9 @@ func NewDockerCommand() *DockerCmd {
 }
 
 func (c *DockerCmd) Build(workDir string) *Cmd {
-	args := []string{"build"}
-	if platform := os.Getenv("SQUADRON_DOCKER_BUILDX"); platform != "" {
-		args = []string{"buildx", "build", "--platform", platform}
-	}
-	args = append(args, ".")
-	return c.Cwd(workDir).Args(args...)
+	return c.Cwd(workDir).Args("buildx", "build", ".")
 }
 
-func (c *DockerCmd) Push(ctx context.Context, image, tag string) (string, error) {
-	return c.Args("push", fmt.Sprintf("%s:%s", image, tag)).Run(ctx)
+func (c *DockerCmd) Push(image, tag string) *Cmd {
+	return c.Args("push", fmt.Sprintf("%s:%s", image, tag))
 }

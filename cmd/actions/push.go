@@ -2,6 +2,7 @@ package actions
 
 import (
 	"context"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -15,6 +16,8 @@ func init() {
 	pushCmd.Flags().StringVarP(&flagNamespace, "namespace", "n", "default", "specifies the namespace")
 	pushCmd.Flags().BoolVarP(&flagBuild, "build", "b", false, "builds or rebuilds units")
 	pushCmd.Flags().IntVar(&flagParallel, "parallel", 1, "run command in parallel")
+	pushCmd.Flags().StringVar(&flagBuildArgs, "build-args", "", "additional docker buildx build args")
+	pushCmd.Flags().StringVar(&flagPushArgs, "push-args", "", "additional docker push args")
 }
 
 var pushCmd = &cobra.Command{
@@ -65,7 +68,7 @@ func push(ctx context.Context, args []string, cwd, namespace string, build bool,
 					return err
 				}
 				defer sem.Release(1)
-				if out, err := unit.Build(wgCtx, sq.Name(), name); err != nil {
+				if out, err := unit.Build(wgCtx, sq.Name(), name, strings.Split(flagBuildArgs, " ")); err != nil {
 					return errors.Wrap(err, out)
 				}
 				return nil
@@ -89,7 +92,7 @@ func push(ctx context.Context, args []string, cwd, namespace string, build bool,
 					return err
 				}
 				defer sem.Release(1)
-				if out, err := unit.Push(wgCtx, sq.Name(), name); err != nil {
+				if out, err := unit.Push(wgCtx, sq.Name(), name, strings.Split(flagPushArgs, " ")); err != nil {
 					return errors.Wrap(err, out)
 				}
 				return nil

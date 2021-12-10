@@ -17,13 +17,13 @@ type Unit struct {
 // ------------------------------------------------------------------------------------------------
 
 // Build ...
-func (u *Unit) Build(ctx context.Context, squadron, unit string) (string, error) {
+func (u *Unit) Build(ctx context.Context, squadron, unit string, args []string) (string, error) {
 	var i int
 	for _, build := range u.Builds {
 		i++
 		pterm.Info.Printfln("[%d/%d] Building %s/%s", i, len(u.Builds), squadron, unit)
 		pterm.FgGray.Printfln("└ %s:%s", build.Image, build.Tag)
-		if out, err := build.Build(ctx); err != nil {
+		if out, err := build.Build(ctx, args); err != nil {
 			pterm.Error.Printfln("[%d/%d] Failed to build squadron unit %s/%s", i, len(u.Builds), squadron, unit)
 			pterm.FgGray.Printfln("└ %s:%s", build.Image, build.Tag)
 			return out, err
@@ -33,13 +33,13 @@ func (u *Unit) Build(ctx context.Context, squadron, unit string) (string, error)
 }
 
 // Push ...
-func (u *Unit) Push(ctx context.Context, squadron, unit string) (string, error) {
+func (u *Unit) Push(ctx context.Context, squadron, unit string, args []string) (string, error) {
 	var i int
 	for _, build := range u.Builds {
 		i++
 		pterm.Info.Printfln("[%d/%d] Pushing %s/%s", i, len(u.Builds), squadron, unit)
 		pterm.FgGray.Printfln("└ %s:%s", build.Image, build.Tag)
-		if out, err := build.Push(ctx); err != nil {
+		if out, err := build.Push(ctx, args); err != nil {
 			pterm.Error.Printfln("[%d/%d] Failed to push %s/%s", i, len(u.Builds), squadron, unit)
 			pterm.FgGray.Printfln("└ %s:%s", build.Image, build.Tag)
 			return out, err

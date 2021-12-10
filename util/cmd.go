@@ -61,6 +61,14 @@ func (c *Cmd) Arg(name, v string) *Cmd {
 	return c
 }
 
+func (c *Cmd) BoolArg(name string, v bool) *Cmd {
+	if name == "" || !v {
+		return c
+	}
+	c.command = append(c.command, name)
+	return c
+}
+
 func (c *Cmd) ListArg(name string, vs []string) *Cmd {
 	if name == "" {
 		return c

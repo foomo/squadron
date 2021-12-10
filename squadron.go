@@ -33,15 +33,6 @@ const (
 	errHelmReleaseNotFound = "Error: release: not found"
 )
 
-type Configuration struct {
-	Name    string                 `yaml:"name,omitempty"`
-	Version string                 `yaml:"version,omitempty"`
-	Prefix  string                 `yaml:"prefix,omitempty"`
-	Unite   bool                   `yaml:"unite,omitempty"`
-	Global  map[string]interface{} `yaml:"global,omitempty"`
-	Units   map[string]*Unit       `yaml:"squadron,omitempty"`
-}
-
 type Squadron struct {
 	name      string
 	basePath  string
@@ -71,28 +62,6 @@ func (sq *Squadron) GetConfig() Configuration {
 
 func (sq *Squadron) GetConfigYAML() string {
 	return sq.config
-}
-
-// UnmarshalYAML ...
-func (c *Configuration) UnmarshalYAML(value *yaml.Node) error {
-	if value.Tag == TagMap {
-		type wrapper Configuration
-		err := value.Decode((*wrapper)(c))
-		if err == nil {
-			// if the decode is successful, remove units that are nil
-			c.removeNilUnits()
-		}
-		return err
-	}
-	return fmt.Errorf("unsupported node tag type for %T: %q", c, value.Tag)
-}
-
-func (c *Configuration) removeNilUnits() {
-	for uName, u := range c.Units {
-		if u == nil {
-			delete(c.Units, uName)
-		}
-	}
 }
 
 func (sq *Squadron) MergeConfigFiles() error {
@@ -142,36 +111,40 @@ func (sq *Squadron) RenderConfig(ctx context.Context) error {
 	// execute again with loaded template vars
 	tv = TemplateVars{}
 	if value, ok := vars["global"]; ok {
-		replace(value)
+		toSnakeCaseKeys(value)
 		tv.add("Global", value)
 	}
 	if value, ok := vars["squadron"]; ok {
-		replace(value)
+		toSnakeCaseKeys(value)
 		tv.add("Squadron", value)
 	}
+	logrus.Debug("executing file template")
 	// execute without errors to get existing values
 	out, err := executeFileTemplate(ctx, sq.config, tv, false)
 	if err != nil {
 		return errors.Wrap(err, "failed to execute initial file template")
 	}
-
+	logrus.Debug("unmarshalling vars")
 	if err := yaml.Unmarshal(out, &vars); err != nil {
 		return err
 	}
 	// execute again with loaded template vars
 	tv = TemplateVars{}
 	if value, ok := vars["global"]; ok {
-		replace(value)
+		toSnakeCaseKeys(value)
 		tv.add("Global", value)
 	}
 	if value, ok := vars["squadron"]; ok {
-		replace(value)
+		toSnakeCaseKeys(value)
 		tv.add("Squadron", value)
 	}
+
+	logrus.Debug("executing file template")
 	out, err = executeFileTemplate(ctx, sq.config, tv, true)
 	if err != nil {
 		return errors.Wrap(err, "failed to execute second file template")
 	}
+	logrus.Debug("unmarshalling vars")
 	if err := yaml.Unmarshal(out, &sq.c); err != nil {
 		return err
 	}
