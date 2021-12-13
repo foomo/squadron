@@ -168,14 +168,13 @@ func onePassword(ctx context.Context, templateVars interface{}, errorOnMissing b
 	}
 	return func(account, vaultUUID, itemUUID, field string) (string, error) {
 		// validate command
-		if _, err := exec.LookPath("op"); err != nil {
+		if mode := os.Getenv("OP_MODE"); mode == "ci" {
+			// do nothing
+		} else if _, err := exec.LookPath("op"); err != nil {
 			fmt.Println("Your templates includes a call to 1Password, please install it:")
 			fmt.Println("https://support.1password.com/command-line-getting-started/#set-up-the-command-line-tool")
 			return "", err
-		}
-
-		// validate session
-		if os.Getenv(fmt.Sprintf("OP_SESSION_%s", account)) == "" {
+		} else if os.Getenv(fmt.Sprintf("OP_SESSION_%s", account)) == "" {
 			if err := onePasswordSignIn(ctx, account); err != nil {
 				return "", err
 			}
@@ -198,11 +197,9 @@ func onePassword(ctx context.Context, templateVars interface{}, errorOnMissing b
 
 		if mode := os.Getenv("OP_MODE"); mode == "ci" {
 			if _, ok := onePasswordCache[cacheKey]; !ok {
-				client, err := connect.NewClientFromEnvironment()
-				if err != nil {
+				if client, err := connect.NewClientFromEnvironment(); err != nil {
 					return "", err
-				}
-				if res, err := onePasswordCIGet(client, vaultUUID, itemUUID); err != nil {
+				} else if res, err := onePasswordCIGet(client, vaultUUID, itemUUID); err != nil {
 					return "", err
 				} else {
 					onePasswordCache[cacheKey] = res
