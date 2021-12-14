@@ -37,6 +37,7 @@ func (tv *TemplateVars) add(name string, value interface{}) {
 func executeFileTemplate(ctx context.Context, text string, templateVars interface{}, errorOnMissing bool) ([]byte, error) {
 	templateFunctions := template.FuncMap{}
 	templateFunctions["env"] = env
+	templateFunctions["envDefault"] = envDefault
 	templateFunctions["op"] = onePassword(ctx, templateVars, errorOnMissing)
 	templateFunctions["base64"] = base64
 	templateFunctions["default"] = defaultValue
@@ -61,11 +62,19 @@ func executeFileTemplate(ctx context.Context, text string, templateVars interfac
 }
 
 func env(name string) (string, error) {
-	value := os.Getenv(name)
-	if value == "" {
+	if value := os.Getenv(name); value == "" {
 		return "", fmt.Errorf("env variable %q was empty", name)
+	} else {
+		return value, nil
 	}
-	return value, nil
+}
+
+func envDefault(name, fallback string) (string, error) {
+	if value := os.Getenv(name); value == "" {
+		return fallback, nil
+	} else {
+		return value, nil
+	}
 }
 
 func file(ctx context.Context, templateVars interface{}, errorOnMissing bool) func(v string) (string, error) {
@@ -207,7 +216,7 @@ func onePassword(ctx context.Context, templateVars interface{}, errorOnMissing b
 			}
 		} else {
 			if _, ok := onePasswordCache[cacheKey]; !ok {
-				if res, err := onePasswordGet(ctx, itemUUID); !errors.Is(err, ErrOnePasswordNotSignedIn) {
+				if res, err := onePasswordGet(ctx, vaultUUID, itemUUID); !errors.Is(err, ErrOnePasswordNotSignedIn) {
 					if err != nil {
 						return "", err
 					} else {
@@ -215,7 +224,7 @@ func onePassword(ctx context.Context, templateVars interface{}, errorOnMissing b
 					}
 				} else if err := onePasswordSignIn(ctx, account); err != nil {
 					return "", err
-				} else if res, err = onePasswordGet(ctx, itemUUID); err != nil {
+				} else if res, err = onePasswordGet(ctx, vaultUUID, itemUUID); err != nil {
 					return "", err
 				} else {
 					onePasswordCache[cacheKey] = res
@@ -257,9 +266,10 @@ func onePasswordCIGet(client connect.Client, vaultUUID, itemUUID string) (map[st
 	return ret, nil
 }
 
-func onePasswordGet(ctx context.Context, uuid string) (map[string]string, error) {
+func onePasswordGet(ctx context.Context, vaultUUID string, itemUUID string) (map[string]string, error) {
 	var v struct {
-		Details struct {
+		VaultUUID string `json:"vaultUuid"`
+		Details   struct {
 			Notes    string `json:"notesPlain"`
 			Password string `json:"password"`
 			Sections []struct {
@@ -275,12 +285,14 @@ func onePasswordGet(ctx context.Context, uuid string) (map[string]string, error)
 			} `json:"fields"`
 		} `json:"details"`
 	}
-	if res, err := exec.CommandContext(ctx, "op", "--cache", "get", "item", uuid).CombinedOutput(); err != nil && strings.Contains(string(res), "You are not currently signed in") {
+	if res, err := exec.CommandContext(ctx, "op", "--cache", "get", "item", itemUUID).CombinedOutput(); err != nil && strings.Contains(string(res), "You are not currently signed in") {
 		return nil, ErrOnePasswordNotSignedIn
 	} else if err != nil {
 		return nil, err
 	} else if err := json.Unmarshal(res, &v); err != nil {
 		return nil, err
+	} else if v.VaultUUID != vaultUUID {
+		return nil, errors.Errorf("wrong vault UUID %s for item %s", vaultUUID, itemUUID)
 	} else {
 		ret := map[string]string{}
 		for _, field := range v.Details.Fields {
