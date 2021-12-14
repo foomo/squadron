@@ -124,6 +124,11 @@ func (sq *Squadron) RenderConfig(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to execute initial file template")
 	}
+	// re-execute for rendering copied values
+	out, err = executeFileTemplate(ctx, string(out), tv, false)
+	if err != nil {
+		return errors.Wrap(err, "failed to execute initial file template")
+	}
 	logrus.Debug("unmarshalling vars")
 	if err := yaml.Unmarshal(out, &vars); err != nil {
 		return err
@@ -249,7 +254,13 @@ func (sq *Squadron) Diff(ctx context.Context, units map[string]*Unit, helmArgs [
 		if err != nil && string(bytes.TrimSpace(manifest)) != errHelmReleaseNotFound {
 			return "", err
 		}
-		cmd := exec.CommandContext(ctx, "helm", "upgrade", rName, "--install", "--namespace", sq.namespace, "-f", path.Join(sq.chartPath(), uName+".yaml"), "--dry-run")
+		cmd := exec.CommandContext(ctx, "helm", "upgrade", rName,
+			"--install",
+			"--namespace", sq.namespace,
+			"-f", path.Join(sq.chartPath(), uName+".yaml"),
+			"--set", fmt.Sprintf("squadron=%s,unit=%s", sq.name, uName),
+			"--dry-run",
+		)
 		if strings.Contains(u.Chart.Repository, "file://") {
 			cmd.Args = append(cmd.Args, "/"+strings.TrimPrefix(u.Chart.Repository, "file://"))
 		} else {
@@ -347,6 +358,7 @@ func (sq *Squadron) Up(ctx context.Context, units map[string]*Unit, helmArgs []s
 		cmd := util.NewHelmCommand().
 			Stdout(os.Stdout).
 			Args("upgrade", rName, "--install").
+			Args("--set", fmt.Sprintf("squadron=%s,unit=%s", sq.name, uName)).
 			Args("--description", description).
 			Args("--namespace", sq.namespace).
 			Args("--dependency-update").
@@ -384,6 +396,7 @@ func (sq *Squadron) Template(ctx context.Context, units map[string]*Unit, helmAr
 		cmd := util.NewHelmCommand().Args("template", rName).
 			Stdout(os.Stdout).
 			Args("--namespace", sq.namespace).
+			Args("--set", fmt.Sprintf("squadron=%s,unit=%s", sq.name, uName)).
 			Args("-f", path.Join(sq.chartPath(), uName+".yaml")).
 			Args(helmArgs...)
 		if strings.Contains(u.Chart.Repository, "file://") {
