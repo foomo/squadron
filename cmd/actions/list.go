@@ -8,6 +8,12 @@ import (
 	"github.com/foomo/squadron"
 )
 
+var flagPrefixSquadron bool
+
+func init() {
+	listCmd.Flags().BoolVar(&flagPrefixSquadron, "prefix-squadron", false, "add squadron prefix")
+}
+
 var listCmd = &cobra.Command{
 	Use:     "list",
 	Short:   "list squadron units",
@@ -26,7 +32,11 @@ func list(cwd string, files []string) error {
 	}
 
 	for name := range sq.GetConfig().Units {
-		fmt.Println(name)
+		if flagPrefixSquadron {
+			fmt.Printf("%s/%s\n", sq.Name(), name)
+		} else {
+			fmt.Println(name)
+		}
 	}
 
 	return nil
