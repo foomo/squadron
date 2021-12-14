@@ -13,6 +13,8 @@ linters-settings:
       - name: indent-error-flow
         disabled: true
   gocritic:
+    disabled-checks:
+      - ifElseChain
     enabled-tags:
       - diagnostic
       - style
