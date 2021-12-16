@@ -47,7 +47,7 @@ func executeFileTemplate(ctx context.Context, text string, templateVars interfac
 	templateFunctions["git"] = git(ctx)
 	templateFunctions["quote"] = quote
 
-	tpl, err := template.New("squadron").Delims("<%", "%>").Funcs(templateFunctions).Parse(text)
+	tpl, err := template.New("squadron").Delims("<% ", " %>").Funcs(templateFunctions).Parse(text)
 	if err != nil {
 		return nil, err
 	}
