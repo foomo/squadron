@@ -18,7 +18,8 @@ const (
 type Build struct {
 	Args         []string `yaml:"args,omitempty"`
 	Builder      string   `yaml:"builder,omitempty"`
-	CacheFrom    []string `yaml:"cache_from,omitempty"`
+	CacheFrom    string   `yaml:"cache_from,omitempty"`
+	CacheTo      string   `yaml:"cache_to,omitempty"`
 	Context      string   `yaml:"context,omitempty"`
 	Dockerfile   string   `yaml:"dockerfile,omitempty"`
 	ExtraHosts   []string `yaml:"extra_hosts,omitempty"`
@@ -51,7 +52,8 @@ func (b *Build) Build(ctx context.Context, args []string) (string, error) {
 		ListArg("--add-host", b.ExtraHosts).
 		ListArg("--build-arg", b.Args).
 		Arg("--builder", b.Builder).
-		ListArg("--cache-from", b.CacheFrom).
+		Arg("--cache-from", b.CacheFrom).
+		Arg("--cache-to", b.CacheTo).
 		Arg("--file", b.Dockerfile).
 		Arg("--iidfile", b.IIDFile).
 		ListArg("--label", b.Labels).
