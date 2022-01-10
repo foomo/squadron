@@ -12,6 +12,7 @@ import (
 
 	"github.com/miracl/conflate"
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/sirupsen/logrus"
 	yamlv2 "gopkg.in/yaml.v2"
@@ -66,7 +67,8 @@ func (sq *Squadron) GetConfigYAML() string {
 
 func (sq *Squadron) MergeConfigFiles() error {
 	logrus.Info("merging config files")
-	logrus.WithField("files", sq.files).Debug("using files")
+	pterm.Debug.Println(strings.Join(append([]string{"using files"}, sq.files...), "\n└ "))
+
 	mergedFiles, err := conflate.FromFiles(sq.files...)
 	if err != nil {
 		return errors.Wrap(err, "failed to conflate files")
@@ -118,21 +120,29 @@ func (sq *Squadron) RenderConfig(ctx context.Context) error {
 		toSnakeCaseKeys(value)
 		tv.add("Squadron", value)
 	}
-	logrus.Debug("executing file template")
+
 	// execute without errors to get existing values
+	pterm.Debug.Println("executing file template")
+	// pterm.Debug.Println(sq.config)
 	out, err := executeFileTemplate(ctx, sq.config, tv, false)
 	if err != nil {
 		return errors.Wrap(err, "failed to execute initial file template")
 	}
+
 	// re-execute for rendering copied values
+	pterm.Debug.Println("re-executing file template")
+	// pterm.Debug.Println(string(out))
 	out, err = executeFileTemplate(ctx, string(out), tv, false)
 	if err != nil {
-		return errors.Wrap(err, "failed to execute initial file template")
+		return errors.Wrap(err, "failed to re-execute initial file template")
 	}
-	logrus.Debug("unmarshalling vars")
+
+	pterm.Debug.Println("unmarshalling vars")
 	if err := yaml.Unmarshal(out, &vars); err != nil {
-		return err
+		pterm.Error.Println(string(out))
+		return errors.Wrap(err, "failed to unmarshal vars")
 	}
+
 	// execute again with loaded template vars
 	tv = TemplateVars{}
 	if value, ok := vars["global"]; ok {
@@ -144,14 +154,15 @@ func (sq *Squadron) RenderConfig(ctx context.Context) error {
 		tv.add("Squadron", value)
 	}
 
-	logrus.Debug("executing file template")
+	pterm.Debug.Println("executing file template")
 	out, err = executeFileTemplate(ctx, sq.config, tv, true)
 	if err != nil {
 		return errors.Wrap(err, "failed to execute second file template")
 	}
-	logrus.Debug("unmarshalling vars")
+	pterm.Debug.Println("unmarshalling vars")
 	if err := yaml.Unmarshal(out, &sq.c); err != nil {
-		return err
+		pterm.Error.Println(string(out))
+		return errors.Wrap(err, "failed to unmarshal vars")
 	}
 	sq.config = string(out)
 
