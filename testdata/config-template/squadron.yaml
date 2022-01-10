@@ -27,7 +27,7 @@ squadron:
         # ONE_PASSWORD: <% op "ACCOUNT_NAME" "Secret name" "FIELD" %>
         # ONE_PASSWORD: <% op "ACCOUNT_NAME" "Secret name wit global {{ .Global.host }}" "FIELD" %>
       values: |
-        <% file "testdata/config-template/values.yaml" | indent 8 %>
+        <% file "testdata/config-template/values.yaml" | indent 4 %>
   frontend-admin:
     chart:
       name: mychart
