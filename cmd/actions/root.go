@@ -23,6 +23,7 @@ var (
 				logrus.SetLevel(logrus.ErrorLevel)
 			} else if flagDebug {
 				logrus.SetLevel(logrus.TraceLevel)
+				pterm.EnableDebugMessages()
 			} else if flagVerbose {
 				logrus.SetLevel(logrus.InfoLevel)
 			} else {
