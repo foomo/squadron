@@ -43,6 +43,7 @@ func executeFileTemplate(ctx context.Context, text string, templateVars interfac
 	templateFunctions["default"] = defaultValue
 	templateFunctions["defaultIndex"] = defaultIndexValue
 	templateFunctions["indent"] = indent
+	templateFunctions["replace"] = replace
 	templateFunctions["file"] = file(ctx, templateVars, errorOnMissing)
 	templateFunctions["git"] = git(ctx)
 	templateFunctions["quote"] = quote
@@ -144,12 +145,16 @@ func git(ctx context.Context) func(action string) (string, error) {
 }
 
 func indent(spaces int, v string) string {
-	pad := strings.Repeat(" ", spaces)
+	pad := strings.Repeat("  ", spaces)
 	return strings.ReplaceAll(v, "\n", "\n"+pad)
 }
 
 func quote(v string) string {
 	return "'" + v + "'"
+}
+
+func replace(old, new, v string) string {
+	return strings.ReplaceAll(v, old, new)
 }
 
 func render(name, text string, data interface{}, errorOnMissing bool) (string, error) {
@@ -275,8 +280,8 @@ func onePasswordGet(ctx context.Context, vaultUUID string, itemUUID string) (map
 			Sections []struct {
 				Title  string `json:"title"`
 				Fields []struct {
-					Title string `json:"t"`
-					Value string `json:"v"`
+					Title string      `json:"t"`
+					Value interface{} `json:"v"`
 				} `json:"fields"`
 			} `json:"sections"`
 			Fields []struct {
@@ -284,6 +289,12 @@ func onePasswordGet(ctx context.Context, vaultUUID string, itemUUID string) (map
 				Value string `json:"value"`
 			} `json:"fields"`
 		} `json:"details"`
+		Overview struct {
+			URLs []struct {
+				Name  string `json:"l"`
+				Value string `json:"u"`
+			} `json:"URLs"`
+		} `json:"overview"`
 	}
 	if res, err := exec.CommandContext(ctx, "op", "--cache", "get", "item", itemUUID).CombinedOutput(); err != nil && strings.Contains(string(res), "You are not currently signed in") {
 		return nil, ErrOnePasswordNotSignedIn
@@ -300,8 +311,14 @@ func onePasswordGet(ctx context.Context, vaultUUID string, itemUUID string) (map
 		}
 		for _, section := range v.Details.Sections {
 			for _, field := range section.Fields {
-				ret[field.Title] = field.Value
+				switch v := field.Value.(type) { // nolint:gocritic
+				case string:
+					ret[field.Title] = v
+				}
 			}
+		}
+		for _, url := range v.Overview.URLs {
+			ret[url.Name] = url.Value
 		}
 		if v.Details.Password != "" {
 			ret["password"] = v.Details.Password
