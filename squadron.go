@@ -182,7 +182,20 @@ func (sq *Squadron) Generate(ctx context.Context, units map[string]*Unit) error 
 		return sq.generateUmbrellaChart(ctx, units)
 	}
 	for uName, u := range units {
-		logrus.Infof("generating %q value overrides file in %q", uName, sq.chartPath())
+		// update local chart dependencies
+		// https://stackoverflow.com/questions/59210148/error-found-in-chart-yaml-but-missing-in-charts-directory-mysql
+		if strings.HasPrefix(u.Chart.Repository, "file:///") {
+			pterm.Debug.Printfln("running helm dependency update for %s", u.Chart.Repository)
+			if out, err := util.NewHelmCommand().
+				Stdout(os.Stdout).
+				Args("dependency", "update").
+				Cwd(strings.TrimPrefix(u.Chart.Repository, "file://")).
+				Run(ctx); err != nil {
+				return errors.Wrap(err, out)
+			}
+		}
+
+		pterm.Debug.Printfln("generating %q value overrides file in %q", uName, sq.chartPath())
 		if err := sq.generateValues(u.Values, sq.chartPath(), uName); err != nil {
 			return err
 		}
@@ -350,22 +363,22 @@ func (sq *Squadron) Up(ctx context.Context, units map[string]*Unit, helmArgs []s
 	for uName, u := range units {
 		// todo use release prefix on install: squadron name or --name
 		rName := fmt.Sprintf("%s-%s", sq.name, uName)
-		// logrus.Infof(
-		// 	"running helm dependency update for %s in %s",
-		// 	uName,
-		// 	strings.TrimPrefix(u.Chart.Repository, "file://"),
-		// )
-		// if strings.Contains(u.Chart.Repository, "file://") {
-		// 	if _, err := util.NewHelmCommand().
-		// 		Args("dependency", "update").
-		// 		Cwd(strings.TrimPrefix(u.Chart.Repository, "file://")).
-		// 		Stdout(os.Stdout).
-		// 		Run(ctx); err != nil {
-		// 		return err
-		// 	}
-		// }
-		fmt.Println("")
-		logrus.Infof("running helm upgrade for %s", uName)
+
+		// update local chart dependencies
+		// https://stackoverflow.com/questions/59210148/error-found-in-chart-yaml-but-missing-in-charts-directory-mysql
+		if strings.HasPrefix(u.Chart.Repository, "file:///") {
+			pterm.Debug.Printfln("running helm dependency update for %s", u.Chart.Repository)
+			if out, err := util.NewHelmCommand().
+				Stdout(os.Stdout).
+				Args("dependency", "update").
+				Cwd(strings.TrimPrefix(u.Chart.Repository, "file://")).
+				Run(ctx); err != nil {
+				return errors.Wrap(err, out)
+			}
+		}
+
+		// install chart
+		pterm.Debug.Printfln("running helm upgrade for %s", uName)
 		cmd := util.NewHelmCommand().
 			Stdout(os.Stdout).
 			Args("upgrade", rName, "--install").
