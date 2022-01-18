@@ -296,7 +296,7 @@ func onePasswordGet(ctx context.Context, vaultUUID string, itemUUID string) (map
 			} `json:"URLs"`
 		} `json:"overview"`
 	}
-	if res, err := exec.CommandContext(ctx, "op", "--cache", "get", "item", itemUUID).CombinedOutput(); err != nil && strings.Contains(string(res), "You are not currently signed in") {
+	if res, err := exec.CommandContext(ctx, "op", "get", "item", itemUUID).CombinedOutput(); err != nil && strings.Contains(string(res), "You are not currently signed in") {
 		return nil, ErrOnePasswordNotSignedIn
 	} else if err != nil {
 		return nil, err
