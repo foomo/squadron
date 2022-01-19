@@ -311,10 +311,7 @@ func onePasswordGet(ctx context.Context, vaultUUID string, itemUUID string) (map
 		}
 		for _, section := range v.Details.Sections {
 			for _, field := range section.Fields {
-				switch v := field.Value.(type) { // nolint:gocritic
-				case string:
-					ret[field.Title] = v
-				}
+				ret[field.Title] = fmt.Sprintf("%v", v)
 			}
 		}
 		for _, url := range v.Overview.URLs {
