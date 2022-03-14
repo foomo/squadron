@@ -311,7 +311,7 @@ func onePasswordGet(ctx context.Context, vaultUUID string, itemUUID string) (map
 		}
 		for _, section := range v.Details.Sections {
 			for _, field := range section.Fields {
-				ret[field.Title] = fmt.Sprintf("%v", v)
+				ret[field.Title] = fmt.Sprintf("%v", field.Value)
 			}
 		}
 		for _, url := range v.Overview.URLs {
