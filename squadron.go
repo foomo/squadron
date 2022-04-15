@@ -258,14 +258,14 @@ func (sq *Squadron) Down(ctx context.Context, units map[string]*Unit, helmArgs [
 
 func (sq *Squadron) Diff(ctx context.Context, units map[string]*Unit, helmArgs []string) (string, error) {
 	if sq.c.Unite {
-		logrus.Infof("running helm diff for: %s", sq.chartPath())
-		manifest, err := exec.CommandContext(ctx, "helm", "get", "manifest", sq.name, "--namespace", sq.namespace).Output() //nolint:gosec
+		pterm.Debug.Printfln("running helm diff for: %s", sq.chartPath())
+		manifest, err := exec.CommandContext(ctx, "helm", "get", "manifest", sq.name, "--namespace", sq.namespace).CombinedOutput() //nolint:gosec
 		if err != nil {
-			return "", err
+			return "", errors.Wrap(err, string(manifest))
 		}
-		template, err := exec.CommandContext(ctx, "helm", "upgrade", sq.name, sq.chartPath(), "--namespace", sq.namespace, "--dry-run").Output() //nolint:gosec
+		template, err := exec.CommandContext(ctx, "helm", "upgrade", sq.name, sq.chartPath(), "--namespace", sq.namespace, "--dry-run").CombinedOutput() //nolint:gosec
 		if err != nil {
-			return "", err
+			return "", errors.Wrap(err, string(template))
 		}
 		dmp := diffmatchpatch.New()
 		return dmp.DiffPrettyText(dmp.DiffMain(string(manifest), string(template), false)), nil
@@ -273,10 +273,10 @@ func (sq *Squadron) Diff(ctx context.Context, units map[string]*Unit, helmArgs [
 	for uName, u := range units {
 		// todo use release prefix on install: squadron name or --name
 		rName := fmt.Sprintf("%s-%s", sq.name, uName)
-		logrus.Infof("running helm diff for: %s", uName)
+		pterm.Debug.Printfln("running helm diff for: %s", uName)
 		manifest, err := exec.CommandContext(ctx, "helm", "get", "manifest", rName, "--namespace", sq.namespace).CombinedOutput()
 		if err != nil && string(bytes.TrimSpace(manifest)) != errHelmReleaseNotFound {
-			return "", err
+			return "", errors.Wrap(err, string(manifest))
 		}
 		cmd := exec.CommandContext(ctx, "helm", "upgrade", rName,
 			"--install",
@@ -290,9 +290,9 @@ func (sq *Squadron) Diff(ctx context.Context, units map[string]*Unit, helmArgs [
 		} else {
 			cmd.Args = append(cmd.Args, u.Chart.Name, "--repo", u.Chart.Repository, "--version", u.Chart.Version)
 		}
-		template, err := cmd.Output()
+		template, err := cmd.CombinedOutput()
 		if err != nil {
-			return "", err
+			return "", errors.Wrap(err, string(template))
 		}
 		dmp := diffmatchpatch.New()
 		return dmp.DiffPrettyText(dmp.DiffMain(string(manifest), string(template), false)), nil
@@ -346,7 +346,7 @@ func (sq *Squadron) Up(ctx context.Context, units map[string]*Unit, helmArgs []s
 	description := fmt.Sprintf("\nDeployed-By: %s\nManaged-By: Squadron %s\nGit-Commit: %s", version, username, commit)
 
 	if sq.c.Unite {
-		logrus.Infof("running helm upgrade for chart: %s", sq.chartPath())
+		pterm.Debug.Printfln("running helm upgrade for chart: %s", sq.chartPath())
 		if out, err := util.NewHelmCommand().
 			Stdout(os.Stdout).
 			Args("upgrade", sq.name, sq.chartPath()).
@@ -406,6 +406,7 @@ func (sq *Squadron) Template(ctx context.Context, units map[string]*Unit, helmAr
 		logrus.Infof("running helm template for chart: %s", sq.chartPath())
 		if out, err := util.NewHelmCommand().Args("template", sq.name, sq.chartPath()).
 			Stdout(os.Stdout).
+			Args("--dependency-update").
 			Args("--namespace", sq.namespace).
 			Args(helmArgs...).
 			Run(ctx); err != nil {
@@ -419,6 +420,7 @@ func (sq *Squadron) Template(ctx context.Context, units map[string]*Unit, helmAr
 		logrus.Infof("running helm template for chart: %s", uName)
 		cmd := util.NewHelmCommand().Args("template", rName).
 			Stdout(os.Stdout).
+			Args("--dependency-update").
 			Args("--namespace", sq.namespace).
 			Args("--set", fmt.Sprintf("squadron=%s,unit=%s", sq.name, uName)).
 			Args("-f", path.Join(sq.chartPath(), uName+".yaml")).
