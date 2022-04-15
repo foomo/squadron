@@ -12,7 +12,7 @@ env:
   GOLANGCI_LINT_VERSION: v1.45.2
 
 jobs:
-  build:
+  check:
     runs-on: ubuntu-latest
     env:
       GOFLAGS: -mod=readonly
