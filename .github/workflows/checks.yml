@@ -26,3 +26,5 @@ jobs:
         with:
           version: ${{ env.GOLANGCI_LINT_VERSION }}
       - run: go test -v ./...
+        env:
+          SHELL: "/bin/sh"
