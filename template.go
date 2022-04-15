@@ -273,28 +273,15 @@ func onePasswordCIGet(client connect.Client, vaultUUID, itemUUID string) (map[st
 
 func onePasswordGet(ctx context.Context, vaultUUID string, itemUUID string) (map[string]string, error) {
 	var v struct {
-		VaultUUID string `json:"vaultUuid"`
-		Details   struct {
-			Notes    string `json:"notesPlain"`
-			Password string `json:"password"`
-			Sections []struct {
-				Title  string `json:"title"`
-				Fields []struct {
-					Title string      `json:"t"`
-					Value interface{} `json:"v"`
-				} `json:"fields"`
-			} `json:"sections"`
-			Fields []struct {
-				Name  string `json:"name"`
-				Value string `json:"value"`
-			} `json:"fields"`
-		} `json:"details"`
-		Overview struct {
-			URLs []struct {
-				Name  string `json:"l"`
-				Value string `json:"u"`
-			} `json:"URLs"`
-		} `json:"overview"`
+		Vault struct {
+			ID string `json:"id"`
+		} `json:"vault"`
+		Fields []struct {
+			ID    string      `json:"id"`
+			Type  string      `json:"type"` // CONCEALED, STRING
+			Label string      `json:"label"`
+			Value interface{} `json:"value"`
+		} `json:"fields"`
 	}
 	if res, err := exec.CommandContext(ctx, "op", "item", "get", itemUUID, "--format", "json").CombinedOutput(); err != nil && strings.Contains(string(res), "You are not currently signed in") {
 		return nil, ErrOnePasswordNotSignedIn
@@ -302,26 +289,19 @@ func onePasswordGet(ctx context.Context, vaultUUID string, itemUUID string) (map
 		return nil, err
 	} else if err := json.Unmarshal(res, &v); err != nil {
 		return nil, err
-	} else if strings.Contains(v.VaultUUID, vaultUUID) {
+	} else if v.Vault.ID != vaultUUID {
 		return nil, errors.Errorf("wrong vault UUID %s for item %s", vaultUUID, itemUUID)
 	} else {
 		ret := map[string]string{}
-		for _, field := range v.Details.Fields {
-			ret[field.Name] = field.Value
+		aliases := map[string]string{
+			"notesPlain": "notes",
 		}
-		for _, section := range v.Details.Sections {
-			for _, field := range section.Fields {
-				ret[field.Title] = fmt.Sprintf("%v", field.Value)
+		for _, field := range v.Fields {
+			if alias, ok := aliases[field.Label]; ok {
+				ret[alias] = fmt.Sprintf("%v", field.Value)
+			} else {
+				ret[field.Label] = fmt.Sprintf("%v", field.Value)
 			}
-		}
-		for _, url := range v.Overview.URLs {
-			ret[url.Name] = url.Value
-		}
-		if v.Details.Password != "" {
-			ret["password"] = v.Details.Password
-		}
-		if v.Details.Notes != "" {
-			ret["notes"] = v.Details.Notes
 		}
 		return ret, nil
 	}
