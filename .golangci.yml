@@ -3,7 +3,8 @@ run:
 
 linters-settings:
   gci:
-    local-prefixes: github.com/foomo/squadron
+    sections:
+      - prefix(github.com/foomo/squadron)
   golint:
     min-confidence: 0
   goimports:
@@ -34,7 +35,7 @@ linters:
     - dupl
     - exhaustive
     - exportloopref
-    - gci
+    # - gci
     - goconst
     - gofmt
     - gofumpt
