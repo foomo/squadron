@@ -263,7 +263,9 @@ func (sq *Squadron) Diff(ctx context.Context, units map[string]*Unit, helmArgs [
 		if err != nil {
 			return "", errors.Wrap(err, string(manifest))
 		}
-		template, err := exec.CommandContext(ctx, "helm", "upgrade", sq.name, sq.chartPath(), "--namespace", sq.namespace, "--dry-run").CombinedOutput() //nolint:gosec
+		cmd := exec.CommandContext(ctx, "helm", "upgrade", sq.name, sq.chartPath(), "--namespace", sq.namespace, "--dry-run") //nolint:gosec
+		cmd.Args = append(cmd.Args, helmArgs...)
+		template, err := cmd.CombinedOutput()
 		if err != nil {
 			return "", errors.Wrap(err, string(template))
 		}
@@ -290,6 +292,7 @@ func (sq *Squadron) Diff(ctx context.Context, units map[string]*Unit, helmArgs [
 		} else {
 			cmd.Args = append(cmd.Args, u.Chart.Name, "--repo", u.Chart.Repository, "--version", u.Chart.Version)
 		}
+		cmd.Args = append(cmd.Args, helmArgs...)
 		template, err := cmd.CombinedOutput()
 		if err != nil {
 			return "", errors.Wrap(err, string(template))
