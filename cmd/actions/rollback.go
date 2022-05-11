@@ -9,19 +9,20 @@ import (
 )
 
 func init() {
-	statusCmd.Flags().StringVarP(&flagNamespace, "namespace", "n", "default", "specifies the namespace")
+	rollbackCmd.Flags().StringVarP(&flagNamespace, "namespace", "n", "default", "specifies the namespace")
+	rollbackCmd.Flags().StringVarP(&flagRevision, "revision", "r", "", "specifies the revision to roll back to")
 }
 
-var statusCmd = &cobra.Command{
-	Use:     "status [UNIT...]",
-	Short:   "installs the squadron or given units",
-	Example: "  squadron status frontend backend --namespace demo",
+var rollbackCmd = &cobra.Command{
+	Use:     "rollback [UNIT...]",
+	Short:   "rolls back the squadron or given units",
+	Example: "  squadron rollback frontend backend --namespace demo",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return status(cmd.Context(), args, cwd, flagNamespace, flagFiles)
+		return rollback(cmd.Context(), args, cwd, flagNamespace, flagRevision, flagFiles)
 	},
 }
 
-func status(ctx context.Context, args []string, cwd, namespace string, files []string) error {
+func rollback(ctx context.Context, args []string, cwd, namespace string, revision string, files []string) error {
 	sq := squadron.New(cwd, namespace, files)
 
 	if err := sq.MergeConfigFiles(); err != nil {
@@ -50,5 +51,5 @@ func status(ctx context.Context, args []string, cwd, namespace string, files []s
 		return err
 	}
 
-	return sq.Status(ctx, units, helmArgs)
+	return sq.Rollback(ctx, units, revision, helmArgs)
 }

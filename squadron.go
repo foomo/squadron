@@ -3,6 +3,7 @@ package squadron
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -204,11 +205,11 @@ func (sq *Squadron) Generate(ctx context.Context, units map[string]*Unit) error 
 }
 
 func (sq *Squadron) generateUmbrellaChart(ctx context.Context, units map[string]*Unit) error {
-	logrus.Infof("generating chart %q files in %q", sq.name, sq.chartPath())
+	pterm.Debug.Printfln("generating chart %q files in %q", sq.name, sq.chartPath())
 	if err := sq.generateChart(units, sq.chartPath(), sq.name, sq.c.Version); err != nil {
 		return err
 	}
-	logrus.Infof("running helm dependency update for chart: %v", sq.chartPath())
+	pterm.Debug.Printfln("running helm dependency update for chart: %v", sq.chartPath())
 	if out, err := util.NewHelmCommand().UpdateDependency(ctx, sq.chartPath()); err != nil {
 		return errors.Wrap(err, out)
 	}
@@ -216,7 +217,7 @@ func (sq *Squadron) generateUmbrellaChart(ctx context.Context, units map[string]
 }
 
 func (sq *Squadron) Package(ctx context.Context) error {
-	logrus.Infof("running helm package for chart: %v", sq.chartPath())
+	pterm.Debug.Printfln("running helm package for chart: %v", sq.chartPath())
 	if out, err := util.NewHelmCommand().Package(ctx, sq.chartPath(), sq.basePath); err != nil {
 		return errors.Wrap(err, out)
 	}
@@ -225,7 +226,7 @@ func (sq *Squadron) Package(ctx context.Context) error {
 
 func (sq *Squadron) Down(ctx context.Context, units map[string]*Unit, helmArgs []string) error {
 	if sq.c.Unite {
-		logrus.Infof("running helm uninstall for: %s", sq.chartPath())
+		pterm.Debug.Printfln("running helm uninstall for: %s", sq.chartPath())
 		stdErr := bytes.NewBuffer([]byte{})
 		if out, err := util.NewHelmCommand().Args("uninstall", sq.name).
 			Stderr(stdErr).
@@ -240,7 +241,7 @@ func (sq *Squadron) Down(ctx context.Context, units map[string]*Unit, helmArgs [
 	for uName := range units {
 		// todo use release prefix on install: squadron name or --name
 		rName := fmt.Sprintf("%s-%s", sq.name, uName)
-		logrus.Infof("running helm uninstall for: %s", uName)
+		pterm.Debug.Printfln("running helm uninstall for: %s", uName)
 		stdErr := bytes.NewBuffer([]byte{})
 		if out, err := util.NewHelmCommand().Args("uninstall", rName).
 			Stderr(stdErr).
@@ -305,48 +306,128 @@ func (sq *Squadron) Diff(ctx context.Context, units map[string]*Unit, helmArgs [
 }
 
 func (sq *Squadron) Status(ctx context.Context, units map[string]*Unit, helmArgs []string) error {
-	stdOut := bytes.NewBuffer([]byte{})
+	tbd := pterm.TableData{
+		{"Name", "Revision", "Status", "Deployed by", "Commit", "Last deployed", "Notes"},
+	}
+
+	type statusType struct {
+		Name      string `json:"name"`
+		Version   int    `json:"version"`
+		Namespace string `json:"namespace"`
+		Info      struct {
+			Status        string `json:"status"`
+			FirstDeployed string `json:"first_deployed"`
+			Deleted       string `json:"deleted"`
+			LastDeployed  string `json:"last_deployed"`
+			Description   string `json:"description"`
+		} `json:"info"`
+		deployedBy string `json:"-"`
+		gitCommit  string `json:"-"`
+	}
+
+	var status statusType
+
 	if sq.c.Unite {
-		stdOut.WriteString("==== " + sq.name + strings.Repeat("=", 20-len(sq.name)) + "\n")
-		logrus.Infof("running helm status for chart: %s", sq.chartPath())
 		stdErr := bytes.NewBuffer([]byte{})
+		pterm.Debug.Printfln("running helm status for chart: %s", sq.chartPath())
 		if out, err := util.NewHelmCommand().Args("status", sq.name).
 			Stderr(stdErr).
-			Stdout(stdOut).
-			Args("--namespace", sq.namespace).
+			Args("--namespace", sq.namespace, "--output", "json", "--show-desc").
 			Args(helmArgs...).
-			Run(ctx); err != nil &&
-			string(bytes.TrimSpace(stdErr.Bytes())) == errHelmReleaseNotFound {
-			stdOut.WriteString("NAME: " + sq.name + "\n")
-			stdOut.WriteString("STATUS: not installed\n")
+			Run(ctx); err != nil && string(bytes.TrimSpace(stdErr.Bytes())) == errHelmReleaseNotFound {
+			tbd = append(tbd, []string{sq.name, "0", "not installed", "", ""})
 		} else if err != nil {
+			return errors.Wrap(err, out)
+		} else if err := json.Unmarshal([]byte(out), &status); err != nil {
+			return errors.Wrap(err, out)
+		} else {
+			var notes []string
+			for _, line := range strings.Split(status.Info.Description, "\n") {
+				if strings.HasPrefix(line, "Managed-By: ") {
+					// do nothing
+				} else if strings.HasPrefix(line, "Deployed-By: ") {
+					status.deployedBy = strings.TrimPrefix(line, "Deployed-By: ")
+				} else if strings.HasPrefix(line, "Git-Commit: ") {
+					status.gitCommit = strings.TrimPrefix(line, "Git-Commit: ")
+				} else {
+					notes = append(notes, line)
+				}
+			}
+			tbd = append(tbd, []string{status.Name, fmt.Sprintf("%d", status.Version), status.Info.Status, status.deployedBy, status.gitCommit, status.Info.LastDeployed, strings.Join(notes, " | ")})
+		}
+	}
+	for uName := range units {
+		stdErr := bytes.NewBuffer([]byte{})
+		// todo use release prefix on install: squadron name or --name
+		rName := fmt.Sprintf("%s-%s", sq.name, uName)
+		pterm.Debug.Printfln("running helm status for %s", uName)
+		if out, err := util.NewHelmCommand().Args("status", rName).
+			Stderr(stdErr).
+			Args("--namespace", sq.namespace, "--output", "json", "--show-desc").
+			Args(helmArgs...).Run(ctx); err != nil && string(bytes.TrimSpace(stdErr.Bytes())) == errHelmReleaseNotFound {
+			tbd = append(tbd, []string{rName, "0", "not installed", "", ""})
+		} else if err != nil {
+			return errors.Wrap(err, out)
+		} else if err := json.Unmarshal([]byte(out), &status); err != nil {
+			return errors.Wrap(err, out)
+		} else {
+			var notes []string
+			for _, line := range strings.Split(status.Info.Description, "\n") {
+				if strings.HasPrefix(line, "Managed-By: ") {
+					// do nothing
+				} else if strings.HasPrefix(line, "Deployed-By: ") {
+					status.deployedBy = strings.TrimPrefix(line, "Deployed-By: ")
+				} else if strings.HasPrefix(line, "Git-Commit: ") {
+					status.gitCommit = strings.TrimPrefix(line, "Git-Commit: ")
+				} else {
+					notes = append(notes, line)
+				}
+			}
+			tbd = append(tbd, []string{status.Name, fmt.Sprintf("%d", status.Version), status.Info.Status, status.deployedBy, status.gitCommit, status.Info.LastDeployed, strings.Join(notes, " | ")})
+		}
+	}
+
+	return pterm.DefaultTable.WithHasHeader().WithData(tbd).Render()
+}
+
+func (sq *Squadron) Rollback(ctx context.Context, units map[string]*Unit, revision string, helmArgs []string) error {
+	if revision != "" {
+		helmArgs = append([]string{revision}, helmArgs...)
+	}
+	if sq.c.Unite {
+		pterm.Debug.Printfln("running helm rollback for: %s", sq.chartPath())
+		stdErr := bytes.NewBuffer([]byte{})
+		if out, err := util.NewHelmCommand().Args("rollback", sq.name).
+			Stderr(stdErr).
+			Stdout(os.Stdout).
+			Args(helmArgs...).
+			Args("--namespace", sq.namespace).
+			Run(ctx); err != nil &&
+			string(bytes.TrimSpace(stdErr.Bytes())) != fmt.Sprintf("Error: uninstall: Release not loaded: %s: release: not found", sq.name) {
 			return errors.Wrap(err, out)
 		}
 	}
 	for uName := range units {
-		stdOut.WriteString("==== " + uName + " " + strings.Repeat("=", 60-len(uName)) + "\n")
 		// todo use release prefix on install: squadron name or --name
 		rName := fmt.Sprintf("%s-%s", sq.name, uName)
-		logrus.Infof("running helm status for %s", uName)
+		pterm.Debug.Printfln("running helm uninstall for: %s", uName)
 		stdErr := bytes.NewBuffer([]byte{})
-		if out, err := util.NewHelmCommand().Args("status", rName).
+		if out, err := util.NewHelmCommand().Args("rollback", rName).
 			Stderr(stdErr).
-			Stdout(stdOut).
+			Stdout(os.Stdout).
+			Args(helmArgs...).
 			Args("--namespace", sq.namespace).
-			Args(helmArgs...).Run(ctx); err != nil &&
-			string(bytes.TrimSpace(stdErr.Bytes())) == errHelmReleaseNotFound {
-			stdOut.WriteString("NAME: " + rName + "\n")
-			stdOut.WriteString("STATUS: not installed\n")
-		} else if err != nil {
+			Run(ctx); err != nil &&
+			string(bytes.TrimSpace(stdErr.Bytes())) != fmt.Sprintf("Error: uninstall: Release not loaded: %s: release: not found", rName) {
 			return errors.Wrap(err, out)
 		}
 	}
-	fmt.Println(strings.ReplaceAll(stdOut.String(), "\\n", "\n"))
+
 	return nil
 }
 
 func (sq *Squadron) Up(ctx context.Context, units map[string]*Unit, helmArgs []string, username, version, commit string) error {
-	description := fmt.Sprintf("\nDeployed-By: %s\nManaged-By: Squadron %s\nGit-Commit: %s", version, username, commit)
+	description := fmt.Sprintf("\nDeployed-By: %s\nManaged-By: Squadron %s\nGit-Commit: %s", username, version, commit)
 
 	if sq.c.Unite {
 		pterm.Debug.Printfln("running helm upgrade for chart: %s", sq.chartPath())
@@ -406,7 +487,7 @@ func (sq *Squadron) Up(ctx context.Context, units map[string]*Unit, helmArgs []s
 
 func (sq *Squadron) Template(ctx context.Context, units map[string]*Unit, helmArgs []string) error {
 	if sq.c.Unite {
-		logrus.Infof("running helm template for chart: %s", sq.chartPath())
+		pterm.Debug.Printfln("running helm template for chart: %s", sq.chartPath())
 		if out, err := util.NewHelmCommand().Args("template", sq.name, sq.chartPath()).
 			Stdout(os.Stdout).
 			Args("--dependency-update").
@@ -420,7 +501,7 @@ func (sq *Squadron) Template(ctx context.Context, units map[string]*Unit, helmAr
 	for uName, u := range units {
 		// todo use release prefix on install: squadron name or --name
 		rName := fmt.Sprintf("%s-%s", sq.name, uName)
-		logrus.Infof("running helm template for chart: %s", uName)
+		pterm.Debug.Printfln("running helm template for chart: %s", uName)
 		cmd := util.NewHelmCommand().Args("template", rName).
 			Stdout(os.Stdout).
 			Args("--dependency-update").
