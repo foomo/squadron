@@ -67,7 +67,7 @@ func up(ctx context.Context, args []string, cwd, namespace string, build, push, 
 		sem := semaphore.NewWeighted(int64(parallel))
 		wg, wgCtx := errgroup.WithContext(ctx)
 
-		for n, u := range units {
+		_ = sq.GetConfig().Units.Iterate(func(n string, u *squadron.Unit) error {
 			name := n
 			unit := u
 			wg.Go(func() error {
@@ -80,7 +80,8 @@ func up(ctx context.Context, args []string, cwd, namespace string, build, push, 
 				}
 				return nil
 			})
-		}
+			return nil
+		})
 		if err := wg.Wait(); err != nil {
 			return err
 		}
@@ -90,7 +91,7 @@ func up(ctx context.Context, args []string, cwd, namespace string, build, push, 
 		sem := semaphore.NewWeighted(int64(parallel))
 		wg, wgCtx := errgroup.WithContext(ctx)
 
-		for n, u := range units {
+		_ = sq.GetConfig().Units.Iterate(func(n string, u *squadron.Unit) error {
 			name := n
 			unit := u
 			wg.Go(func() error {
@@ -103,7 +104,9 @@ func up(ctx context.Context, args []string, cwd, namespace string, build, push, 
 				}
 				return nil
 			})
-		}
+			return nil
+		})
+
 		if err := wg.Wait(); err != nil {
 			return err
 		}

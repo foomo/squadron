@@ -174,7 +174,7 @@ func (sq *Squadron) RenderConfig(ctx context.Context) error {
 	return nil
 }
 
-func (sq *Squadron) Generate(ctx context.Context, units map[string]*Unit) error {
+func (sq *Squadron) Generate(ctx context.Context, units Units) error {
 	logrus.WithField("path", sq.chartPath()).Infof("generating charts")
 	if err := sq.cleanupOutput(sq.chartPath()); err != nil {
 		return err
@@ -182,7 +182,8 @@ func (sq *Squadron) Generate(ctx context.Context, units map[string]*Unit) error 
 	if sq.c.Unite {
 		return sq.generateUmbrellaChart(ctx, units)
 	}
-	for uName, u := range units {
+	for _, uName := range units.Keys() {
+		u := units[uName]
 		// update local chart dependencies
 		// https://stackoverflow.com/questions/59210148/error-found-in-chart-yaml-but-missing-in-charts-directory-mysql
 		if strings.HasPrefix(u.Chart.Repository, "file:///") {
@@ -204,7 +205,7 @@ func (sq *Squadron) Generate(ctx context.Context, units map[string]*Unit) error 
 	return nil
 }
 
-func (sq *Squadron) generateUmbrellaChart(ctx context.Context, units map[string]*Unit) error {
+func (sq *Squadron) generateUmbrellaChart(ctx context.Context, units Units) error {
 	pterm.Debug.Printfln("generating chart %q files in %q", sq.name, sq.chartPath())
 	if err := sq.generateChart(units, sq.chartPath(), sq.name, sq.c.Version); err != nil {
 		return err
@@ -224,7 +225,7 @@ func (sq *Squadron) Package(ctx context.Context) error {
 	return nil
 }
 
-func (sq *Squadron) Down(ctx context.Context, units map[string]*Unit, helmArgs []string) error {
+func (sq *Squadron) Down(ctx context.Context, units Units, helmArgs []string) error {
 	if sq.c.Unite {
 		pterm.Debug.Printfln("running helm uninstall for: %s", sq.chartPath())
 		stdErr := bytes.NewBuffer([]byte{})
@@ -238,7 +239,7 @@ func (sq *Squadron) Down(ctx context.Context, units map[string]*Unit, helmArgs [
 			return errors.Wrap(err, out)
 		}
 	}
-	for uName := range units {
+	for _, uName := range units.Keys() {
 		// todo use release prefix on install: squadron name or --name
 		rName := fmt.Sprintf("%s-%s", sq.name, uName)
 		pterm.Debug.Printfln("running helm uninstall for: %s", uName)
@@ -257,7 +258,7 @@ func (sq *Squadron) Down(ctx context.Context, units map[string]*Unit, helmArgs [
 	return nil
 }
 
-func (sq *Squadron) Diff(ctx context.Context, units map[string]*Unit, helmArgs []string) (string, error) {
+func (sq *Squadron) Diff(ctx context.Context, units Units, helmArgs []string) (string, error) {
 	if sq.c.Unite {
 		pterm.Debug.Printfln("running helm diff for: %s", sq.chartPath())
 		manifest, err := exec.CommandContext(ctx, "helm", "get", "manifest", sq.name, "--namespace", sq.namespace).CombinedOutput() //nolint:gosec
@@ -273,7 +274,8 @@ func (sq *Squadron) Diff(ctx context.Context, units map[string]*Unit, helmArgs [
 		dmp := diffmatchpatch.New()
 		return dmp.DiffPrettyText(dmp.DiffMain(string(manifest), string(template), false)), nil
 	}
-	for uName, u := range units {
+	for _, uName := range units.Keys() {
+		u := units[uName]
 		// todo use release prefix on install: squadron name or --name
 		rName := fmt.Sprintf("%s-%s", sq.name, uName)
 		pterm.Debug.Printfln("running helm diff for: %s", uName)
@@ -299,13 +301,13 @@ func (sq *Squadron) Diff(ctx context.Context, units map[string]*Unit, helmArgs [
 			return "", errors.Wrap(err, string(template))
 		}
 		dmp := diffmatchpatch.New()
-		return dmp.DiffPrettyText(dmp.DiffMain(string(manifest), string(template), false)), nil
+		_, _ = fmt.Println(dmp.DiffPrettyText(dmp.DiffMain(string(manifest), string(template), false)))
 	}
 
 	return "", nil
 }
 
-func (sq *Squadron) Status(ctx context.Context, units map[string]*Unit, helmArgs []string) error {
+func (sq *Squadron) Status(ctx context.Context, units Units, helmArgs []string) error {
 	tbd := pterm.TableData{
 		{"Name", "Revision", "Status", "Deployed by", "Commit", "Last deployed", "Notes"},
 	}
@@ -356,7 +358,7 @@ func (sq *Squadron) Status(ctx context.Context, units map[string]*Unit, helmArgs
 			tbd = append(tbd, []string{status.Name, fmt.Sprintf("%d", status.Version), status.Info.Status, status.deployedBy, status.gitCommit, status.Info.LastDeployed, strings.Join(notes, " | ")})
 		}
 	}
-	for uName := range units {
+	for _, uName := range units.Keys() {
 		stdErr := bytes.NewBuffer([]byte{})
 		// todo use release prefix on install: squadron name or --name
 		rName := fmt.Sprintf("%s-%s", sq.name, uName)
@@ -390,7 +392,7 @@ func (sq *Squadron) Status(ctx context.Context, units map[string]*Unit, helmArgs
 	return pterm.DefaultTable.WithHasHeader().WithData(tbd).Render()
 }
 
-func (sq *Squadron) Rollback(ctx context.Context, units map[string]*Unit, revision string, helmArgs []string) error {
+func (sq *Squadron) Rollback(ctx context.Context, units Units, revision string, helmArgs []string) error {
 	if revision != "" {
 		helmArgs = append([]string{revision}, helmArgs...)
 	}
@@ -407,7 +409,7 @@ func (sq *Squadron) Rollback(ctx context.Context, units map[string]*Unit, revisi
 			return errors.Wrap(err, out)
 		}
 	}
-	for uName := range units {
+	for _, uName := range units.Keys() {
 		// todo use release prefix on install: squadron name or --name
 		rName := fmt.Sprintf("%s-%s", sq.name, uName)
 		pterm.Debug.Printfln("running helm uninstall for: %s", uName)
@@ -426,7 +428,7 @@ func (sq *Squadron) Rollback(ctx context.Context, units map[string]*Unit, revisi
 	return nil
 }
 
-func (sq *Squadron) Up(ctx context.Context, units map[string]*Unit, helmArgs []string, username, version, commit string) error {
+func (sq *Squadron) Up(ctx context.Context, units Units, helmArgs []string, username, version, commit string) error {
 	description := fmt.Sprintf("\nDeployed-By: %s\nManaged-By: Squadron %s\nGit-Commit: %s", username, version, commit)
 
 	if sq.c.Unite {
@@ -444,7 +446,8 @@ func (sq *Squadron) Up(ctx context.Context, units map[string]*Unit, helmArgs []s
 		}
 		return nil
 	}
-	for uName, u := range units {
+	for _, uName := range units.Keys() {
+		u := units[uName]
 		// todo use release prefix on install: squadron name or --name
 		rName := fmt.Sprintf("%s-%s", sq.name, uName)
 
@@ -485,7 +488,7 @@ func (sq *Squadron) Up(ctx context.Context, units map[string]*Unit, helmArgs []s
 	return nil
 }
 
-func (sq *Squadron) Template(ctx context.Context, units map[string]*Unit, helmArgs []string) error {
+func (sq *Squadron) Template(ctx context.Context, units Units, helmArgs []string) error {
 	if sq.c.Unite {
 		pterm.Debug.Printfln("running helm template for chart: %s", sq.chartPath())
 		if out, err := util.NewHelmCommand().Args("template", sq.name, sq.chartPath()).
@@ -498,7 +501,8 @@ func (sq *Squadron) Template(ctx context.Context, units map[string]*Unit, helmAr
 		}
 		return nil
 	}
-	for uName, u := range units {
+	for _, uName := range units.Keys() {
+		u := units[uName]
 		// todo use release prefix on install: squadron name or --name
 		rName := fmt.Sprintf("%s-%s", sq.name, uName)
 		pterm.Debug.Printfln("running helm template for chart: %s", uName)
@@ -539,16 +543,17 @@ func (sq *Squadron) cleanupOutput(chartPath string) error {
 	return nil
 }
 
-func (sq *Squadron) generateChart(units map[string]*Unit, chartPath, chartName, version string) error {
+func (sq *Squadron) generateChart(units Units, chartPath, chartName, version string) error {
 	chart := newChart(chartName, version)
 	values := map[string]interface{}{}
 	if sq.c.Global != nil {
 		values["global"] = sq.c.Global
 	}
-	for name, unit := range units {
+	_ = units.Iterate(func(name string, unit *Unit) error {
 		chart.addDependency(name, unit.Chart)
 		values[name] = unit.Values
-	}
+		return nil
+	})
 	return chart.generate(chartPath, values)
 }
 

@@ -31,13 +31,14 @@ func list(cwd string, files []string) error {
 		return err
 	}
 
-	for name := range sq.GetConfig().Units {
+	_ = sq.GetConfig().Units.Iterate(func(name string, unit *squadron.Unit) error {
 		if flagPrefixSquadron {
 			fmt.Printf("%s/%s\n", sq.Name(), name)
 		} else {
 			fmt.Println(name)
 		}
-	}
+		return nil
+	})
 
 	return nil
 }

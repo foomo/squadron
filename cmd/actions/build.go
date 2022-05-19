@@ -60,7 +60,7 @@ func build(ctx context.Context, args []string, cwd string, files []string, push 
 		sem := semaphore.NewWeighted(int64(parallel))
 		wg, wgCtx := errgroup.WithContext(ctx)
 
-		for n, u := range units {
+		_ = squadron.Units(units).Iterate(func(n string, u *squadron.Unit) error {
 			name := n
 			unit := u
 			wg.Go(func() error {
@@ -73,7 +73,8 @@ func build(ctx context.Context, args []string, cwd string, files []string, push 
 				}
 				return nil
 			})
-		}
+			return nil
+		})
 
 		if err := wg.Wait(); err != nil {
 			return err
@@ -83,7 +84,7 @@ func build(ctx context.Context, args []string, cwd string, files []string, push 
 	if push {
 		sem := semaphore.NewWeighted(int64(parallel))
 		wg, wgCtx := errgroup.WithContext(ctx)
-		for n, u := range units {
+		_ = squadron.Units(units).Iterate(func(n string, u *squadron.Unit) error {
 			name := n
 			unit := u
 			wg.Go(func() error {
@@ -96,7 +97,8 @@ func build(ctx context.Context, args []string, cwd string, files []string, push 
 				}
 				return nil
 			})
-		}
+			return nil
+		})
 
 		if err := wg.Wait(); err != nil {
 			return err
