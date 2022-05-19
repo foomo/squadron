@@ -12,7 +12,7 @@ type Configuration struct {
 	Prefix  string                 `yaml:"prefix,omitempty"`
 	Unite   bool                   `yaml:"unite,omitempty"`
 	Global  map[string]interface{} `yaml:"global,omitempty"`
-	Units   map[string]*Unit       `yaml:"squadron,omitempty"`
+	Units   Units                  `yaml:"squadron,omitempty"`
 }
 
 // UnmarshalYAML ...
