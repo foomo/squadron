@@ -129,7 +129,7 @@ func up(ctx context.Context, args []string, cwd, namespace string, build, push, 
 	}
 
 	if !diff {
-		return sq.Up(ctx, units, helmArgs, username, version, commit)
+		return sq.Up(ctx, units, helmArgs, username, version, commit, parallel)
 	} else if out, err := sq.Diff(ctx, units, helmArgs); err != nil {
 		return err
 	} else {

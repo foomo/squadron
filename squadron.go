@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/foomo/squadron/runner"
 	"github.com/miracl/conflate"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
@@ -428,7 +429,7 @@ func (sq *Squadron) Rollback(ctx context.Context, units Units, revision string, 
 	return nil
 }
 
-func (sq *Squadron) Up(ctx context.Context, units Units, helmArgs []string, username, version, commit string) error {
+func (sq *Squadron) Up(ctx context.Context, units Units, helmArgs []string, username, version, commit string, parallel int) error {
 	description := fmt.Sprintf("\nDeployed-By: %s\nManaged-By: Squadron %s\nGit-Commit: %s", username, version, commit)
 
 	if sq.c.Unite {
@@ -446,6 +447,8 @@ func (sq *Squadron) Up(ctx context.Context, units Units, helmArgs []string, user
 		}
 		return nil
 	}
+	r := runner.Runner{}
+
 	for _, uName := range units.Keys() {
 		u := units[uName]
 		// todo use release prefix on install: squadron name or --name
@@ -481,11 +484,16 @@ func (sq *Squadron) Up(ctx context.Context, units Units, helmArgs []string, user
 		} else {
 			cmd.Args(u.Chart.Name, "--repo", u.Chart.Repository, "--version", u.Chart.Version)
 		}
-		if out, err := cmd.Run(ctx); err != nil {
-			return errors.Wrap(err, out)
-		}
+
+		r.Add(func(tctx context.Context) error {
+			if out, err := cmd.Run(tctx); err != nil {
+				return errors.Wrap(err, out)
+			}
+			return nil
+		})
+
 	}
-	return nil
+	return r.Run(ctx, parallel)
 }
 
 func (sq *Squadron) Template(ctx context.Context, units Units, helmArgs []string) error {
