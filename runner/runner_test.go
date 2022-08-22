@@ -24,6 +24,17 @@ func TestRunner(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, count, int(completed.Load()))
 	})
+	t.Run("overcommit", func(t *testing.T) {
+		runner := Runner{}
+		completed := atomic.NewInt32(0)
+		runner.Add(func(ctx context.Context) error {
+			completed.Inc()
+			return nil
+		})
+		err := runner.Run(context.Background(), 4)
+		require.NoError(t, err)
+		require.Equal(t, 1, int(completed.Load()))
+	})
 	t.Run("error", func(t *testing.T) {
 		runner := Runner{}
 		completed := atomic.NewInt32(0)

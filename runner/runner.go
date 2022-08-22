@@ -25,14 +25,14 @@ func (r *Runner) Run(ctx context.Context, routines int) error {
 		}
 	}()
 
-	wg, wgCtx := errgroup.WithContext(ctx)
+	g, gctx := errgroup.WithContext(ctx)
 	for i := 0; i < routines; i++ {
-		wg.Go(func() error {
+		g.Go(func() error {
 			for task := range tasks {
-				if wgCtx.Err() != nil {
-					return wgCtx.Err()
+				if gctx.Err() != nil {
+					return gctx.Err()
 				}
-				if err := task(wgCtx); err != nil {
+				if err := task(gctx); err != nil {
 					return err
 				}
 			}
@@ -40,5 +40,5 @@ func (r *Runner) Run(ctx context.Context, routines int) error {
 		})
 	}
 
-	return wg.Wait()
+	return g.Wait()
 }
