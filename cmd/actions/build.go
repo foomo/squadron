@@ -4,12 +4,10 @@ import (
 	"context"
 	"strings"
 
+	"github.com/foomo/squadron"
+	"github.com/foomo/squadron/runner"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"golang.org/x/sync/errgroup"
-	"golang.org/x/sync/semaphore"
-
-	"github.com/foomo/squadron"
 )
 
 func init() {
@@ -57,42 +55,33 @@ func build(ctx context.Context, args []string, cwd string, files []string, push 
 	}
 
 	{
-		sem := semaphore.NewWeighted(int64(parallel))
-		wg, wgCtx := errgroup.WithContext(ctx)
+		r := runner.Runner{}
 
 		_ = squadron.Units(units).Iterate(func(n string, u *squadron.Unit) error {
 			name := n
 			unit := u
-			wg.Go(func() error {
-				if err := sem.Acquire(wgCtx, 1); err != nil {
-					return err
-				}
-				defer sem.Release(1)
-				if out, err := unit.Build(wgCtx, sq.Name(), name, strings.Split(flagBuildArgs, " ")); err != nil {
+			r.Add(func(tctx context.Context) error {
+				if out, err := unit.Build(tctx, sq.Name(), name, strings.Split(flagBuildArgs, " ")); err != nil {
 					return errors.Wrap(err, out)
 				}
 				return nil
 			})
 			return nil
 		})
-
-		if err := wg.Wait(); err != nil {
+		err := r.Run(ctx, parallel)
+		if err != nil {
 			return err
 		}
 	}
 
 	if push {
-		sem := semaphore.NewWeighted(int64(parallel))
-		wg, wgCtx := errgroup.WithContext(ctx)
+		r := runner.Runner{}
+
 		_ = squadron.Units(units).Iterate(func(n string, u *squadron.Unit) error {
 			name := n
 			unit := u
-			wg.Go(func() error {
-				if err := sem.Acquire(wgCtx, 1); err != nil {
-					return err
-				}
-				defer sem.Release(1)
-				if out, err := unit.Push(wgCtx, sq.Name(), name, strings.Split(flagPushArgs, " ")); err != nil {
+			r.Add(func(tctx context.Context) error {
+				if out, err := unit.Push(tctx, sq.Name(), name, strings.Split(flagPushArgs, " ")); err != nil {
 					return errors.Wrap(err, out)
 				}
 				return nil
@@ -100,7 +89,7 @@ func build(ctx context.Context, args []string, cwd string, files []string, push 
 			return nil
 		})
 
-		if err := wg.Wait(); err != nil {
+		if err := r.Run(ctx, parallel); err != nil {
 			return err
 		}
 	}
