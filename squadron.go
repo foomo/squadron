@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/foomo/squadron/runner"
 	"github.com/miracl/conflate"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
@@ -19,6 +18,8 @@ import (
 	"github.com/sirupsen/logrus"
 	yamlv2 "gopkg.in/yaml.v2"
 	"gopkg.in/yaml.v3"
+
+	"github.com/foomo/squadron/runner"
 
 	"github.com/foomo/squadron/util"
 )
@@ -491,7 +492,6 @@ func (sq *Squadron) Up(ctx context.Context, units Units, helmArgs []string, user
 			}
 			return nil
 		})
-
 	}
 	return r.Run(ctx, parallel)
 }

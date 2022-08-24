@@ -4,10 +4,11 @@ import (
 	"context"
 	"strings"
 
-	"github.com/foomo/squadron"
-	"github.com/foomo/squadron/runner"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+
+	"github.com/foomo/squadron"
+	"github.com/foomo/squadron/runner"
 )
 
 func init() {
