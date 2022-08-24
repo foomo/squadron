@@ -16,10 +16,9 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 	yamlv2 "gopkg.in/yaml.v2"
 	"gopkg.in/yaml.v3"
-
-	"github.com/foomo/squadron/runner"
 
 	"github.com/foomo/squadron/util"
 )
@@ -448,7 +447,8 @@ func (sq *Squadron) Up(ctx context.Context, units Units, helmArgs []string, user
 		}
 		return nil
 	}
-	r := runner.Runner{}
+	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(parallel)
 
 	for _, uName := range units.Keys() {
 		u := units[uName]
@@ -486,14 +486,14 @@ func (sq *Squadron) Up(ctx context.Context, units Units, helmArgs []string, user
 			cmd.Args(u.Chart.Name, "--repo", u.Chart.Repository, "--version", u.Chart.Version)
 		}
 
-		r.Add(func(tctx context.Context) error {
-			if out, err := cmd.Run(tctx); err != nil {
+		g.Go(func() error {
+			if out, err := cmd.Run(gctx); err != nil {
 				return errors.Wrap(err, out)
 			}
 			return nil
 		})
 	}
-	return r.Run(ctx, parallel)
+	return g.Wait()
 }
 
 func (sq *Squadron) Template(ctx context.Context, units Units, helmArgs []string) error {

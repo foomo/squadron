@@ -6,9 +6,9 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/foomo/squadron"
-	"github.com/foomo/squadron/runner"
 )
 
 func init() {
@@ -56,33 +56,35 @@ func build(ctx context.Context, args []string, cwd string, files []string, push 
 	}
 
 	{
-		r := runner.Runner{}
+		g, gctx := errgroup.WithContext(ctx)
+		g.SetLimit(parallel)
 
 		_ = squadron.Units(units).Iterate(func(n string, u *squadron.Unit) error {
 			name := n
 			unit := u
-			r.Add(func(tctx context.Context) error {
-				if out, err := unit.Build(tctx, sq.Name(), name, strings.Split(flagBuildArgs, " ")); err != nil {
+			g.Go(func() error {
+				if out, err := unit.Build(gctx, sq.Name(), name, strings.Split(flagBuildArgs, " ")); err != nil {
 					return errors.Wrap(err, out)
 				}
 				return nil
 			})
 			return nil
 		})
-		err := r.Run(ctx, parallel)
+		err := g.Wait()
 		if err != nil {
 			return err
 		}
 	}
 
 	if push {
-		r := runner.Runner{}
+		g, gctx := errgroup.WithContext(ctx)
+		g.SetLimit(parallel)
 
 		_ = squadron.Units(units).Iterate(func(n string, u *squadron.Unit) error {
 			name := n
 			unit := u
-			r.Add(func(tctx context.Context) error {
-				if out, err := unit.Push(tctx, sq.Name(), name, strings.Split(flagPushArgs, " ")); err != nil {
+			g.Go(func() error {
+				if out, err := unit.Push(gctx, sq.Name(), name, strings.Split(flagPushArgs, " ")); err != nil {
 					return errors.Wrap(err, out)
 				}
 				return nil
@@ -90,7 +92,7 @@ func build(ctx context.Context, args []string, cwd string, files []string, push 
 			return nil
 		})
 
-		if err := r.Run(ctx, parallel); err != nil {
+		if err := g.Wait(); err != nil {
 			return err
 		}
 	}
