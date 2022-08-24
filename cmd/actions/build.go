@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
-	"golang.org/x/sync/semaphore"
 
 	"github.com/foomo/squadron"
 )
@@ -57,42 +56,35 @@ func build(ctx context.Context, args []string, cwd string, files []string, push 
 	}
 
 	{
-		sem := semaphore.NewWeighted(int64(parallel))
-		wg, wgCtx := errgroup.WithContext(ctx)
+		g, gctx := errgroup.WithContext(ctx)
+		g.SetLimit(parallel)
 
 		_ = squadron.Units(units).Iterate(func(n string, u *squadron.Unit) error {
 			name := n
 			unit := u
-			wg.Go(func() error {
-				if err := sem.Acquire(wgCtx, 1); err != nil {
-					return err
-				}
-				defer sem.Release(1)
-				if out, err := unit.Build(wgCtx, sq.Name(), name, strings.Split(flagBuildArgs, " ")); err != nil {
+			g.Go(func() error {
+				if out, err := unit.Build(gctx, sq.Name(), name, strings.Split(flagBuildArgs, " ")); err != nil {
 					return errors.Wrap(err, out)
 				}
 				return nil
 			})
 			return nil
 		})
-
-		if err := wg.Wait(); err != nil {
+		err := g.Wait()
+		if err != nil {
 			return err
 		}
 	}
 
 	if push {
-		sem := semaphore.NewWeighted(int64(parallel))
-		wg, wgCtx := errgroup.WithContext(ctx)
+		g, gctx := errgroup.WithContext(ctx)
+		g.SetLimit(parallel)
+
 		_ = squadron.Units(units).Iterate(func(n string, u *squadron.Unit) error {
 			name := n
 			unit := u
-			wg.Go(func() error {
-				if err := sem.Acquire(wgCtx, 1); err != nil {
-					return err
-				}
-				defer sem.Release(1)
-				if out, err := unit.Push(wgCtx, sq.Name(), name, strings.Split(flagPushArgs, " ")); err != nil {
+			g.Go(func() error {
+				if out, err := unit.Push(gctx, sq.Name(), name, strings.Split(flagPushArgs, " ")); err != nil {
 					return errors.Wrap(err, out)
 				}
 				return nil
@@ -100,7 +92,7 @@ func build(ctx context.Context, args []string, cwd string, files []string, push 
 			return nil
 		})
 
-		if err := wg.Wait(); err != nil {
+		if err := g.Wait(); err != nil {
 			return err
 		}
 	}
