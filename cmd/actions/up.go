@@ -123,13 +123,17 @@ func up(ctx context.Context, args []string, cwd, namespace string, build, push, 
 		username = strings.TrimSpace(value.Name)
 	}
 
+	branch := ""
+	if value, err := util.NewCommand("sh").Args("-c", "git describe --tags --exact-match 2> /dev/null || git symbolic-ref -q --short HEAD || git rev-parse --short HEAD").Run(ctx); err == nil {
+		branch = strings.TrimSpace(value)
+	}
 	commit := ""
-	if value, err := util.NewCommand("git").Args("rev-parse", "--short", "HEAD").Run(ctx); err == nil {
+	if value, err := util.NewCommand("sh").Args("-c", "rev-parse --short HEAD").Run(ctx); err == nil {
 		commit = strings.TrimSpace(value)
 	}
 
 	if !diff {
-		return sq.Up(ctx, units, helmArgs, username, version, commit, parallel)
+		return sq.Up(ctx, units, helmArgs, username, version, commit, branch, parallel)
 	} else if out, err := sq.Diff(ctx, units, helmArgs); err != nil {
 		return err
 	} else {

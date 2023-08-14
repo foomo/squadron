@@ -1,30 +1,31 @@
-name: goreleaser
+name: Release Tag
 
 on:
   push:
     tags:
       - v*.*.*
+  workflow_dispatch:
 
 env:
-  GO_VERSION: 1.18
-  GOLANGCI_LINT_VERSION: v1.45.2
+  GOFLAGS: -mod=readonly
+  GOPROXY: https://proxy.golang.org
 
 jobs:
-  goreleaser:
+  release:
     runs-on: ubuntu-latest
-    env:
-      GOFLAGS: -mod=readonly
-      GOPROXY: https://proxy.golang.org
     steps:
       - uses: actions/checkout@v3
-      - run: git fetch --prune --unshallow
-      - uses: actions/setup-go@v3
         with:
-          go-version: ${{ env.GO_VERSION }}
-      - uses: golangci/golangci-lint-action@v3.1.0
+          fetch-depth: 0
+
+      - run: git fetch --force --tags
+
+      - uses: actions/setup-go@v4
         with:
-          version: ${{ env.GOLANGCI_LINT_VERSION }}
-      - uses: goreleaser/goreleaser-action@v2
+          check-latest: true
+          go-version-file: 'go.mod'
+
+      - uses: goreleaser/goreleaser-action@v4
         with:
           distribution: goreleaser
           version: latest

@@ -1,6 +1,67 @@
 .DEFAULT_GOAL:=help
+-include .makerc
+
+# --- Targets -----------------------------------------------------------------
+
+# This allows us to accept extra arguments
+%: .husky
+	@:
+
+.PHONY: .husky
+# Configure git hooks for husky
+.husky:
+	@if ! command -v husky &> /dev/null; then \
+		echo "ERROR: missing executeable 'husky', please run:"; \
+		echo "\n$ go install github.com/go-courier/husky/cmd/husky@latest\n"; \
+	fi
+	@git config core.hooksPath .husky
 
 ## === Tasks ===
+
+## === Tasks ===
+
+.PHONY: doc
+## Run tests
+doc:
+	@open "http://localhost:6060/pkg/github.com/foomo/keel/"
+	@godoc -http=localhost:6060 -play
+
+.PHONY: test
+## Run tests
+test:
+	@go test -v ./...
+
+.PHONY: test.update
+## Run tests and update snapshots
+test.update:
+	go test -update ./...
+
+.PHONY: test.cover
+## Run tests with coverage
+test.cover:
+	@go test -v -coverprofile=coverage.out ./...
+	@go tool cover -func=coverage.out
+	@go tool cover -html=coverage.out
+
+.PHONY: lint
+## Run linter
+lint:
+	@golangci-lint run
+
+.PHONY: lint.fix
+## Fix lint violations
+lint.fix:
+	@golangci-lint run --fix
+
+.PHONY: tidy
+## Run go mod tidy
+tidy:
+	@go mod tidy
+
+.PHONY: outdated
+## Show outdated direct dependencies
+outdated:
+	@go list -u -m -json all | go-mod-outdated -update -direct
 
 ## Install binary
 install:
@@ -10,32 +71,6 @@ install:
 build:
 	mkdir -p bin
 	go build -o bin/squadron cmd/main.go
-
-.PHONY: check
-## Run lint & tests
-check:
-	$(MAKE) lint
-	$(MAKE) test
-
-.PHONY: test
-## Run tests
-test:
-	go test ./...
-
-.PHONY: test.update
-## Run tests and update snapshots
-test.update:
-	go test -update ./...
-
-.PHONY: lint
-## Run linter
-lint:
-	golangci-lint run
-
-.PHONY: lint.fix
-## Fix lint violations
-lint.fix:
-	golangci-lint run --fix
 
 ## === Utils ===
 
