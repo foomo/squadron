@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"regexp"
@@ -23,8 +22,8 @@ import (
 func init() {
 	// define the unmarshallers for the given file extensions, blank extension is the global unmarshaller
 	conflate.Unmarshallers = conflate.UnmarshallerMap{
-		".yaml": {conflate.YAMLUnmarshal},
-		".yml":  {conflate.YAMLUnmarshal},
+		".yaml": conflate.UnmarshallerFuncs{conflate.YAMLUnmarshal},
+		".yml":  conflate.UnmarshallerFuncs{conflate.YAMLUnmarshal},
 	}
 }
 
@@ -82,7 +81,7 @@ func file(ctx context.Context, templateVars interface{}, errorOnMissing bool) fu
 	return func(v string) (string, error) {
 		if v == "" {
 			return "", nil
-		} else if fileBytes, err := ioutil.ReadFile(v); err != nil {
+		} else if fileBytes, err := os.ReadFile(v); err != nil {
 			return "", errors.Wrap(err, "failed to read file")
 		} else if renderedBytes, err := executeFileTemplate(ctx, string(fileBytes), templateVars, errorOnMissing); err != nil {
 			return "", errors.Wrap(err, "failed to render file")

@@ -3,7 +3,7 @@ package squadron
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path"
 
 	"github.com/pkg/errors"
@@ -72,7 +72,7 @@ func (c *Chart) addDependency(alias string, cd ChartDependency) {
 
 func loadChart(path string) (*Chart, error) {
 	c := Chart{}
-	file, err := ioutil.ReadFile(path)
+	file, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("error while opening file: %v", err)
 	}

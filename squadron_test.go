@@ -102,6 +102,7 @@ func TestConfigOverrideSnapshotNulled(t *testing.T) {
 }
 
 func testConfigSnapshot(t *testing.T, configs []string, snapshot string, units []string, render bool) {
+	t.Helper()
 	var cwd string
 	testutils.Must(t, util.ValidatePath(".", &cwd))
 
