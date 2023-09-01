@@ -189,7 +189,7 @@ func onePassword(ctx context.Context, templateVars interface{}, errorOnMissing b
 			return "", err
 		} else if os.Getenv(fmt.Sprintf("OP_SESSION_%s", account)) == "" {
 			if err := onePasswordSignIn(ctx, account); err != nil {
-				return "", err
+				return "", errors.Wrap(err, "failed to sign in")
 			}
 		}
 
@@ -220,15 +220,15 @@ func onePassword(ctx context.Context, templateVars interface{}, errorOnMissing b
 			}
 		} else {
 			if _, ok := onePasswordCache[cacheKey]; !ok {
-				if res, err := onePasswordGet(ctx, vaultUUID, itemUUID); !errors.Is(err, ErrOnePasswordNotSignedIn) {
+				if res, err := onePasswordGet(ctx, account, vaultUUID, itemUUID); !errors.Is(err, ErrOnePasswordNotSignedIn) {
 					if err != nil {
 						return "", err
 					} else {
 						onePasswordCache[cacheKey] = res
 					}
 				} else if err := onePasswordSignIn(ctx, account); err != nil {
-					return "", err
-				} else if res, err = onePasswordGet(ctx, vaultUUID, itemUUID); err != nil {
+					return "", errors.Wrap(err, "failed to sign in second time")
+				} else if res, err = onePasswordGet(ctx, account, vaultUUID, itemUUID); err != nil {
 					return "", err
 				} else {
 					onePasswordCache[cacheKey] = res
@@ -270,7 +270,7 @@ func onePasswordCIGet(client connect.Client, vaultUUID, itemUUID string) (map[st
 	return ret, nil
 }
 
-func onePasswordGet(ctx context.Context, vaultUUID string, itemUUID string) (map[string]string, error) {
+func onePasswordGet(ctx context.Context, account, vaultUUID, itemUUID string) (map[string]string, error) {
 	var v struct {
 		Vault struct {
 			ID string `json:"id"`
@@ -282,7 +282,7 @@ func onePasswordGet(ctx context.Context, vaultUUID string, itemUUID string) (map
 			Value interface{} `json:"value"`
 		} `json:"fields"`
 	}
-	if res, err := exec.CommandContext(ctx, "op", "item", "get", itemUUID, "--format", "json").CombinedOutput(); err != nil && strings.Contains(string(res), "You are not currently signed in") {
+	if res, err := exec.CommandContext(ctx, "op", "item", "get", itemUUID, "--account", account, "--format", "json").CombinedOutput(); err != nil && strings.Contains(string(res), "You are not currently signed in") {
 		return nil, ErrOnePasswordNotSignedIn
 	} else if err != nil {
 		return nil, err
