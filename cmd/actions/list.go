@@ -10,6 +10,10 @@ import (
 
 var flagPrefixSquadron bool
 
+func init() {
+	listCmd.Flags().StringSliceVar(&flagTags, "tags", nil, "list of tags to include or exclude (can specify multiple or separate values with commas: tag1,tag2,-tag3)")
+}
+
 var listCmd = &cobra.Command{
 	Use:     "list [SQUADRON]",
 	Short:   "list squadron units",
@@ -23,7 +27,7 @@ var listCmd = &cobra.Command{
 		}
 
 		squadronName, unitNames := parseSquadronAndUnitNames(args)
-		if err := sq.FilterConfig(squadronName, unitNames); err != nil {
+		if err := sq.FilterConfig(squadronName, unitNames, flagTags); err != nil {
 			return err
 		}
 

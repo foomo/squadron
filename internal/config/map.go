@@ -80,6 +80,15 @@ func (m Map[T]) Filter(keys ...string) error {
 	return nil
 }
 
+func (m Map[T]) FilterFn(handler func(key string, value T) bool) error {
+	for key, value := range m {
+		if !handler(key, value) {
+			delete(m, key)
+		}
+	}
+	return nil
+}
+
 func (m Map[T]) Iterate(handler func(key string, value T) error) error {
 	if len(m) == 0 {
 		return nil

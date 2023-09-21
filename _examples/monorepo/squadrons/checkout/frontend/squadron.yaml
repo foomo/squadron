@@ -5,6 +5,7 @@ squadron:
   checkout:
     frontend:
       chart: <% env "PROJECT_ROOT" %>/../common/charts/frontend
+      tags: [ "frontend" ]
       builds:
         default:
           tag: "<% .Global.docker.tag %>"

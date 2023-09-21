@@ -9,15 +9,20 @@ import (
 	"github.com/foomo/squadron"
 	"github.com/foomo/squadron/internal/testutils"
 	"github.com/foomo/squadron/internal/util"
+	"github.com/pterm/pterm"
 	"github.com/stretchr/testify/require"
 )
 
 func TestConfigSimpleSnapshot(t *testing.T) {
+	pterm.EnableDebugMessages()
+	require.NoError(t, os.Setenv("PROJECT_ROOT", "."))
+
 	tests := []struct {
 		name     string
 		files    []string
 		squadron string
 		units    []string
+		tags     []string
 	}{
 		{
 			name:  "blank",
@@ -39,21 +44,25 @@ func TestConfigSimpleSnapshot(t *testing.T) {
 			name:  "template",
 			files: []string{"squadron.yaml"},
 		},
+		{
+			name:  "tags",
+			tags:  []string{"backend", "-skip"},
+			files: []string{"squadron.yaml"},
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(tt *testing.T) {
-			config(tt, test.name, test.files, test.squadron, test.units)
+			config(tt, test.name, test.files, test.squadron, test.units, test.tags)
 		})
 	}
 }
 
-func config(t *testing.T, name string, files []string, squadronName string, unitNames []string) {
+func config(t *testing.T, name string, files []string, squadronName string, unitNames, tags []string) {
 	t.Helper()
 	var cwd string
 	ctx := context.TODO()
 	require.NoError(t, util.ValidatePath(".", &cwd))
-	require.NoError(t, os.Setenv("PROJECT_ROOT", "."))
 
 	for i, file := range files {
 		files[i] = path.Join("testdata", name, file)
@@ -65,7 +74,7 @@ func config(t *testing.T, name string, files []string, squadronName string, unit
 	}
 
 	{
-		require.NoError(t, sq.FilterConfig(squadronName, unitNames), "failed to filter config")
+		require.NoError(t, sq.FilterConfig(squadronName, unitNames, tags), "failed to filter config")
 		testutils.Snapshot(t, path.Join("testdata", name, "snapshop-config-norender.yaml"), sq.ConfigYAML())
 	}
 

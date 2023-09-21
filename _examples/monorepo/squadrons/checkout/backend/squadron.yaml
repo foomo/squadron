@@ -5,6 +5,7 @@ squadron:
   checkout:
     backend:
       chart: <% env "PROJECT_ROOT" %>/../common/charts/backend
+      tags: [ "backend" ]
       builds:
         default:
           tag: <% .Global.docker.tag | quote %>

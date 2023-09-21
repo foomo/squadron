@@ -8,7 +8,8 @@ import (
 
 func init() {
 	statusCmd.Flags().IntVar(&flagParallel, "parallel", 1, "run command in parallel")
-	statusCmd.Flags().StringVarP(&flagNamespace, "namespace", "n", "default", "specifies the namespace")
+	statusCmd.Flags().StringVarP(&flagNamespace, "namespace", "n", "default", "set the namespace name or template (default, squadron-{{.Squadron}}-{{.Unit}})")
+	statusCmd.Flags().StringSliceVar(&flagTags, "tags", nil, "list of tags to include or exclude (can specify multiple or separate values with commas: tag1,tag2,-tag3)")
 }
 
 var statusCmd = &cobra.Command{
@@ -25,7 +26,7 @@ var statusCmd = &cobra.Command{
 		args, helmArgs := parseExtraArgs(args)
 
 		squadronName, unitNames := parseSquadronAndUnitNames(args)
-		if err := sq.FilterConfig(squadronName, unitNames); err != nil {
+		if err := sq.FilterConfig(squadronName, unitNames, flagTags); err != nil {
 			return err
 		}
 

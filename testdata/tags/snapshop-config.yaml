@@ -1,0 +1,14 @@
+version: "2.0"
+squadron:
+  checkout:
+    backend:
+      chart:
+        name: backend
+        repository: file://./_examples/common/charts/backend
+        version: 0.0.1
+      tags:
+      - backend
+      values:
+        image:
+          repository: nginx
+          tag: latest

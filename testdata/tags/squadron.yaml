@@ -1,0 +1,33 @@
+version: "2.0"
+
+squadron:
+  storefinder:
+    frontend:
+      chart: <% env "PROJECT_ROOT" %>/_examples/common/charts/frontend
+      tags: ["frontend"]
+      values:
+        image:
+          tag: latest
+          repository: nginx
+    backend:
+      chart: <% env "PROJECT_ROOT" %>/_examples/common/charts/backend
+      tags: ["backend", "skip"]
+      values:
+        image:
+          tag: latest
+          repository: nginx
+  checkout:
+    frontend:
+      chart: <% env "PROJECT_ROOT" %>/_examples/common/charts/frontend
+      tags: ["frontend"]
+      values:
+        image:
+          tag: latest
+          repository: nginx
+    backend:
+      chart: <% env "PROJECT_ROOT" %>/_examples/common/charts/backend
+      tags: ["backend"]
+      values:
+        image:
+          tag: latest
+          repository: nginx

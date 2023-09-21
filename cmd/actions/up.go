@@ -10,12 +10,13 @@ import (
 )
 
 func init() {
-	upCmd.Flags().StringVarP(&flagNamespace, "namespace", "n", "default", "specifies the namespace")
+	upCmd.Flags().StringVarP(&flagNamespace, "namespace", "n", "default", "set the namespace name or template (default, squadron-{{.Squadron}}-{{.Unit}})")
 	upCmd.Flags().BoolVarP(&flagBuild, "build", "b", false, "builds or rebuilds units")
 	upCmd.Flags().BoolVarP(&flagPush, "push", "p", false, "pushes units to the registry")
 	upCmd.Flags().IntVar(&flagParallel, "parallel", 1, "run command in parallel")
 	upCmd.Flags().StringSliceVar(&flagBuildArgs, "build-args", nil, "additional docker buildx build args")
 	upCmd.Flags().StringSliceVar(&flagPushArgs, "push-args", nil, "additional docker push args")
+	upCmd.Flags().StringSliceVar(&flagTags, "tags", nil, "list of tags to include or exclude (can specify multiple or separate values with commas: tag1,tag2,-tag3)")
 }
 
 var upCmd = &cobra.Command{
@@ -32,7 +33,7 @@ var upCmd = &cobra.Command{
 		args, helmArgs := parseExtraArgs(args)
 
 		squadronName, unitNames := parseSquadronAndUnitNames(args)
-		if err := sq.FilterConfig(squadronName, unitNames); err != nil {
+		if err := sq.FilterConfig(squadronName, unitNames, flagTags); err != nil {
 			return err
 		}
 

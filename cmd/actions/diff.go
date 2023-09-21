@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	diffCmd.Flags().StringVarP(&flagNamespace, "namespace", "n", "default", "specifies the namespace")
+	diffCmd.Flags().StringVarP(&flagNamespace, "namespace", "n", "default", "set the namespace name or template (default, squadron-{{.Squadron}}-{{.Unit}})")
 	diffCmd.Flags().IntVar(&flagParallel, "parallel", 1, "run command in parallel")
 }
 

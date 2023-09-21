@@ -3,14 +3,14 @@ package actions
 import (
 	"fmt"
 
+	"github.com/foomo/squadron"
 	"github.com/foomo/squadron/internal/util"
 	"github.com/spf13/cobra"
-
-	"github.com/foomo/squadron"
 )
 
 func init() {
 	configCmd.Flags().BoolVar(&flagNoRender, "no-render", false, "don't render the config template")
+	configCmd.Flags().StringSliceVar(&flagTags, "tags", nil, "list of tags to include or exclude (can specify multiple or separate values with commas: tag1,tag2,-tag3)")
 }
 
 var configCmd = &cobra.Command{
@@ -26,7 +26,7 @@ var configCmd = &cobra.Command{
 		}
 
 		squadronName, unitNames := parseSquadronAndUnitNames(args)
-		if err := sq.FilterConfig(squadronName, unitNames); err != nil {
+		if err := sq.FilterConfig(squadronName, unitNames, flagTags); err != nil {
 			return err
 		}
 

@@ -4,10 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/foomo/squadron/internal/util"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
-
-	"github.com/foomo/squadron/internal/util"
 )
 
 type Build struct {

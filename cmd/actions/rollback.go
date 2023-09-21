@@ -8,8 +8,9 @@ import (
 
 func init() {
 	rollbackCmd.Flags().IntVar(&flagParallel, "parallel", 1, "run command in parallel")
-	rollbackCmd.Flags().StringVarP(&flagNamespace, "namespace", "n", "default", "specifies the namespace")
+	rollbackCmd.Flags().StringVarP(&flagNamespace, "namespace", "n", "default", "set the namespace name or template (default, squadron-{{.Squadron}}-{{.Unit}})")
 	rollbackCmd.Flags().StringVarP(&flagRevision, "revision", "r", "", "specifies the revision to roll back to")
+	rollbackCmd.Flags().StringSliceVar(&flagTags, "tags", nil, "list of tags to include or exclude (can specify multiple or separate values with commas: tag1,tag2,-tag3)")
 }
 
 var rollbackCmd = &cobra.Command{
@@ -26,7 +27,7 @@ var rollbackCmd = &cobra.Command{
 		args, helmArgs := parseExtraArgs(args)
 
 		squadronName, unitNames := parseSquadronAndUnitNames(args)
-		if err := sq.FilterConfig(squadronName, unitNames); err != nil {
+		if err := sq.FilterConfig(squadronName, unitNames, flagTags); err != nil {
 			return err
 		}
 

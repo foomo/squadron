@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"text/template"
 
@@ -102,13 +103,11 @@ func (sq *Squadron) MergeConfigFiles() error {
 	return nil
 }
 
-func (sq *Squadron) FilterConfig(squadron string, units []string) error {
-	if len(squadron) == 0 {
-		return nil
-	}
-
-	if err := sq.Config().Squadrons.Filter(squadron); err != nil {
-		return err
+func (sq *Squadron) FilterConfig(squadron string, units, tags []string) error {
+	if len(squadron) > 0 {
+		if err := sq.Config().Squadrons.Filter(squadron); err != nil {
+			return err
+		}
 	}
 
 	if len(squadron) > 0 && len(units) > 0 {
@@ -116,6 +115,27 @@ func (sq *Squadron) FilterConfig(squadron string, units []string) error {
 			return err
 		}
 	}
+
+	if len(tags) > 0 {
+		if err := sq.Config().Squadrons.Iterate(func(key string, value config.Map[*config.Unit]) error {
+			return value.FilterFn(func(k string, v *config.Unit) bool {
+				for _, tag := range tags {
+					if strings.HasPrefix(tag, "-") {
+						if slices.Contains(v.Tags, config.Tag(strings.TrimPrefix(tag, "-"))) {
+							return false
+						}
+					} else if !slices.Contains(v.Tags, config.Tag(tag)) {
+						return false
+					}
+				}
+				return true
+			})
+		}); err != nil {
+			return err
+		}
+	}
+
+	sq.c.Trim()
 
 	value, err := yamlv2.Marshal(sq.c)
 	if err != nil {
