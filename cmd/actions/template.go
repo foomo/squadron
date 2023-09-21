@@ -1,11 +1,11 @@
 package actions
 
 import (
-	"context"
-
-	"github.com/spf13/cobra"
+	"fmt"
 
 	"github.com/foomo/squadron"
+	"github.com/foomo/squadron/internal/util"
+	"github.com/spf13/cobra"
 )
 
 func init() {
@@ -13,49 +13,35 @@ func init() {
 }
 
 var templateCmd = &cobra.Command{
-	Use:     "template [UNIT...]",
+	Use:     "template [SQUADRON] [UNIT...]",
 	Short:   "render chart templates locally and display the output",
-	Example: "  squadron template frontend backend --namespace demo",
+	Example: "  squadron template storefinder frontend backend --namespace demo",
 	Args:    cobra.MinimumNArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return template(cmd.Context(), args, cwd, flagNamespace, flagFiles)
-	},
-}
+		sq := squadron.New(cwd, flagNamespace, flagFiles)
 
-func template(ctx context.Context, args []string, cwd, namespace string, files []string) error {
-	sq := squadron.New(cwd, namespace, files)
-
-	if err := sq.MergeConfigFiles(); err != nil {
-		return err
-	}
-
-	args, helmArgs := parseExtraArgs(args)
-
-	unitsNames, err := parseUnitNames(args, sq.GetConfig().Units)
-	if err != nil {
-		return err
-	}
-
-	if unitsNames != nil {
-		if err := sq.FilterConfig(unitsNames); err != nil {
+		if err := sq.MergeConfigFiles(); err != nil {
 			return err
 		}
-	}
 
-	if err := sq.RenderConfig(ctx); err != nil {
-		return err
-	}
+		args, helmArgs := parseExtraArgs(args)
 
-	units, err := parseUnitArgs(args, sq.GetConfig().Units)
-	if err != nil {
-		return err
-	}
+		squadronName, unitNames := parseSquadronAndUnitNames(args)
+		if err := sq.FilterConfig(squadronName, unitNames); err != nil {
+			return err
+		}
 
-	if err := sq.Generate(ctx, sq.GetConfig().Units); err != nil {
-		return err
-	} else if err := sq.Template(ctx, units, helmArgs); err != nil {
-		return err
-	}
+		if err := sq.RenderConfig(cmd.Context()); err != nil {
+			return err
+		}
 
-	return nil
+		out, err := sq.Template(cmd.Context(), helmArgs)
+		if err != nil {
+			return err
+		}
+
+		fmt.Print(util.Highlight(out))
+
+		return nil
+	},
 }

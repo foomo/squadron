@@ -2,14 +2,12 @@ package util
 
 import (
 	"os"
-	"path"
-	"path/filepath"
 
-	"gopkg.in/yaml.v3"
+	yamlv2 "gopkg.in/yaml.v2"
 )
 
 func GenerateYaml(path string, data interface{}) (err error) {
-	out, marshalErr := yaml.Marshal(data)
+	out, marshalErr := yamlv2.Marshal(data)
 	if marshalErr != nil {
 		return marshalErr
 	}
@@ -24,20 +22,4 @@ func GenerateYaml(path string, data interface{}) (err error) {
 	}()
 	_, err = file.Write(out)
 	return
-}
-
-func ValidatePath(wd string, p *string) error {
-	if !filepath.IsAbs(*p) {
-		*p = path.Join(wd, *p)
-	}
-	absPath, err := filepath.Abs(*p)
-	if err != nil {
-		return err
-	}
-	_, err = os.Stat(absPath)
-	if err != nil {
-		return err
-	}
-	*p = absPath
-	return nil
 }

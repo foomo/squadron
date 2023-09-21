@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"time"
 
+	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 )
 
@@ -144,7 +145,7 @@ func (c *Cmd) Run(ctx context.Context) (string, error) {
 	if c.cwd != "" {
 		cmd.Dir = c.cwd
 	}
-	logrus.Debugf("executing %q", cmd.String())
+	pterm.Debug.Printfln("executing %s", cmd.String())
 
 	combinedBuf := new(bytes.Buffer)
 	traceWriter := logrus.StandardLogger().WriterLevel(logrus.TraceLevel)
@@ -153,7 +154,7 @@ func (c *Cmd) Run(ctx context.Context) (string, error) {
 	cmd.Stderr = io.MultiWriter(append(c.stderrWriters, combinedBuf, traceWriter)...)
 
 	if c.preStartFunc != nil {
-		logrus.Debug("executing pre start func")
+		pterm.Debug.Println("executing pre start func")
 		if err := c.preStartFunc(); err != nil {
 			return combinedBuf.String(), err
 		}
@@ -164,7 +165,7 @@ func (c *Cmd) Run(ctx context.Context) (string, error) {
 	}
 
 	if c.postStartFunc != nil {
-		logrus.Debug("executing post start func")
+		pterm.Debug.Println("executing post start func")
 		if err := c.postStartFunc(); err != nil {
 			return combinedBuf.String(), err
 		}

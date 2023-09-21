@@ -1,39 +1,35 @@
 package actions
 
 import (
-	"context"
-
 	"github.com/spf13/cobra"
 
 	"github.com/foomo/squadron"
 )
 
 func init() {
+	downCmd.Flags().IntVar(&flagParallel, "parallel", 1, "run command in parallel")
 	downCmd.Flags().StringVarP(&flagNamespace, "namespace", "n", "default", "Specifies the namespace")
 }
 
 var downCmd = &cobra.Command{
-	Use:     "down [UNIT...]",
+	Use:     "down [SQUADRON] [UNIT...]",
 	Short:   "uninstalls the squadron or given units",
-	Example: "  squadron down frontend backend --namespace demo",
+	Example: "  squadron down storefinder frontend backend --namespace demo",
 	Args:    cobra.MinimumNArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return down(cmd.Context(), args, cwd, flagNamespace, flagFiles)
+		sq := squadron.New(cwd, flagNamespace, flagFiles)
+
+		if err := sq.MergeConfigFiles(); err != nil {
+			return err
+		}
+
+		args, helmArgs := parseExtraArgs(args)
+
+		squadronName, unitNames := parseSquadronAndUnitNames(args)
+		if err := sq.FilterConfig(squadronName, unitNames); err != nil {
+			return err
+		}
+
+		return sq.Down(cmd.Context(), helmArgs, flagParallel)
 	},
-}
-
-func down(ctx context.Context, args []string, cwd, namespace string, files []string) error {
-	sq := squadron.New(cwd, namespace, files)
-
-	if err := sq.MergeConfigFiles(); err != nil {
-		return err
-	}
-
-	args, helmArgs := parseExtraArgs(args)
-	units, err := parseUnitArgs(args, sq.GetConfig().Units)
-	if err != nil {
-		return err
-	}
-
-	return sq.Down(ctx, units, helmArgs)
 }

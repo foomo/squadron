@@ -4,13 +4,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/pkg/errors"
+	"github.com/foomo/squadron/internal/util"
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-
-	"github.com/foomo/squadron"
-	"github.com/foomo/squadron/util"
 )
 
 var (
@@ -47,8 +44,8 @@ var (
 	flagBuild     bool
 	flagPush      bool
 	flagParallel  int
-	flagBuildArgs string
-	flagPushArgs  string
+	flagBuildArgs []string
+	flagPushArgs  []string
 	flagDiff      bool
 	flagFiles     []string
 )
@@ -59,7 +56,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&flagVerbose, "verbose", "v", false, "show more output")
 	rootCmd.PersistentFlags().StringSliceVarP(&flagFiles, "file", "f", []string{"squadron.yaml"}, "specify alternative squadron files")
 
-	rootCmd.AddCommand(upCmd, downCmd, buildCmd, pushCmd, listCmd, generateCmd, rollbackCmd, statusCmd, configCmd, versionCmd, completionCmd, templateCmd)
+	rootCmd.AddCommand(upCmd, diffCmd, downCmd, buildCmd, pushCmd, listCmd, rollbackCmd, statusCmd, configCmd, versionCmd, completionCmd, templateCmd)
 
 	pterm.Info = *pterm.Info.WithPrefix(pterm.Prefix{Text: "INFO", Style: pterm.Info.Prefix.Style})
 	pterm.Error = *pterm.Info.WithPrefix(pterm.Prefix{Text: "ERROR", Style: pterm.Error.Prefix.Style})
@@ -85,33 +82,15 @@ func parseExtraArgs(args []string) (out []string, extraArgs []string) {
 	return args, nil
 }
 
-// parseUnitArgs helper
-func parseUnitArgs(args []string, units map[string]*squadron.Unit) (map[string]*squadron.Unit, error) {
+func parseSquadronAndUnitNames(args []string) (squadron string, units []string) {
 	if len(args) == 0 {
-		return units, nil
+		return "", nil
 	}
-	ret := map[string]*squadron.Unit{}
-	for _, arg := range args {
-		if unit, ok := units[arg]; ok {
-			ret[arg] = unit
-		} else {
-			return nil, errors.Errorf("unknown unit name %s", arg)
-		}
+	if len(args) > 0 {
+		squadron = args[0]
 	}
-	return ret, nil
-}
-
-func parseUnitNames(args []string, units map[string]*squadron.Unit) ([]string, error) {
-	if len(args) == 0 {
-		return nil, nil
+	if len(args) > 1 {
+		units = args[1:]
 	}
-	ret := make([]string, 0, len(args))
-	for _, arg := range args {
-		if _, ok := units[arg]; ok {
-			ret = append(ret, arg)
-		} else {
-			return nil, errors.Errorf("unknown unit name %s", arg)
-		}
-	}
-	return ret, nil
+	return squadron, units
 }

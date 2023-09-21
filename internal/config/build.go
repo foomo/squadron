@@ -1,4 +1,4 @@
-package squadron
+package config
 
 import (
 	"context"
@@ -7,12 +7,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 
-	"github.com/foomo/squadron/util"
-)
-
-const (
-	TagMap    = "!!map"
-	TagString = "!!str"
+	"github.com/foomo/squadron/internal/util"
 )
 
 type Build struct {
@@ -45,7 +40,6 @@ type Build struct {
 // ~ Public methods
 // ------------------------------------------------------------------------------------------------
 
-// Build ...
 func (b *Build) Build(ctx context.Context, args []string) (string, error) {
 	logrus.Debugf("running docker build for %q", b.Context)
 	return util.NewDockerCommand().Build(b.Context).
@@ -78,24 +72,24 @@ func (b *Build) Build(ctx context.Context, args []string) (string, error) {
 		Run(ctx)
 }
 
-// Push ...
 func (b *Build) Push(ctx context.Context, args []string) (string, error) {
 	logrus.Debugf("running docker push for %s:%s", b.Image, b.Tag)
 	return util.NewDockerCommand().Push(b.Image, b.Tag).Args(args...).Run(ctx)
 }
 
-// UnmarshalYAML ...
 func (b *Build) UnmarshalYAML(value *yaml.Node) error {
-	if value.Tag == TagMap {
+	switch value.Tag {
+	case "!!map":
 		type wrapper Build
 		return value.Decode((*wrapper)(b))
-	}
-	if value.Tag == TagString {
+	case "!!str":
 		var vString string
 		if err := value.Decode(&vString); err != nil {
 			return err
 		}
 		b.Context = vString
+		return nil
+	default:
+		return fmt.Errorf("unsupported node tag type for %T: %q", b, value.Tag)
 	}
-	return fmt.Errorf("unsupported node tag type for %T: %q", b, value.Tag)
 }
