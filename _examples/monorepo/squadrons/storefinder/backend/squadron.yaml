@@ -1,0 +1,17 @@
+# Schema version
+version: "2.0"
+
+squadron:
+  storefinder:
+    backend:
+      chart: <% env "PROJECT_ROOT" %>/../common/charts/backend
+      builds:
+        default:
+          tag: <% .Global.docker.tag | quote %>
+          image: <% .Global.docker.registry %>/storefinder-backend
+          context: <% env "PROJECT_ROOT" %>/squadrons/storefinder/backend
+          dockerfile: <% env "PROJECT_ROOT" %>/../common/docker/backend.Dockerfile
+      values:
+        image:
+          tag: <% .Global.docker.tag | quote %>
+          repository: <% .Squadron.storefinder.backend.builds.default.image %>
