@@ -1,0 +1,15 @@
+version: "2.0"
+
+squadron:
+  storefinder:
+    frontend:
+      builds:
+        default:
+          # override element
+          tag: nightly
+          # append new element to array
+          args:
+            - "bar=baz"
+            - "baz=baz"
+    # override backend
+    backend: ~

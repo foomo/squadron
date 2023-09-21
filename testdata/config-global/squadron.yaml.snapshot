@@ -1,4 +1,0 @@
-global:
-  bar: bar
-  foo: baz
-version: "1.0"

@@ -1,0 +1,32 @@
+version: "2.0"
+
+squadron:
+  storefinder:
+    frontend:
+      chart: <% env "PROJECT_ROOT" %>/_examples/common/charts/frontend
+      builds:
+        default:
+          tag: latest
+          dockerfile: Dockerfile
+          image: docker.mycompany.com/mycomapny/frontend
+          args:
+            - "foo=foo"
+            - "bar=bar"
+      values:
+        image:
+          tag: <% .Squadron.storefinder.frontend.builds.default.tag %>
+          repository: <% .Squadron.storefinder.frontend.builds.default.image %>
+    backend:
+      chart: <% env "PROJECT_ROOT" %>/_examples/common/charts/backend
+      builds:
+        default:
+          tag: latest
+          dockerfile: Dockerfile
+          image: docker.mycompany.com/mycomapny/backend
+          args:
+            - "foo=foo"
+            - "bar=bar"
+      values:
+        image:
+          tag: <% .Squadron.storefinder.backend.builds.default.tag %>
+          repository: <% .Squadron.storefinder.backend.builds.default.image %>
