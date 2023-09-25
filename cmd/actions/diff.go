@@ -2,7 +2,6 @@ package actions
 
 import (
 	"github.com/foomo/squadron"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -24,16 +23,9 @@ var diffCmd = &cobra.Command{
 
 		args, helmArgs := parseExtraArgs(args)
 
-		if len(args) > 0 {
-			if err := sq.Config().Squadrons.Filter(args[0]); err != nil {
-				return errors.Wrap(err, "invalid SQUADRON argument")
-			}
-		}
-
-		if len(args) > 1 {
-			if err := sq.Config().Squadrons[args[0]].Filter(args[1:]...); err != nil {
-				return errors.Wrap(err, "invalid UNIT argument")
-			}
+		squadronName, unitNames := parseSquadronAndUnitNames(args)
+		if err := sq.FilterConfig(squadronName, unitNames, flagTags); err != nil {
+			return err
 		}
 
 		if err := sq.RenderConfig(cmd.Context()); err != nil {
