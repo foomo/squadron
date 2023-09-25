@@ -35,15 +35,6 @@ func NewCommand(name string) *Cmd {
 	}
 }
 
-func (c Cmd) Base() *Cmd {
-	c.command = []string{c.command[0]}
-	return &c
-}
-
-func (c Cmd) Command() []string {
-	return c.command
-}
-
 func (c *Cmd) Args(args ...string) *Cmd {
 	for _, arg := range args {
 		if arg == "" {

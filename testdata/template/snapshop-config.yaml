@@ -10,8 +10,8 @@ squadron:
         version: 0.0.1
       builds:
         default:
-          image: docker.mycompany.com/mycomapny/frontend-admin
           tag: latest
+          image: docker.mycompany.com/mycomapny/frontend-admin
       values:
         image:
           repository: docker.mycompany.com/mycomapny/frontend-admin
@@ -23,8 +23,8 @@ squadron:
         version: 0.0.1
       builds:
         default:
-          image: docker.mycompany.com/mycomapny/frontend
           tag: latest
+          image: docker.mycompany.com/mycomapny/frontend
       values:
         env:
           BASE64: MTIzNDU2Nzg5MA==

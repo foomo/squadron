@@ -235,7 +235,36 @@ func (sq *Squadron) Push(ctx context.Context, pushArgs []string, parallel int) e
 	return wg.Wait()
 }
 
+func (sq *Squadron) BuildDependencies(ctx context.Context, buildArgs []string, parallel int) error {
+	wg, gctx := errgroup.WithContext(ctx)
+	wg.SetLimit(parallel)
+
+	var i int
+	dependencies := sq.c.BuildDependencies()
+	for name, dependency := range dependencies {
+		i := i + 1
+		name := name
+		dependency := dependency
+		wg.Go(func() error {
+			pterm.Info.Printfln("[%d/%d] Building dependency `%s`", i, len(dependencies), name)
+			pterm.FgGray.Printfln("└ %s:%s", dependency.Image, dependency.Tag)
+			if out, err := dependency.Build(gctx, buildArgs); err != nil {
+				pterm.Error.Printfln("[%d/%d] Failed to build dependency `%s`", i, len(dependencies), name)
+				pterm.FgGray.Printfln("└ %s:%s", dependency.Image, dependency.Tag)
+				return errors.Wrap(err, out)
+			}
+			return nil
+		})
+	}
+
+	return wg.Wait()
+}
+
 func (sq *Squadron) Build(ctx context.Context, buildArgs []string, parallel int) error {
+	if err := sq.BuildDependencies(ctx, buildArgs, parallel); err != nil {
+		return err
+	}
+
 	wg, gctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 

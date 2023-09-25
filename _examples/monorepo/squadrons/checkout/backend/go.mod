@@ -1,3 +1,3 @@
-module github.com/foomo/squadron/exmpale/monorepo/storefinder/backend
+module github.com/foomo/squadron/exmpale/monorepo/checkout/backend
 
-go 1.16
+go 1.21

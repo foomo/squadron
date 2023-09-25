@@ -8,10 +8,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var flagPrefixSquadron bool
+var (
+	flagBuilds bool
+)
 
 func init() {
 	listCmd.Flags().StringSliceVar(&flagTags, "tags", nil, "list of tags to include or exclude (can specify multiple or separate values with commas: tag1,tag2,-tag3)")
+	listCmd.Flags().BoolVar(&flagBuilds, "builds", false, "include builds")
 }
 
 var listCmd = &cobra.Command{
@@ -31,12 +34,23 @@ var listCmd = &cobra.Command{
 			return err
 		}
 
-		return sq.Config().Squadrons.Iterate(func(key string, value config.Map[*config.Unit]) error {
+		// List squadrons
+		_ = sq.Config().Squadrons.Iterate(func(key string, value config.Map[*config.Unit]) error {
 			fmt.Println("Squadron:", key)
 			return value.Iterate(func(k string, v *config.Unit) error {
-				fmt.Println("  ", k)
+				fmt.Println("  " + k)
+				if flagBuilds {
+					for name, build := range v.Builds {
+						fmt.Println("    " + name)
+						for _, dependency := range build.Dependencies {
+							fmt.Println("      " + dependency)
+						}
+					}
+				}
 				return nil
 			})
 		})
+
+		return nil
 	},
 }

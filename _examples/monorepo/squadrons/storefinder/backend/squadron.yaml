@@ -12,6 +12,10 @@ squadron:
           image: <% .Global.docker.registry %>/storefinder-backend
           context: <% env "PROJECT_ROOT" %>/squadrons/storefinder/backend
           dockerfile: <% env "PROJECT_ROOT" %>/../common/docker/backend.Dockerfile
+          dependencies: [ "backend-base" ]
+          args:
+            - "BASE_IMAGE=<% .Global.docker.registry %>/backend-base"
+            - "BASE_IMAGE_TAG=<% .Global.docker.tag | quote %>"
       values:
         image:
           tag: <% .Global.docker.tag | quote %>

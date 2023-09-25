@@ -9,7 +9,7 @@ files=$(shell find . -name 'squadron.yaml' | tail -r | xargs echo -n | tr " ", "
 .PHONY: list
 ## Show config
 list:
-	@go run ../../cmd/main.go -f ${files} list
+	@go run ../../cmd/main.go -f ${files} list --builds
 
 .PHONY: config
 ## Show config
