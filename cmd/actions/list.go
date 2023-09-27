@@ -1,19 +1,21 @@
 package actions
 
 import (
-	"fmt"
-
 	"github.com/foomo/squadron"
 	"github.com/foomo/squadron/internal/config"
+	"github.com/pterm/pterm"
+	"github.com/pterm/pterm/putils"
 	"github.com/spf13/cobra"
 )
 
 var (
 	flagBuilds bool
+	flagCharts bool
 )
 
 func init() {
 	listCmd.Flags().StringSliceVar(&flagTags, "tags", nil, "list of tags to include or exclude (can specify multiple or separate values with commas: tag1,tag2,-tag3)")
+	listCmd.Flags().BoolVar(&flagCharts, "charts", false, "include charts")
 	listCmd.Flags().BoolVar(&flagBuilds, "builds", false, "include builds")
 }
 
@@ -34,16 +36,25 @@ var listCmd = &cobra.Command{
 			return err
 		}
 
+		if err := sq.RenderConfig(cmd.Context()); err != nil {
+			return err
+		}
+
+		var list pterm.LeveledList
+
 		// List squadrons
 		_ = sq.Config().Squadrons.Iterate(func(key string, value config.Map[*config.Unit]) error {
-			fmt.Println("Squadron:", key)
+			list = append(list, pterm.LeveledListItem{Level: 0, Text: key})
 			return value.Iterate(func(k string, v *config.Unit) error {
-				fmt.Println("  " + k)
+				list = append(list, pterm.LeveledListItem{Level: 1, Text: k})
+				if flagCharts {
+					list = append(list, pterm.LeveledListItem{Level: 2, Text: "📑: " + v.Chart.String()})
+				}
 				if flagBuilds {
 					for name, build := range v.Builds {
-						fmt.Println("    " + name)
+						list = append(list, pterm.LeveledListItem{Level: 2, Text: "📦: " + name})
 						for _, dependency := range build.Dependencies {
-							fmt.Println("      " + dependency)
+							list = append(list, pterm.LeveledListItem{Level: 3, Text: "🗃️: " + dependency})
 						}
 					}
 				}
@@ -51,6 +62,8 @@ var listCmd = &cobra.Command{
 			})
 		})
 
-		return nil
+		root := putils.TreeFromLeveledList(list)
+		root.Text = "Squadron"
+		return pterm.DefaultTree.WithRoot(root).Render()
 	},
 }

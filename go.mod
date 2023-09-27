@@ -7,7 +7,7 @@ require (
 	github.com/alecthomas/chroma v0.10.0
 	github.com/miracl/conflate v1.2.1
 	github.com/pkg/errors v0.9.1
-	github.com/pterm/pterm v0.12.67
+	github.com/pterm/pterm v0.12.69
 	github.com/sergi/go-diff v1.3.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.7.0

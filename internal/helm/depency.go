@@ -17,11 +17,11 @@ type Dependency struct {
 	Alias      string `yaml:"alias,omitempty"`
 }
 
-func (cd *Dependency) UnmarshalYAML(value *yaml.Node) error {
+func (d *Dependency) UnmarshalYAML(value *yaml.Node) error {
 	switch value.Tag {
 	case "!!map":
 		type wrapper Dependency
-		return value.Decode((*wrapper)(cd))
+		return value.Decode((*wrapper)(d))
 	case "!!str":
 		var vString string
 		if err := value.Decode(&vString); err != nil {
@@ -35,11 +35,15 @@ func (cd *Dependency) UnmarshalYAML(value *yaml.Node) error {
 		if err != nil {
 			return fmt.Errorf("failed to load local chart: " + vString)
 		}
-		cd.Name = localChart.Name
-		cd.Repository = fmt.Sprintf("file://%v", vString)
-		cd.Version = localChart.Version
+		d.Name = localChart.Name
+		d.Repository = fmt.Sprintf("file://%v", vString)
+		d.Version = localChart.Version
 		return nil
 	default:
-		return fmt.Errorf("unsupported node tag type for %T: %q", cd, value.Tag)
+		return fmt.Errorf("unsupported node tag type for %T: %q", d, value.Tag)
 	}
+}
+
+func (d Dependency) String() string {
+	return fmt.Sprintf("%s/%s:%s", d.Repository, d.Name, d.Version)
 }
