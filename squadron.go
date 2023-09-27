@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"slices"
 	"strings"
+	"sync"
 	"text/template"
 
 	"github.com/foomo/squadron/internal/config"
@@ -49,6 +50,9 @@ func New(basePath, namespace string, files []string) *Squadron {
 // ------------------------------------------------------------------------------------------------
 
 func (sq *Squadron) Namespace(ctx context.Context, squadron, unit string) (string, error) {
+	if sq.namespace == "" {
+		return "default", nil
+	}
 	var out bytes.Buffer
 	t, err := template.New("namespace").Parse(sq.namespace)
 	if err != nil {
@@ -317,7 +321,14 @@ func (sq *Squadron) Down(ctx context.Context, helmArgs []string, parallel int) e
 }
 
 func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) error {
-	var diff string
+	var m sync.Mutex
+	var ret string
+	write := func(b string) {
+		m.Lock()
+		defer m.Unlock()
+		ret += b
+	}
+
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
@@ -360,7 +371,7 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) e
 				}
 
 				dmp := diffmatchpatch.New()
-				diff += dmp.DiffPrettyText(dmp.DiffMain(string(manifest), string(out), false))
+				write(dmp.DiffPrettyText(dmp.DiffMain(string(manifest), string(out), false)))
 				return nil
 			})
 			return nil
@@ -371,16 +382,21 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) e
 		return err
 	}
 
-	fmt.Println(diff)
+	fmt.Println(ret)
 
 	return nil
 }
 
 func (sq *Squadron) Status(ctx context.Context, helmArgs []string, parallel int) error {
+	var m sync.Mutex
 	tbd := pterm.TableData{
 		{"Name", "Revision", "Status", "Deployed by", "Commit", "Branch", "Last deployed", "Notes"},
 	}
-
+	write := func(b []string) {
+		m.Lock()
+		defer m.Unlock()
+		tbd = append(tbd, b)
+	}
 	type statusType struct {
 		Name      string `json:"name"`
 		Version   int    `json:"version"`
@@ -435,7 +451,7 @@ func (sq *Squadron) Status(ctx context.Context, helmArgs []string, parallel int)
 						notes = append(notes, line)
 					}
 				}
-				tbd = append(tbd, []string{
+				write([]string{
 					status.Name,
 					fmt.Sprintf("%d", status.Version),
 					status.Info.Status,
@@ -556,48 +572,42 @@ func (sq *Squadron) Up(ctx context.Context, helmArgs []string, username, version
 	return wg.Wait()
 }
 
-func (sq *Squadron) Template(ctx context.Context, helmArgs []string) (string, error) {
+func (sq *Squadron) Template(ctx context.Context, helmArgs []string, parallel int) (string, error) {
+	var m sync.Mutex
 	var ret bytes.Buffer
+	write := func(b []byte) error {
+		m.Lock()
+		defer m.Unlock()
+		_, err := ret.Write(b)
+		return err
+	}
 
-	err := sq.Config().Squadrons.Iterate(func(key string, value config.Map[*config.Unit]) error {
+	wg, gctx := errgroup.WithContext(ctx)
+	wg.SetLimit(parallel)
+
+	_ = sq.Config().Squadrons.Iterate(func(key string, value config.Map[*config.Unit]) error {
 		return value.Iterate(func(k string, v *config.Unit) error {
-			name := fmt.Sprintf("%s-%s", key, k)
-			namespace, err := sq.Namespace(ctx, key, k)
-			if err != nil {
-				return err
-			}
-			valueBytes, err := v.ValuesYAML(sq.c.Global)
-			if err != nil {
-				return err
-			}
-
-			pterm.Debug.Printfln("running helm template for chart: %s", name)
-			cmd := util.NewHelmCommand().Args("template", k).
-				Stdin(bytes.NewReader(valueBytes)).
-				Stdout(&ret).
-				Args("--dependency-update").
-				Args("--namespace", namespace).
-				Args("--set", fmt.Sprintf("squadron=%s", key)).
-				Args("--set", fmt.Sprintf("unit=%s", k)).
-				Args("--values", "-").
-				Args(helmArgs...)
-			if strings.Contains(v.Chart.Repository, "file://") {
-				file := strings.TrimPrefix(v.Chart.Repository, "file://")
-				if !strings.HasPrefix(file, ".") {
-					file = "/" + file
+			wg.Go(func() error {
+				name := fmt.Sprintf("%s-%s", key, k)
+				namespace, err := sq.Namespace(ctx, key, k)
+				if err != nil {
+					return err
 				}
-				cmd.Args(file)
-			} else {
-				cmd.Args(v.Chart.Name, "--repo", v.Chart.Repository, "--version", v.Chart.Version)
-			}
-			if out, err := cmd.Run(ctx); err != nil {
-				return errors.Wrap(err, out)
-			}
+
+				pterm.Debug.Printfln("running helm template for chart: %s", name)
+				out, err := v.Template(gctx, key, k, namespace, sq.c.Global, helmArgs)
+				if err != nil {
+					return err
+				}
+
+				return write(out)
+			})
 
 			return nil
 		})
 	})
-	if err != nil {
+
+	if err := wg.Wait(); err != nil {
 		return "", err
 	}
 

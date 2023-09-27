@@ -9,6 +9,7 @@ metadata:
     app.kubernetes.io/component: backend
     app.kubernetes.io/managed-by: Helm
     helm.sh/chart: backend-0.0.1
+  namespace: default
 spec:
   type: ClusterIP
   selector:
@@ -28,8 +29,8 @@ metadata:
     app.kubernetes.io/component: backend
     app.kubernetes.io/managed-by: Helm
     helm.sh/chart: backend-0.0.1
+  namespace: default
 spec:
-  replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: backend
@@ -58,6 +59,7 @@ metadata:
     app.kubernetes.io/component: frontend
     app.kubernetes.io/managed-by: Helm
     helm.sh/chart: frontend-0.0.1
+  namespace: default
 spec:
   type: ClusterIP
   selector:
@@ -77,8 +79,8 @@ metadata:
     app.kubernetes.io/component: frontend
     app.kubernetes.io/managed-by: Helm
     helm.sh/chart: frontend-0.0.1
+  namespace: default
 spec:
-  replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: frontend
@@ -96,3 +98,31 @@ spec:
             - name: http
               protocol: TCP
               containerPort: 80
+---
+# Source: frontend/templates/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: frontend
+  labels:
+    app.kubernetes.io/name: frontend
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: frontend-0.0.1
+  namespace: default
+spec:
+  tls:
+    - hosts: [ "foo.com" ]
+      secretName: foo-com-cert
+  rules:
+    - host:  foo.com
+      http:
+        paths:
+          - pathType: Prefix
+            path: /
+            backend:
+              service:
+                name: frontend
+                port:
+                  name: http
+                  number: 80

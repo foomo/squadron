@@ -9,6 +9,7 @@ metadata:
     app.kubernetes.io/component: backend
     app.kubernetes.io/managed-by: Helm
     helm.sh/chart: backend-0.0.1
+  namespace: default
 spec:
   type: ClusterIP
   selector:
@@ -28,8 +29,8 @@ metadata:
     app.kubernetes.io/component: backend
     app.kubernetes.io/managed-by: Helm
     helm.sh/chart: backend-0.0.1
+  namespace: default
 spec:
-  replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: backend

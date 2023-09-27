@@ -1,8 +1,11 @@
 package config
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"os"
+	"path"
 	"strings"
 
 	"github.com/foomo/squadron/internal/helm"
@@ -62,6 +65,34 @@ func (u *Unit) Push(ctx context.Context, squadron, unit string, args []string) (
 		}
 	}
 	return "", nil
+}
+
+func (u *Unit) Template(ctx context.Context, squadron, unit, namespace string, global map[string]interface{}, helmArgs []string) ([]byte, error) {
+	var ret bytes.Buffer
+	valueBytes, err := u.ValuesYAML(global)
+	if err != nil {
+		return nil, err
+	}
+
+	cmd := util.NewHelmCommand().Args("template", unit).
+		Stdin(bytes.NewReader(valueBytes)).
+		Stdout(&ret).
+		Args("--dependency-update").
+		Args("--namespace", namespace).
+		Args("--set", fmt.Sprintf("squadron=%s", squadron)).
+		Args("--set", fmt.Sprintf("unit=%s", unit)).
+		Args("--values", "-").
+		Args(helmArgs...)
+	if strings.HasPrefix(u.Chart.Repository, "file://") {
+		cmd.Args(path.Clean(strings.TrimPrefix(u.Chart.Repository, "file://")))
+	} else {
+		cmd.Args(u.Chart.Name, "--repo", u.Chart.Repository, "--version", u.Chart.Version)
+	}
+	if out, err := cmd.Run(ctx); err != nil {
+		return nil, errors.Wrap(err, out)
+	}
+
+	return ret.Bytes(), nil
 }
 
 func (u *Unit) DependencyUpdate(ctx context.Context) error {

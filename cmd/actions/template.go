@@ -9,6 +9,7 @@ import (
 )
 
 func init() {
+	templateCmd.Flags().IntVar(&flagParallel, "parallel", 1, "run command in parallel")
 	templateCmd.Flags().StringVarP(&flagNamespace, "namespace", "n", "default", "set the namespace name or template (default, squadron-{{.Squadron}}-{{.Unit}})")
 	templateCmd.Flags().StringSliceVar(&flagTags, "tags", nil, "list of tags to include or exclude (can specify multiple or separate values with commas: tag1,tag2,-tag3)")
 }
@@ -36,7 +37,7 @@ var templateCmd = &cobra.Command{
 			return err
 		}
 
-		out, err := sq.Template(cmd.Context(), helmArgs)
+		out, err := sq.Template(cmd.Context(), helmArgs, flagParallel)
 		if err != nil {
 			return err
 		}

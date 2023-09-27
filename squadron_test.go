@@ -89,7 +89,7 @@ func config(t *testing.T, name string, files []string, squadronName string, unit
 	}
 
 	{
-		out, err := sq.Template(ctx, nil)
+		out, err := sq.Template(ctx, nil, 1)
 		require.NoError(t, err, "failed to render template")
 		testutils.Snapshot(t, path.Join("testdata", name, "snapshop-template.yaml"), out)
 	}
