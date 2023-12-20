@@ -186,7 +186,9 @@ func onePassword(ctx context.Context, templateVars interface{}, errorOnMissing b
 		} else if _, err := exec.LookPath("op"); err != nil {
 			fmt.Println("Your templates includes a call to 1Password, please install it:")
 			fmt.Println("https://support.1password.com/command-line-getting-started/#set-up-the-command-line-tool")
-			return "", err
+			return "", errors.Wrap(err, "failed to lookup op")
+		} else if _, err := exec.CommandContext(ctx, "op", "account", "get", "--account", account).CombinedOutput(); err == nil {
+			// do nothing
 		} else if os.Getenv(fmt.Sprintf("OP_SESSION_%s", account)) == "" {
 			if err := onePasswordSignIn(ctx, account); err != nil {
 				return "", errors.Wrap(err, "failed to sign in")
