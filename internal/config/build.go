@@ -12,15 +12,13 @@ import (
 type Build struct {
 	Context string `yaml:"context,omitempty"`
 	// AddHost add a custom host-to-IP mapping (format: "host:ip")
-	AddHost   []string `yaml:"add_host,omitempty"`
-	ExtraHost []string `yaml:"extra_hosts,omitempty"` // TODO deprecate use AddHost
+	AddHost []string `yaml:"add_host,omitempty"`
 	// Allow extra privileged entitlement (e.g., "network.host", "security.insecure")
 	Allow []string `yaml:"allow,omitempty"`
 	// Attest parameters (format: "type=sbom,generator=image")
 	Attest []string `yaml:"attest,omitempty"`
 	// BuildArg set build-time variables
 	BuildArg []string `yaml:"build_arg,omitempty"`
-	Args     []string `yaml:"args,omitempty"` // TODO deprecate use BuildArg
 	// BuildContext additional build contexts (e.g., name=path)
 	BuildContext []string `yaml:"build_context,omitempty"`
 	// Builder override the configured builder instance
@@ -32,13 +30,11 @@ type Build struct {
 	// CGroupParent optional parent cgroup for the container
 	CGroupParent string `yaml:"cgroup_parent,omitempty"`
 	// File name of the Dockerfile (default: "PATH/Dockerfile")
-	File       string `yaml:"file,omitempty"`
-	Dockerfile string `yaml:"dockerfile,omitempty"` // TODO deprecate use File
+	File string `yaml:"file,omitempty"`
 	// IIDFile write the image ID to the file
 	IIDFile string `yaml:"iidfile,omitempty"`
 	// Label wet metadata for an image
-	Label  []string `yaml:"label,omitempty"`
-	Labels []string `yaml:"labels,omitempty"` // TODO deprecate use Label
+	Label []string `yaml:"label,omitempty"`
 	// Load shorthand for "--output=type=docker"
 	Load bool `yaml:"load,omitempty"`
 	// MetadataFile write build result metadata to the file
@@ -52,11 +48,9 @@ type Build struct {
 	// Output destination (format: "type=local,dest=path")
 	Output string `yaml:"output,omitempty"`
 	// Platform set target platform for build
-	Platform  string   `yaml:"platform,omitempty"`
-	Platforms []string `yaml:"platforms,omitempty"` // TODO deprecate use Platform
+	Platform string `yaml:"platform,omitempty"`
 	// Secret to expose to the build (format: "id=mysecret[,src=/local/secret]")
-	Secret  []string `yaml:"secret,omitempty"`
-	Secrets []string `yaml:"secrets,omitempty"` // TODO deprecate use Secret
+	Secret []string `yaml:"secret,omitempty"`
 	// ShmSize size of "/dev/shm"
 	ShmSize string `yaml:"shm_size,omitempty"`
 	// SSH agent socket or keys to expose to the build (format: "default|<id>[=<socket>|<key>[,<key>]]")
@@ -79,22 +73,17 @@ type Build struct {
 func (b *Build) Build(ctx context.Context, args []string) (string, error) {
 	pterm.Debug.Printfln("running docker build for %q", b.Context)
 	return util.NewDockerCommand().Build(b.Context).
-		ListArg("--add-host", b.ExtraHost).
 		ListArg("--add-host", b.AddHost).
 		ListArg("--allow", b.Allow).
 		ListArg("--attest", b.Attest).
-		ListArg("--build-arg", b.Args).
 		ListArg("--build-arg", b.BuildArg).
 		ListArg("--build-contet", b.BuildContext).
 		Arg("--builder", b.Builder).
 		Arg("--cache-from", b.CacheFrom).
 		Arg("--cache-to", b.CacheTo).
-		Arg("--cgroup-parent", b.Dockerfile).
 		Arg("--file", b.File).
-		Arg("--file", b.Dockerfile).
 		Arg("--iidfile", b.IIDFile).
 		ListArg("--label", b.Label).
-		ListArg("--label", b.Labels).
 		BoolArg("--load", b.Load).
 		Arg("--metadata-file", b.MetadataFile).
 		Arg("--network", b.Network).
@@ -102,14 +91,12 @@ func (b *Build) Build(ctx context.Context, args []string) (string, error) {
 		ListArg("--noe-cache-filter", b.NoCacheFilter).
 		Arg("--output", b.Output).
 		Arg("--platform", b.Platform).
-		ListArg("--platform", b.Platforms).
 		// Arg("--progress", xxx).
 		// Arg("--provenance", xxx).
 		// Arg("--push", xxx).
 		// Arg("--pull", xxx).
 		// Arg("--quiet", xxx).
 		ListArg("--secret", b.Secret).
-		ListArg("--secret", b.Secrets).
 		Arg("--shm-size", b.ShmSize).
 		Arg("--ssh", b.SSH).
 		Arg("--tag", fmt.Sprintf("%s:%s", b.Image, b.Tag)).
