@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"time"
 
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
@@ -20,18 +19,13 @@ type Cmd struct {
 	stdin         io.Reader
 	stdoutWriters []io.Writer
 	stderrWriters []io.Writer
-	wait          bool
-	timeout       time.Duration
-	preStartFunc  func() error
-	postStartFunc func() error
-	postEndFunc   func() error
 }
 
 func NewCommand(name string) *Cmd {
 	return &Cmd{
 		command: []string{name},
-		wait:    true,
-		env:     os.Environ(),
+		//wait:    true,
+		env: os.Environ(),
 	}
 }
 
@@ -105,31 +99,6 @@ func (c *Cmd) Stderr(w io.Writer) *Cmd {
 	return c
 }
 
-func (c *Cmd) Timeout(t time.Duration) *Cmd {
-	c.timeout = t
-	return c
-}
-
-func (c *Cmd) NoWait() *Cmd {
-	c.wait = false
-	return c
-}
-
-func (c *Cmd) PreStart(f func() error) *Cmd {
-	c.preStartFunc = f
-	return c
-}
-
-func (c *Cmd) PostStart(f func() error) *Cmd {
-	c.postStartFunc = f
-	return c
-}
-
-func (c *Cmd) PostEnd(f func() error) *Cmd {
-	c.postEndFunc = f
-	return c
-}
-
 func (c *Cmd) Run(ctx context.Context) (string, error) {
 	cmd := exec.CommandContext(ctx, c.command[0], c.command[1:]...) //nolint:gosec
 	cmd.Env = append(os.Environ(), c.env...)
@@ -138,52 +107,16 @@ func (c *Cmd) Run(ctx context.Context) (string, error) {
 	}
 	pterm.Debug.Printfln("executing %s", cmd.String())
 
-	combinedBuf := new(bytes.Buffer)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
 	traceWriter := logrus.StandardLogger().WriterLevel(logrus.TraceLevel)
 
 	if c.stdin != nil {
 		cmd.Stdin = c.stdin
 	}
-	cmd.Stdout = io.MultiWriter(append(c.stdoutWriters, combinedBuf, traceWriter)...)
-	cmd.Stderr = io.MultiWriter(append(c.stderrWriters, combinedBuf, traceWriter)...)
+	cmd.Stdout = io.MultiWriter(append(c.stdoutWriters, &stdout, traceWriter)...)
+	cmd.Stderr = io.MultiWriter(append(c.stderrWriters, &stderr, traceWriter)...)
 
-	if c.preStartFunc != nil {
-		pterm.Debug.Println("executing pre start func")
-		if err := c.preStartFunc(); err != nil {
-			return combinedBuf.String(), err
-		}
-	}
-
-	if err := cmd.Start(); err != nil {
-		return combinedBuf.String(), err
-	}
-
-	if c.postStartFunc != nil {
-		pterm.Debug.Println("executing post start func")
-		if err := c.postStartFunc(); err != nil {
-			return combinedBuf.String(), err
-		}
-	}
-
-	if c.wait {
-		if c.timeout != 0 {
-			timer := time.AfterFunc(c.timeout, func() {
-				_ = cmd.Process.Kill()
-			})
-			defer timer.Stop()
-		}
-
-		if err := cmd.Wait(); err != nil {
-			if c.timeout == 0 {
-				return combinedBuf.String(), err
-			}
-		}
-		if c.postEndFunc != nil {
-			if err := c.postEndFunc(); err != nil {
-				return combinedBuf.String(), err
-			}
-		}
-	}
-
-	return combinedBuf.String(), nil
+	err := cmd.Run()
+	return stdout.String() + stderr.String(), err
 }
