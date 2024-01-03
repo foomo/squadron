@@ -141,6 +141,9 @@ func (c *Cmd) Run(ctx context.Context) (string, error) {
 	combinedBuf := new(bytes.Buffer)
 	traceWriter := logrus.StandardLogger().WriterLevel(logrus.TraceLevel)
 
+	if c.stdin != nil {
+		cmd.Stdin = c.stdin
+	}
 	cmd.Stdout = io.MultiWriter(append(c.stdoutWriters, combinedBuf, traceWriter)...)
 	cmd.Stderr = io.MultiWriter(append(c.stderrWriters, combinedBuf, traceWriter)...)
 
