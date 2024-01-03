@@ -6,7 +6,7 @@ metadata:
     app.kubernetes.io/name: {{ .Release.Name }}
     app.kubernetes.io/component: {{ .Chart.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
-    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+    helm.sh/chart: '{{ .Chart.Name }}-{{ .Chart.Version }}'
   namespace: {{ .Release.Namespace }}
 spec:
   type: ClusterIP

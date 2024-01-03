@@ -1,8 +1,8 @@
-version: "2.0"
+version: '2.0'
 
 global:
   docker:
-    tag: "230101.0"
+    tag: '230101.0'
     registry: monorepo
 
 builds:
