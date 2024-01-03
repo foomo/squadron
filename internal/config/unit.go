@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"os"
 	"path"
 	"strings"
 
@@ -32,7 +31,9 @@ func (u *Unit) ValuesYAML(global map[string]interface{}) ([]byte, error) {
 		values = map[string]interface{}{}
 	}
 	if global != nil {
-		values["global"] = global
+		if _, ok := values["global"]; !ok {
+			values["global"] = global
+		}
 	}
 	return yamlv2.Marshal(values)
 }
@@ -79,6 +80,7 @@ func (u *Unit) Template(ctx context.Context, squadron, unit, namespace string, g
 		Stdout(&ret).
 		Args("--dependency-update").
 		Args("--namespace", namespace).
+		Args("--debug").
 		Args("--set", fmt.Sprintf("squadron=%s", squadron)).
 		Args("--set", fmt.Sprintf("unit=%s", unit)).
 		Args("--values", "-").
@@ -100,12 +102,13 @@ func (u *Unit) DependencyUpdate(ctx context.Context) error {
 	// https://stackoverflow.com/questions/59210148/error-found-in-chart-yaml-but-missing-in-charts-directory-mysql
 	if strings.HasPrefix(u.Chart.Repository, "file:///") {
 		pterm.Debug.Printfln("running helm dependency update for %s", u.Chart.Repository)
-		if out, err := util.NewHelmCommand().
-			Stdout(os.Stdout).
-			Args("dependency", "update").
+		sh := util.NewHelmCommand().
 			Cwd(strings.TrimPrefix(u.Chart.Repository, "file://")).
-			Run(ctx); err != nil {
+			Args("dependency", "update", "--skip-refresh", "--debug")
+		if out, err := sh.Run(ctx); err != nil {
 			return errors.Wrap(err, out)
+		} else {
+			pterm.Debug.Println(out)
 		}
 	}
 	return nil
