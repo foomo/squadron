@@ -44,6 +44,6 @@ func (d *Dependency) UnmarshalYAML(value *yaml.Node) error {
 	}
 }
 
-func (d Dependency) String() string {
+func (d *Dependency) String() string {
 	return fmt.Sprintf("%s/%s:%s", d.Repository, d.Name, d.Version)
 }
