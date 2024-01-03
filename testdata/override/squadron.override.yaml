@@ -1,4 +1,4 @@
-version: '2.0'
+version: "2.0"
 
 squadron:
   storefinder:
@@ -8,7 +8,7 @@ squadron:
           # override element
           tag: nightly
           # append new element to array
-          args:
+          build_arg:
             - "bar=baz"
             - "baz=baz"
     # override backend

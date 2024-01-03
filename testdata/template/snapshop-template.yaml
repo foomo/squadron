@@ -8,7 +8,7 @@ metadata:
     app.kubernetes.io/name: backend
     app.kubernetes.io/component: backend
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: backend-0.0.1
+    helm.sh/chart: 'backend-0.0.1'
   namespace: default
 spec:
   type: ClusterIP
@@ -28,7 +28,7 @@ metadata:
     app.kubernetes.io/name: backend
     app.kubernetes.io/component: backend
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: backend-0.0.1
+    helm.sh/chart: 'backend-0.0.1'
   namespace: default
 spec:
   selector:
@@ -43,7 +43,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: nginx:latest
+          image: 'docker.mycompany.com/mycomapny/frontend-admin:latest'
           ports:
             - name: http
               protocol: TCP
@@ -58,7 +58,7 @@ metadata:
     app.kubernetes.io/name: frontend
     app.kubernetes.io/component: frontend
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: frontend-0.0.1
+    helm.sh/chart: 'frontend-0.0.1'
   namespace: default
 spec:
   type: ClusterIP
@@ -78,7 +78,7 @@ metadata:
     app.kubernetes.io/name: frontend
     app.kubernetes.io/component: frontend
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: frontend-0.0.1
+    helm.sh/chart: 'frontend-0.0.1'
   namespace: default
 spec:
   selector:
@@ -93,7 +93,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: nginx:latest
+          image: 'docker.mycompany.com/mycomapny/frontend:latest'
           ports:
             - name: http
               protocol: TCP
@@ -108,14 +108,14 @@ metadata:
     app.kubernetes.io/name: frontend
     app.kubernetes.io/component: frontend
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: frontend-0.0.1
+    helm.sh/chart: 'frontend-0.0.1'
   namespace: default
 spec:
   tls:
-    - hosts: [ "foo.com" ]
+    - hosts: ['foo.com']
       secretName: foo-com-cert
   rules:
-    - host:  foo.com
+    - host: foo.com
       http:
         paths:
           - pathType: Prefix
