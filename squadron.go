@@ -345,8 +345,13 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) e
 					return err
 				}
 
+				// update local chart dependencies
+				if err := v.DependencyUpdate(ctx); err != nil {
+					return err
+				}
+
 				pterm.Debug.Printfln("running helm diff for: %s", k)
-				manifest, err := exec.CommandContext(ctx, "helm", "get", "manifest", name, "--namespace", sq.namespace).CombinedOutput()
+				manifest, err := exec.CommandContext(ctx, "helm", "get", "manifest", name, "--namespace", namespace).CombinedOutput()
 				if err != nil && string(bytes.TrimSpace(manifest)) != errHelmReleaseNotFound {
 					return errors.Wrap(err, string(manifest))
 				}
@@ -527,16 +532,8 @@ func (sq *Squadron) Up(ctx context.Context, helmArgs []string, username, version
 				}
 
 				// update local chart dependencies
-				// https://stackoverflow.com/questions/59210148/error-found-in-chart-yaml-but-missing-in-charts-directory-mysql
-				if strings.HasPrefix(v.Chart.Repository, "file:///") {
-					pterm.Debug.Printfln("running helm dependency update for %s", v.Chart.Repository)
-					if out, err := util.NewHelmCommand().
-						Stdout(os.Stdout).
-						Args("dependency", "update").
-						Cwd(strings.TrimPrefix(v.Chart.Repository, "file://")).
-						Run(ctx); err != nil {
-						return errors.Wrap(err, out)
-					}
+				if err := v.DependencyUpdate(ctx); err != nil {
+					return err
 				}
 
 				// install chart
@@ -591,6 +588,11 @@ func (sq *Squadron) Template(ctx context.Context, helmArgs []string, parallel in
 				name := fmt.Sprintf("%s-%s", key, k)
 				namespace, err := sq.Namespace(ctx, key, k)
 				if err != nil {
+					return err
+				}
+
+				// update local chart dependencies
+				if err := v.DependencyUpdate(ctx); err != nil {
 					return err
 				}
 
