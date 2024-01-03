@@ -8,6 +8,7 @@ import (
 func init() {
 	diffCmd.Flags().StringVarP(&flagNamespace, "namespace", "n", "default", "set the namespace name or template (default, squadron-{{.Squadron}}-{{.Unit}})")
 	diffCmd.Flags().IntVar(&flagParallel, "parallel", 1, "run command in parallel")
+	diffCmd.Flags().StringSliceVar(&flagTags, "tags", nil, "list of tags to include or exclude (can specify multiple or separate values with commas: tag1,tag2,-tag3)")
 }
 
 var diffCmd = &cobra.Command{
