@@ -62,8 +62,12 @@ var listCmd = &cobra.Command{
 			})
 		})
 
-		root := putils.TreeFromLeveledList(list)
-		root.Text = "Squadron"
-		return pterm.DefaultTree.WithRoot(root).Render()
+		if len(list) > 0 {
+			root := putils.TreeFromLeveledList(list)
+			root.Text = "Squadron"
+			return pterm.DefaultTree.WithRoot(root).Render()
+		}
+
+		return nil
 	},
 }
