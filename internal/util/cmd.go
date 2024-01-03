@@ -12,7 +12,6 @@ import (
 )
 
 type Cmd struct {
-	// cmd           *exec.Cmd
 	command       []string
 	cwd           string
 	env           []string
@@ -24,8 +23,7 @@ type Cmd struct {
 func NewCommand(name string) *Cmd {
 	return &Cmd{
 		command: []string{name},
-		//wait:    true,
-		env: os.Environ(),
+		env:     os.Environ(),
 	}
 }
 
