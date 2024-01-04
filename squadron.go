@@ -547,7 +547,7 @@ func (sq *Squadron) Up(ctx context.Context, helmArgs []string, username, version
 					Args("--namespace", namespace).
 					Args("--dependency-update").
 					Args("--install").
-					Args("-values", "-").
+					Args("--values", "-").
 					Args(helmArgs...)
 
 				if strings.Contains(v.Chart.Repository, "file://") {
