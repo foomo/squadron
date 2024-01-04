@@ -1,0 +1,10 @@
+version: "2.0"
+
+squadron:
+  storefinder:
+    frontend:
+      chart: <% env "PROJECT_ROOT" %>/_examples/common/charts/frontend
+      values:
+        image:
+          tag: latest
+          repository: nginx

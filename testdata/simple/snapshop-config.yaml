@@ -1,0 +1,12 @@
+version: "2.0"
+squadron:
+  storefinder:
+    frontend:
+      chart:
+        name: frontend
+        repository: file://./_examples/common/charts/frontend
+        version: 0.0.1
+      values:
+        image:
+          repository: nginx
+          tag: latest

@@ -1,0 +1,22 @@
+version: "2.0"
+squadron:
+  storefinder:
+    frontend:
+      chart:
+        name: frontend
+        repository: file://./_examples/common/charts/frontend
+        version: 0.0.1
+      builds:
+        default:
+          build_arg:
+          - foo=foo
+          - bar=bar
+          - bar=baz
+          - baz=baz
+          file: Dockerfile
+          tag: nightly
+          image: docker.mycompany.com/mycomapny/frontend
+      values:
+        image:
+          repository: docker.mycompany.com/mycomapny/frontend
+          tag: nightly
