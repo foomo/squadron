@@ -19,6 +19,9 @@ builds:
     ldflags:
       - -s -w -X github.com/foomo/squadron/cmd/actions.version={{.Version}}
 
+release:
+  prerelease: auto
+
 archives:
   - format: tar.gz
     format_overrides:
