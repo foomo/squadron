@@ -68,14 +68,14 @@ func (u *Unit) Push(ctx context.Context, squadron, unit string, args []string) (
 	return "", nil
 }
 
-func (u *Unit) Template(ctx context.Context, squadron, unit, namespace string, global map[string]interface{}, helmArgs []string) ([]byte, error) {
+func (u *Unit) Template(ctx context.Context, name, squadron, unit, namespace string, global map[string]interface{}, helmArgs []string) ([]byte, error) {
 	var ret bytes.Buffer
 	valueBytes, err := u.ValuesYAML(global)
 	if err != nil {
 		return nil, err
 	}
 
-	cmd := util.NewHelmCommand().Args("template", unit).
+	cmd := util.NewHelmCommand().Args("template", name).
 		Stdin(bytes.NewReader(valueBytes)).
 		Stdout(&ret).
 		Args("--dependency-update").

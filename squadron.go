@@ -597,7 +597,7 @@ func (sq *Squadron) Template(ctx context.Context, helmArgs []string, parallel in
 				}
 
 				pterm.Debug.Printfln("running helm template for chart: %s", name)
-				out, err := v.Template(gctx, key, k, namespace, sq.c.Global, helmArgs)
+				out, err := v.Template(gctx, name, key, k, namespace, sq.c.Global, helmArgs)
 				if err != nil {
 					return err
 				}
