@@ -30,10 +30,6 @@ var statusCmd = &cobra.Command{
 			return err
 		}
 
-		if err := sq.RenderConfig(cmd.Context()); err != nil {
-			return err
-		}
-
 		return sq.Status(cmd.Context(), helmArgs, flagParallel)
 	},
 }
