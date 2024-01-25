@@ -30,6 +30,10 @@ var buildCmd = &cobra.Command{
 			return err
 		}
 
+		if err := sq.RenderConfig(cmd.Context()); err != nil {
+			return err
+		}
+
 		if err := sq.Build(cmd.Context(), flagBuildArgs, flagParallel); err != nil {
 			return err
 		}
