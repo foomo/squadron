@@ -16,24 +16,38 @@ Configure your squadron
 
 ```yaml
 # squadron.yaml
-version: "1.0"
+version: '2.0'
 
 squadron:
-  frontend:
-    chart:
-      name: mychart
-      version: 0.1.0
-      repository: http://helm.mycompany.com/repository
-    builds:
-      service:
-        tag: latest
-        dockerfile: Dockerfile
-        image: docker.mycompany.com/mycomapny/frontend
-        args:
-          - "foo=foo"
-          - "bar=bar"
-    values:
-      image: docker.mycompany.com/mycomapny/frontend:latest
+  site:
+    frontend:
+      chart:
+        name: mychart
+        version: 0.1.0
+        repository: http://helm.mycompany.com/repository
+      builds:
+        service:
+          tag: latest
+          dockerfile: Dockerfile
+          image: docker.mycompany.com/mycomapny/frontend
+          args:
+            - "foo=foo"
+            - "bar=bar"
+      values:
+        image: docker.mycompany.com/mycomapny/frontend:latest
+    backend:
+      chart: <% env "PROJECT_ROOT" %>/path/to/chart
+      kustomize: <% env "PROJECT_ROOT" %>/path/to/kustomize
+      builds:
+        service:
+          tag: latest
+          dockerfile: Dockerfile
+          image: docker.mycompany.com/mycomapny/backend
+          args:
+            - "foo=foo"
+            - "bar=bar"
+      values:
+        image: docker.mycompany.com/mycomapny/backend:latest
 ```
 
 Install the squadron squadron and namespace:
