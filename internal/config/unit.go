@@ -15,10 +15,11 @@ import (
 )
 
 type Unit struct {
-	Chart  helm.Dependency        `yaml:"chart,omitempty"`
-	Tags   []Tag                  `yaml:"tags,omitempty"`
-	Builds map[string]Build       `yaml:"builds,omitempty"`
-	Values map[string]interface{} `yaml:"values,omitempty"`
+	Chart     helm.Dependency        `yaml:"chart,omitempty"`
+	Kustomize string                 `yaml:"kustomize,omitempty"`
+	Tags      []Tag                  `yaml:"tags,omitempty"`
+	Builds    map[string]Build       `yaml:"builds,omitempty"`
+	Values    map[string]interface{} `yaml:"values,omitempty"`
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -83,6 +84,7 @@ func (u *Unit) Template(ctx context.Context, name, squadron, unit, namespace str
 		Args("--debug").
 		Args("--set", fmt.Sprintf("squadron=%s", squadron)).
 		Args("--set", fmt.Sprintf("unit=%s", unit)).
+		Args(u.PostRendererArgs()...).
 		Args("--values", "-").
 		Args(helmArgs...)
 	if strings.HasPrefix(u.Chart.Repository, "file://") {
@@ -112,4 +114,16 @@ func (u *Unit) DependencyUpdate(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+func (u *Unit) PostRendererArgs() []string {
+	var ret []string
+	if u.Kustomize != "" {
+		ret = append(ret,
+			"--post-renderer", "squadron",
+			"--post-renderer-args", "post-renderer",
+			"--post-renderer-args", u.Kustomize,
+		)
+	}
+	return ret
 }

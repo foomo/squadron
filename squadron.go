@@ -546,6 +546,7 @@ func (sq *Squadron) Up(ctx context.Context, helmArgs []string, username, version
 					Args("--description", description).
 					Args("--namespace", namespace).
 					Args("--dependency-update").
+					Args(v.PostRendererArgs()...).
 					Args("--install").
 					Args("--values", "-").
 					Args(helmArgs...)
