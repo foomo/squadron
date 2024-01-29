@@ -554,7 +554,13 @@ func (sq *Squadron) Up(ctx context.Context, helmArgs []string, username, version
 				if strings.Contains(v.Chart.Repository, "file://") {
 					cmd.Args(strings.TrimPrefix(v.Chart.Repository, "file://"))
 				} else {
-					cmd.Args(v.Chart.Name, "--repo", v.Chart.Repository, "--version", v.Chart.Version)
+					cmd.Args(v.Chart.Name)
+					if v.Chart.Repository != "" {
+						cmd.Args("--repo", v.Chart.Repository)
+					}
+					if v.Chart.Version != "" {
+						cmd.Args("--version", v.Chart.Version)
+					}
 				}
 
 				if out, err := cmd.Run(gctx); err != nil {
