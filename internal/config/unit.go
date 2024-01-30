@@ -17,7 +17,7 @@ import (
 type Unit struct {
 	Chart     helm.Dependency        `yaml:"chart,omitempty"`
 	Kustomize string                 `yaml:"kustomize,omitempty"`
-	Tags      []Tag                  `yaml:"tags,omitempty"`
+	Tags      Tags                   `yaml:"tags,omitempty"`
 	Builds    map[string]Build       `yaml:"builds,omitempty"`
 	Values    map[string]interface{} `yaml:"values,omitempty"`
 }
