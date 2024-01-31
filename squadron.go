@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"slices"
 	"strings"
 	"sync"
@@ -364,10 +365,17 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) e
 					"--dry-run",
 				)
 				cmd.Stdin = bytes.NewReader(valueBytes)
-				if strings.Contains(v.Chart.Repository, "file://") {
-					cmd.Args = append(cmd.Args, "/"+strings.TrimPrefix(v.Chart.Repository, "file://"))
+
+				if strings.HasPrefix(v.Chart.Repository, "file://") {
+					cmd.Args = append(cmd.Args, path.Clean(strings.TrimPrefix(v.Chart.Repository, "file://")))
 				} else {
-					cmd.Args = append(cmd.Args, v.Chart.Name, "--repo", v.Chart.Repository, "--version", v.Chart.Version)
+					cmd.Args = append(cmd.Args, v.Chart.Name)
+					if v.Chart.Repository != "" {
+						cmd.Args = append(cmd.Args, "--repo", v.Chart.Repository)
+					}
+					if v.Chart.Version != "" {
+						cmd.Args = append(cmd.Args, "--version", v.Chart.Version)
+					}
 				}
 				cmd.Args = append(cmd.Args, helmArgs...)
 				out, err := cmd.CombinedOutput()
@@ -551,8 +559,8 @@ func (sq *Squadron) Up(ctx context.Context, helmArgs []string, username, version
 					Args("--values", "-").
 					Args(helmArgs...)
 
-				if strings.Contains(v.Chart.Repository, "file://") {
-					cmd.Args(strings.TrimPrefix(v.Chart.Repository, "file://"))
+				if strings.HasPrefix(v.Chart.Repository, "file://") {
+					cmd.Args(path.Clean(strings.TrimPrefix(v.Chart.Repository, "file://")))
 				} else {
 					cmd.Args(v.Chart.Name)
 					if v.Chart.Repository != "" {

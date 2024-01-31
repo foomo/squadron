@@ -87,10 +87,17 @@ func (u *Unit) Template(ctx context.Context, name, squadron, unit, namespace str
 		Args(u.PostRendererArgs()...).
 		Args("--values", "-").
 		Args(helmArgs...)
+
 	if strings.HasPrefix(u.Chart.Repository, "file://") {
 		cmd.Args(path.Clean(strings.TrimPrefix(u.Chart.Repository, "file://")))
 	} else {
-		cmd.Args(u.Chart.Name, "--repo", u.Chart.Repository, "--version", u.Chart.Version)
+		cmd.Args(u.Chart.Name)
+		if u.Chart.Repository != "" {
+			cmd.Args("--repo", u.Chart.Repository)
+		}
+		if u.Chart.Version != "" {
+			cmd.Args("--version", u.Chart.Version)
+		}
 	}
 	if out, err := cmd.Run(ctx); err != nil {
 		return nil, errors.Wrap(err, out)
