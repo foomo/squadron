@@ -60,12 +60,12 @@ func onePasswordGet(ctx context.Context, account, vaultUUID, itemUUID string) (m
 			Value interface{} `json:"value"`
 		} `json:"fields"`
 	}
-	if res, err := exec.CommandContext(ctx, "op", "item", "get", itemUUID, "--account", account, "--format", "json").CombinedOutput(); err != nil && strings.Contains(string(res), "You are not currently signed in") {
+	if res, err := exec.CommandContext(ctx, "op", "item", "get", itemUUID, "--vault", vaultUUID, "--account", account, "--format", "json").CombinedOutput(); err != nil && strings.Contains(string(res), "You are not currently signed in") {
 		return nil, ErrOnePasswordNotSignedIn
 	} else if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, string(res))
 	} else if err := json.Unmarshal(res, &v); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to unmarshal secret")
 	} else if v.Vault.ID != vaultUUID {
 		return nil, errors.Errorf("wrong vault UUID %s for item %s", vaultUUID, itemUUID)
 	} else {
