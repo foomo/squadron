@@ -519,7 +519,7 @@ func (sq *Squadron) Rollback(ctx context.Context, revision string, helmArgs []st
 // https://stackoverflow.com/questions/59210148/error-found-in-chart-yaml-but-missing-in-charts-directory-mysql
 func (sq *Squadron) UpdateLocalDependencies(ctx context.Context, parallel int) error {
 	// collect unique entrie
-	var repositories map[string]struct{}
+	repositories := map[string]struct{}{}
 	err := sq.Config().Squadrons.Iterate(func(key string, value config.Map[*config.Unit]) error {
 		return value.Iterate(func(k string, v *config.Unit) error {
 			if strings.HasPrefix(v.Chart.Repository, "file:///") {
