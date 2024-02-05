@@ -119,13 +119,17 @@ func isConnect() bool {
 	return os.Getenv("OP_CONNECT_HOST") != "" && os.Getenv("OP_CONNECT_TOKEN") != ""
 }
 
+func isServiceAccount() bool {
+	return os.Getenv("OP_SERVICE_ACCOUNT_TOKEN") != ""
+}
+
 func onePassword(ctx context.Context, templateVars interface{}, errorOnMissing bool) func(account, vaultUUID, itemUUID, field string) (string, error) {
 	if onePasswordCache == nil {
 		onePasswordCache = map[string]map[string]string{}
 	}
 	return func(account, vaultUUID, itemUUID, field string) (string, error) {
 		// validate command
-		if isConnect() {
+		if isConnect() || isServiceAccount() {
 			// do nothing
 		} else if _, err := exec.LookPath("op"); err != nil {
 			fmt.Println("Your templates includes a call to 1Password, please install it:")
