@@ -24,7 +24,7 @@ var (
 
 var ErrOnePasswordNotSignedIn = errors.New("not signed in")
 
-func onePasswordCIGet(client connect.Client, vaultUUID, itemUUID string) (map[string]string, error) {
+func onePasswordConnectGet(client connect.Client, vaultUUID, itemUUID string) (map[string]string, error) {
 	var item *onepassword.Item
 	if onePasswordUUID.Match([]byte(itemUUID)) {
 		if v, err := client.GetItem(itemUUID, vaultUUID); err != nil {
@@ -115,13 +115,17 @@ func onePasswordSignIn(ctx context.Context, account string) error {
 	return nil
 }
 
+func isConnect() bool {
+	return os.Getenv("OP_CONNECT_HOST") != "" && os.Getenv("OP_CONNECT_TOKEN") != ""
+}
+
 func onePassword(ctx context.Context, templateVars interface{}, errorOnMissing bool) func(account, vaultUUID, itemUUID, field string) (string, error) {
 	if onePasswordCache == nil {
 		onePasswordCache = map[string]map[string]string{}
 	}
 	return func(account, vaultUUID, itemUUID, field string) (string, error) {
 		// validate command
-		if mode := os.Getenv("OP_MODE"); mode == "ci" {
+		if isConnect() {
 			// do nothing
 		} else if _, err := exec.LookPath("op"); err != nil {
 			fmt.Println("Your templates includes a call to 1Password, please install it:")
@@ -150,11 +154,11 @@ func onePassword(ctx context.Context, templateVars interface{}, errorOnMissing b
 		// create cache key
 		cacheKey := strings.Join([]string{account, vaultUUID, itemUUID}, "#")
 
-		if mode := os.Getenv("OP_MODE"); mode == "ci" {
+		if isConnect() {
 			if _, ok := onePasswordCache[cacheKey]; !ok {
 				if client, err := connect.NewClientFromEnvironment(); err != nil {
 					return "", err
-				} else if res, err := onePasswordCIGet(client, vaultUUID, itemUUID); err != nil {
+				} else if res, err := onePasswordConnectGet(client, vaultUUID, itemUUID); err != nil {
 					return "", err
 				} else {
 					onePasswordCache[cacheKey] = res
