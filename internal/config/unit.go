@@ -106,23 +106,6 @@ func (u *Unit) Template(ctx context.Context, name, squadron, unit, namespace str
 	return ret.Bytes(), nil
 }
 
-func (u *Unit) DependencyUpdate(ctx context.Context) error {
-	// update local chart dependencies
-	// https://stackoverflow.com/questions/59210148/error-found-in-chart-yaml-but-missing-in-charts-directory-mysql
-	if strings.HasPrefix(u.Chart.Repository, "file:///") {
-		pterm.Debug.Printfln("running helm dependency update for %s", u.Chart.Repository)
-		sh := util.NewHelmCommand().
-			Cwd(strings.TrimPrefix(u.Chart.Repository, "file://")).
-			Args("dependency", "update", "--skip-refresh", "--debug")
-		if out, err := sh.Run(ctx); err != nil {
-			return errors.Wrap(err, out)
-		} else {
-			pterm.Debug.Println(out)
-		}
-	}
-	return nil
-}
-
 func (u *Unit) PostRendererArgs() []string {
 	var ret []string
 	if u.Kustomize != "" {

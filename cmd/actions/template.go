@@ -37,6 +37,10 @@ var templateCmd = &cobra.Command{
 			return err
 		}
 
+		if err := sq.UpdateLocalDependencies(cmd.Context(), flagParallel); err != nil {
+			return err
+		}
+
 		out, err := sq.Template(cmd.Context(), helmArgs, flagParallel)
 		if err != nil {
 			return err

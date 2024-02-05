@@ -346,11 +346,6 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) e
 					return err
 				}
 
-				// update local chart dependencies
-				if err := v.DependencyUpdate(ctx); err != nil {
-					return err
-				}
-
 				pterm.Debug.Printfln("running helm diff for: %s", k)
 				manifest, err := exec.CommandContext(ctx, "helm", "get", "manifest", name, "--namespace", namespace).CombinedOutput()
 				if err != nil && string(bytes.TrimSpace(manifest)) != errHelmReleaseNotFound {
@@ -520,6 +515,45 @@ func (sq *Squadron) Rollback(ctx context.Context, revision string, helmArgs []st
 	return wg.Wait()
 }
 
+// UpdateLocalDependencies work around
+// https://stackoverflow.com/questions/59210148/error-found-in-chart-yaml-but-missing-in-charts-directory-mysql
+func (sq *Squadron) UpdateLocalDependencies(ctx context.Context, parallel int) error {
+	// collect unique entrie
+	var repositories map[string]struct{}
+	err := sq.Config().Squadrons.Iterate(func(key string, value config.Map[*config.Unit]) error {
+		return value.Iterate(func(k string, v *config.Unit) error {
+			if strings.HasPrefix(v.Chart.Repository, "file:///") {
+				repositories[v.Chart.Repository] = struct{}{}
+			}
+			return nil
+		})
+	})
+	if err != nil {
+		return err
+	}
+
+	wg, gctx := errgroup.WithContext(ctx)
+	wg.SetLimit(parallel)
+
+	for repository := range repositories {
+		repository := repository
+		wg.Go(func() error {
+			pterm.Debug.Printfln("running helm dependency update for %s", repository)
+			if out, err := util.NewHelmCommand().
+				Cwd(path.Clean(strings.TrimPrefix(repository, "file://"))).
+				Args("dependency", "update", "--skip-refresh", "--debug").
+				Run(gctx); err != nil {
+				return errors.Wrap(err, out)
+			} else {
+				pterm.Debug.Println(out)
+			}
+			return nil
+		})
+	}
+
+	return wg.Wait()
+}
+
 func (sq *Squadron) Up(ctx context.Context, helmArgs []string, username, version, commit, branch string, parallel int) error {
 	description := fmt.Sprintf("\nDeployed-By: %s\nManaged-By: Squadron %s\nGit-Commit: %s\nGit-Branch: %s", username, version, commit, branch)
 
@@ -536,11 +570,6 @@ func (sq *Squadron) Up(ctx context.Context, helmArgs []string, username, version
 				}
 				valueBytes, err := v.ValuesYAML(sq.c.Global)
 				if err != nil {
-					return err
-				}
-
-				// update local chart dependencies
-				if err := v.DependencyUpdate(ctx); err != nil {
 					return err
 				}
 
@@ -603,11 +632,6 @@ func (sq *Squadron) Template(ctx context.Context, helmArgs []string, parallel in
 				name := fmt.Sprintf("%s-%s", key, k)
 				namespace, err := sq.Namespace(ctx, key, k)
 				if err != nil {
-					return err
-				}
-
-				// update local chart dependencies
-				if err := v.DependencyUpdate(ctx); err != nil {
 					return err
 				}
 

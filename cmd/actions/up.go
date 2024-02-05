@@ -53,6 +53,10 @@ var upCmd = &cobra.Command{
 			}
 		}
 
+		if err := sq.UpdateLocalDependencies(cmd.Context(), flagParallel); err != nil {
+			return err
+		}
+
 		username := "unknown"
 		if value, err := util.NewCommand("git").Args("config", "user.name").Run(cmd.Context()); err == nil {
 			username = strings.TrimSpace(value)

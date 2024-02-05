@@ -33,6 +33,10 @@ var diffCmd = &cobra.Command{
 			return err
 		}
 
+		if err := sq.UpdateLocalDependencies(cmd.Context(), flagParallel); err != nil {
+			return err
+		}
+
 		return sq.Diff(cmd.Context(), helmArgs, flagParallel)
 	},
 }
