@@ -24,7 +24,7 @@ jobs:
           check-latest: true
           go-version-file: 'go.mod'
 
-      - uses: golangci/golangci-lint-action@v3
+      - uses: golangci/golangci-lint-action@v4
 
       - name: Run tests
         run: go test -v ./...
