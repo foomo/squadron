@@ -98,7 +98,7 @@ func (c *Cmd) Stderr(w io.Writer) *Cmd {
 }
 
 func (c *Cmd) Run(ctx context.Context) (string, error) {
-	cmd := exec.CommandContext(ctx, c.command[0], c.command[1:]...) //nolint:gosec
+	cmd := exec.CommandContext(ctx, c.command[0], c.command[1:]...)
 	cmd.Env = append(os.Environ(), c.env...)
 	if c.cwd != "" {
 		cmd.Dir = c.cwd

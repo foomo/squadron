@@ -1,5 +1,16 @@
 run:
   timeout: 5m
+  skip-dirs:
+    - tmp
+
+linters-settings:
+  gocritic:
+    disabled-checks:
+      - ifElseChain
+      - commentFormatting
+  gosec:
+    excludes:
+      - G204
 
 linters:
   enable:
@@ -17,12 +28,12 @@ linters:
     - forcetypeassert # finds forced type assertions [fast: true, auto-fix: false]
     #- gochecknoinits # Checks that no init functions are present in Go code [fast: true, auto-fix: false]
     #- goconst # Finds repeated strings that could be replaced by a constant [fast: true, auto-fix: false]
-    #- gocritic # Provides diagnostics that check for bugs, performance and style issues. [fast: false, auto-fix: false]
+    - gocritic # Provides diagnostics that check for bugs, performance and style issues. [fast: false, auto-fix: false]
     - goimports # In addition to fixing imports, goimports also formats your code in the same style as gofmt. [fast: true, auto-fix: true]
     #- gomoddirectives # Manage the use of 'replace', 'retract', and 'excludes' directives in go.mod. [fast: true, auto-fix: false]
     - gomodguard # Allow and block list linter for direct Go module dependencies. This is different from depguard where there are different block types for example version constraints and module recommendations. [fast: true, auto-fix: false]
     - goprintffuncname # Checks that printf-like functions are named with `f` at the end [fast: true, auto-fix: false]
-    #- gosec # (gas): Inspects source code for security problems [fast: false, auto-fix: false]
+    - gosec # (gas): Inspects source code for security problems [fast: false, auto-fix: false]
     - grouper # An analyzer to analyze expression groups. [fast: true, auto-fix: false]
     - importas # Enforces consistent import aliases [fast: false, auto-fix: false]
     - maintidx # maintidx measures the maintainability index of each function. [fast: true, auto-fix: false]
@@ -31,7 +42,7 @@ linters:
     - nakedret # Finds naked returns in functions greater than a specified function length [fast: true, auto-fix: false]
     #- nestif # Reports deeply nested if statements [fast: true, auto-fix: false]
     - nilerr # Finds the code that returns nil even if it checks that the error is not nil. [fast: false, auto-fix: false]
-    #- nilnil # Checks that there is no simultaneous return of `nil` error and an invalid value. [fast: false, auto-fix: false]
+    - nilnil # Checks that there is no simultaneous return of `nil` error and an invalid value. [fast: false, auto-fix: false]
     - noctx # noctx finds sending http request without context.Context [fast: false, auto-fix: false]
     - nolintlint # Reports ill-formed or insufficient nolint directives [fast: true, auto-fix: false]
     #- nonamedreturns # Reports all named returns [fast: false, auto-fix: false]
