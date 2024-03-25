@@ -18,8 +18,6 @@
 
 ## === Tasks ===
 
-## === Tasks ===
-
 .PHONY: doc
 ## Run tests
 doc:

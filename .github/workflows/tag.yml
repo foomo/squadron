@@ -6,21 +6,20 @@ on:
       - v*.*.*
   workflow_dispatch:
 
-env:
-  GOFLAGS: -mod=readonly
-  GOPROXY: https://proxy.golang.org
+permissions:
+  contents: write
 
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+
+      - name: Unshallow
+        run: git fetch --prune --unshallow
 
       - uses: actions/setup-go@v5
         with:
-          check-latest: true
           go-version-file: go.mod
 
       - id: app_token
