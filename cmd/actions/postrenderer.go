@@ -26,7 +26,7 @@ var postRendererCmd = &cobra.Command{
 			return err
 		}
 
-		err = os.WriteFile(path.Join(args[0], ".chart.yaml"), r, 0644)
+		err = os.WriteFile(path.Join(args[0], ".chart.yaml"), r, 0600)
 		if err != nil {
 			return err
 		}
