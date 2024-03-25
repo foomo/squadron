@@ -359,6 +359,7 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) e
 					"--values", "-",
 					"--dry-run",
 				)
+				cmd.Args = append(cmd.Args, v.PostRendererArgs()...)
 				cmd.Stdin = bytes.NewReader(valueBytes)
 
 				if strings.HasPrefix(v.Chart.Repository, "file://") {
