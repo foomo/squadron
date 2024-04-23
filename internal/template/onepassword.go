@@ -124,25 +124,31 @@ func isServiceAccount() bool {
 }
 
 func onePassword(ctx context.Context, templateVars interface{}, errorOnMissing bool) func(account, vaultUUID, itemUUID, field string) (string, error) {
-	if onePasswordCache == nil {
-		onePasswordCache = map[string]map[string]string{}
+	init := func(account string) error {
+		if onePasswordCache == nil {
+			onePasswordCache = map[string]map[string]string{}
+			if _, err := exec.LookPath("op"); err != nil {
+				fmt.Println("Your templates includes a call to 1Password, please install it:")
+				fmt.Println("https://support.1password.com/command-line-getting-started/#set-up-the-command-line-tool")
+				return errors.Wrap(err, "failed to lookup op")
+			} else if _, err := exec.CommandContext(ctx, "op", "account", "get", "--account", account).CombinedOutput(); err == nil {
+				// do nothing
+			} else if os.Getenv(fmt.Sprintf("OP_SESSION_%s", account)) == "" {
+				if err := onePasswordSignIn(ctx, account); err != nil {
+					return errors.Wrap(err, "failed to sign in")
+				}
+			}
+		}
+		return nil
 	}
+
 	return func(account, vaultUUID, itemUUID, field string) (string, error) {
 		// validate command
 		if isConnect() || isServiceAccount() {
 			// do nothing
-		} else if _, err := exec.LookPath("op"); err != nil {
-			fmt.Println("Your templates includes a call to 1Password, please install it:")
-			fmt.Println("https://support.1password.com/command-line-getting-started/#set-up-the-command-line-tool")
-			return "", errors.Wrap(err, "failed to lookup op")
-		} else if _, err := exec.CommandContext(ctx, "op", "account", "get", "--account", account).CombinedOutput(); err == nil {
-			// do nothing
-		} else if os.Getenv(fmt.Sprintf("OP_SESSION_%s", account)) == "" {
-			if err := onePasswordSignIn(ctx, account); err != nil {
-				return "", errors.Wrap(err, "failed to sign in")
-			}
+		} else if err := init(account); err != nil {
+			return "", err
 		}
-
 		// render uuid & field params
 		if value, err := onePasswordRender("op", itemUUID, templateVars, errorOnMissing); err != nil {
 			return "", err
