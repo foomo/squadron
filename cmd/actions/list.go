@@ -3,6 +3,7 @@ package actions
 import (
 	"github.com/foomo/squadron"
 	"github.com/foomo/squadron/internal/config"
+	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 	"github.com/pterm/pterm/putils"
 	"github.com/spf13/cobra"
@@ -30,12 +31,12 @@ var listCmd = &cobra.Command{
 		sq := squadron.New(cwd, "", flagFiles)
 
 		if err := sq.MergeConfigFiles(); err != nil {
-			return err
+			return errors.Wrap(err, "failed to merge config files")
 		}
 
 		squadronName, unitNames := parseSquadronAndUnitNames(args)
 		if err := sq.FilterConfig(squadronName, unitNames, flagTags); err != nil {
-			return err
+			return errors.Wrap(err, "failed to filter config")
 		}
 
 		var list pterm.LeveledList

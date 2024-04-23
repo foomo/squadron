@@ -5,6 +5,7 @@ import (
 
 	"github.com/foomo/squadron"
 	"github.com/foomo/squadron/internal/util"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -23,27 +24,27 @@ var templateCmd = &cobra.Command{
 		sq := squadron.New(cwd, flagNamespace, flagFiles)
 
 		if err := sq.MergeConfigFiles(); err != nil {
-			return err
+			return errors.Wrap(err, "failed to merge config files")
 		}
 
 		args, helmArgs := parseExtraArgs(args)
 
 		squadronName, unitNames := parseSquadronAndUnitNames(args)
 		if err := sq.FilterConfig(squadronName, unitNames, flagTags); err != nil {
-			return err
+			return errors.Wrap(err, "failed to filter config")
 		}
 
 		if err := sq.RenderConfig(cmd.Context()); err != nil {
-			return err
+			return errors.Wrap(err, "failed to render config")
 		}
 
 		if err := sq.UpdateLocalDependencies(cmd.Context(), flagParallel); err != nil {
-			return err
+			return errors.Wrap(err, "failed to update dependencies")
 		}
 
 		out, err := sq.Template(cmd.Context(), helmArgs, flagParallel)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to render template")
 		}
 
 		fmt.Print(util.Highlight(out))

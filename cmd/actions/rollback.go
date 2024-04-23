@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"github.com/foomo/squadron"
@@ -21,14 +22,14 @@ var rollbackCmd = &cobra.Command{
 		sq := squadron.New(cwd, flagNamespace, flagFiles)
 
 		if err := sq.MergeConfigFiles(); err != nil {
-			return err
+			return errors.Wrap(err, "failed to merge config files")
 		}
 
 		args, helmArgs := parseExtraArgs(args)
 
 		squadronName, unitNames := parseSquadronAndUnitNames(args)
 		if err := sq.FilterConfig(squadronName, unitNames, flagTags); err != nil {
-			return err
+			return errors.Wrap(err, "failed to filter config")
 		}
 
 		return sq.Rollback(cmd.Context(), flagRevision, helmArgs, flagParallel)
