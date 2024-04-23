@@ -15,6 +15,7 @@ import (
 	"github.com/1Password/connect-sdk-go/connect"
 	"github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 )
 
 var (
@@ -128,8 +129,8 @@ func onePassword(ctx context.Context, templateVars interface{}, errorOnMissing b
 		if onePasswordCache == nil {
 			onePasswordCache = map[string]map[string]string{}
 			if _, err := exec.LookPath("op"); err != nil {
-				fmt.Println("Your templates includes a call to 1Password, please install it:")
-				fmt.Println("https://support.1password.com/command-line-getting-started/#set-up-the-command-line-tool")
+				pterm.Warning.Println("Your templates includes a call to 1Password, please install it:")
+				pterm.Warning.Println("https://support.1password.com/command-line-getting-started/#set-up-the-command-line-tool")
 				return errors.Wrap(err, "failed to lookup op")
 			} else if _, err := exec.CommandContext(ctx, "op", "account", "get", "--account", account).CombinedOutput(); err == nil {
 				// do nothing
