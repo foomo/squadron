@@ -3,6 +3,8 @@ package config
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 
 	"github.com/foomo/squadron/internal/util"
 	"github.com/pterm/pterm"
@@ -71,37 +73,62 @@ type Build struct {
 // ------------------------------------------------------------------------------------------------
 
 func (b *Build) Build(ctx context.Context, args []string) (string, error) {
+	argOverride := func(name string, vs string, args []string) (string, string) {
+		if slices.ContainsFunc(args, func(s string) bool {
+			return strings.HasPrefix(s, name)
+		}) {
+			return "", ""
+		}
+		return name, vs
+	}
+	boolArgOverride := func(name string, vs bool, args []string) (string, bool) {
+		if slices.ContainsFunc(args, func(s string) bool {
+			return strings.HasPrefix(s, name)
+		}) {
+			return "", false
+		}
+		return name, vs
+	}
+	listArgOverride := func(name string, vs, args []string) (string, []string) {
+		if slices.ContainsFunc(args, func(s string) bool {
+			return strings.HasPrefix(s, name)
+		}) {
+			return "", nil
+		}
+		return name, vs
+	}
+
 	pterm.Debug.Printfln("running docker build for %q", b.Context)
 	return util.NewDockerCommand().Build(b.Context).
-		ListArg("--add-host", b.AddHost).
-		ListArg("--allow", b.Allow).
-		ListArg("--attest", b.Attest).
-		ListArg("--build-arg", b.BuildArg).
-		ListArg("--build-contet", b.BuildContext).
-		Arg("--builder", b.Builder).
-		Arg("--cache-from", b.CacheFrom).
-		Arg("--cache-to", b.CacheTo).
-		Arg("--file", b.File).
-		Arg("--iidfile", b.IIDFile).
-		ListArg("--label", b.Label).
-		BoolArg("--load", b.Load).
-		Arg("--metadata-file", b.MetadataFile).
-		Arg("--network", b.Network).
-		BoolArg("--no-cache", b.NoCache).
-		ListArg("--noe-cache-filter", b.NoCacheFilter).
-		Arg("--output", b.Output).
-		Arg("--platform", b.Platform).
+		ListArg(listArgOverride("--add-host", b.AddHost, args)).
+		ListArg(listArgOverride("--allow", b.Allow, args)).
+		ListArg(listArgOverride("--attest", b.Attest, args)).
+		ListArg(listArgOverride("--build-arg", b.BuildArg, args)).
+		ListArg(listArgOverride("--build-contet", b.BuildContext, args)).
+		Arg(argOverride("--builder", b.Builder, args)).
+		Arg(argOverride("--cache-from", b.CacheFrom, args)).
+		Arg(argOverride("--cache-to", b.CacheTo, args)).
+		Arg(argOverride("--file", b.File, args)).
+		Arg(argOverride("--iidfile", b.IIDFile, args)).
+		ListArg(listArgOverride("--label", b.Label, args)).
+		BoolArg(boolArgOverride("--load", b.Load, args)).
+		Arg(argOverride("--metadata-file", b.MetadataFile, args)).
+		Arg(argOverride("--network", b.Network, args)).
+		BoolArg(boolArgOverride("--no-cache", b.NoCache, args)).
+		ListArg(listArgOverride("--noe-cache-filter", b.NoCacheFilter, args)).
+		Arg(argOverride("--output", b.Output, args)).
+		Arg(argOverride("--platform", b.Platform, args)).
 		// Arg("--progress", xxx).
 		// Arg("--provenance", xxx).
 		// Arg("--push", xxx).
 		// Arg("--pull", xxx).
 		// Arg("--quiet", xxx).
-		ListArg("--secret", b.Secret).
-		Arg("--shm-size", b.ShmSize).
-		Arg("--ssh", b.SSH).
-		Arg("--tag", fmt.Sprintf("%s:%s", b.Image, b.Tag)).
-		Arg("--target", b.Target).
-		Arg("--ulimit", b.ULimit).
+		ListArg(listArgOverride("--secret", b.Secret, args)).
+		Arg(argOverride("--shm-size", b.ShmSize, args)).
+		Arg(argOverride("--ssh", b.SSH, args)).
+		Arg(argOverride("--tag", fmt.Sprintf("%s:%s", b.Image, b.Tag), args)).
+		Arg(argOverride("--target", b.Target, args)).
+		Arg(argOverride("--ulimit", b.ULimit, args)).
 		Args(args...).
 		Run(ctx)
 }
