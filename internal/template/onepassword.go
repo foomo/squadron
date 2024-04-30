@@ -146,7 +146,7 @@ func onePassword(ctx context.Context, templateVars interface{}, errorOnMissing b
 	return func(account, vaultUUID, itemUUID, field string) (string, error) {
 		// validate command
 		if isConnect() || isServiceAccount() {
-			// do nothing
+			onePasswordCache = map[string]map[string]string{}
 		} else if err := init(account); err != nil {
 			return "", err
 		}
