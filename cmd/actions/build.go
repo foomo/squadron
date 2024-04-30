@@ -9,9 +9,9 @@ import (
 func init() {
 	buildCmd.Flags().BoolVarP(&flagPush, "push", "p", false, "pushes built squadron units to the registry")
 	buildCmd.Flags().IntVar(&flagParallel, "parallel", 1, "run command in parallel")
-	buildCmd.Flags().StringSliceVar(&flagTags, "tags", nil, "list of tags to include or exclude (can specify multiple or separate values with commas: tag1,tag2,-tag3)")
-	buildCmd.Flags().StringSliceVar(&flagBuildArgs, "build-args", nil, "additional docker buildx build args")
-	buildCmd.Flags().StringSliceVar(&flagPushArgs, "push-args", nil, "additional docker push args")
+	buildCmd.Flags().StringArrayVar(&flagTags, "tags", nil, "list of tags to include or exclude (can specify multiple or separate values with commas: tag1,tag2,-tag3)")
+	buildCmd.Flags().StringArrayVar(&flagBuildArgs, "build-args", nil, "additional docker buildx build args")
+	buildCmd.Flags().StringArrayVar(&flagPushArgs, "push-args", nil, "additional docker push args")
 }
 
 var buildCmd = &cobra.Command{
