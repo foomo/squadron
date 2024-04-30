@@ -10,8 +10,8 @@ func init() {
 	pushCmd.Flags().StringVarP(&flagNamespace, "namespace", "n", "default", "set the namespace name or template (default, squadron-{{.Squadron}}-{{.Unit}})")
 	pushCmd.Flags().BoolVarP(&flagBuild, "build", "b", false, "builds or rebuilds units")
 	pushCmd.Flags().IntVar(&flagParallel, "parallel", 1, "run command in parallel")
-	pushCmd.Flags().StringSliceVar(&flagBuildArgs, "build-args", nil, "additional docker buildx build args")
-	pushCmd.Flags().StringSliceVar(&flagPushArgs, "push-args", nil, "additional docker push args")
+	pushCmd.Flags().StringArrayVar(&flagBuildArgs, "build-args", nil, "additional docker buildx build args")
+	pushCmd.Flags().StringArrayVar(&flagPushArgs, "push-args", nil, "additional docker push args")
 	pushCmd.Flags().StringSliceVar(&flagTags, "tags", nil, "list of tags to include or exclude (can specify multiple or separate values with commas: tag1,tag2,-tag3)")
 }
 

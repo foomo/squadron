@@ -15,8 +15,8 @@ func init() {
 	upCmd.Flags().BoolVarP(&flagBuild, "build", "b", false, "builds or rebuilds units")
 	upCmd.Flags().BoolVarP(&flagPush, "push", "p", false, "pushes units to the registry")
 	upCmd.Flags().IntVar(&flagParallel, "parallel", 1, "run command in parallel")
-	upCmd.Flags().StringSliceVar(&flagBuildArgs, "build-args", nil, "additional docker buildx build args")
-	upCmd.Flags().StringSliceVar(&flagPushArgs, "push-args", nil, "additional docker push args")
+	upCmd.Flags().StringArrayVar(&flagBuildArgs, "build-args", nil, "additional docker buildx build args")
+	upCmd.Flags().StringArrayVar(&flagPushArgs, "push-args", nil, "additional docker push args")
 	upCmd.Flags().StringSliceVar(&flagTags, "tags", nil, "list of tags to include or exclude (can specify multiple or separate values with commas: tag1,tag2,-tag3)")
 }
 

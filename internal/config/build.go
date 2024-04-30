@@ -99,7 +99,7 @@ func (b *Build) Build(ctx context.Context, args []string) (string, error) {
 	}
 
 	pterm.Debug.Printfln("running docker build for %q", b.Context)
-	return util.NewDockerCommand().Build(b.Context).
+	sh := util.NewDockerCommand().Build(b.Context).
 		ListArg(listArgOverride("--add-host", b.AddHost, args)).
 		ListArg(listArgOverride("--allow", b.Allow, args)).
 		ListArg(listArgOverride("--attest", b.Attest, args)).
@@ -129,8 +129,9 @@ func (b *Build) Build(ctx context.Context, args []string) (string, error) {
 		Arg(argOverride("--tag", fmt.Sprintf("%s:%s", b.Image, b.Tag), args)).
 		Arg(argOverride("--target", b.Target, args)).
 		Arg(argOverride("--ulimit", b.ULimit, args)).
-		Args(args...).
-		Run(ctx)
+		Args(args...)
+	fmt.Println(sh.String())
+	return sh.Run(ctx)
 }
 
 func (b *Build) Push(ctx context.Context, args []string) (string, error) {
