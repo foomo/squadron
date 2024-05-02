@@ -100,6 +100,7 @@ func (b *Build) Build(ctx context.Context, args []string) (string, error) {
 
 	pterm.Debug.Printfln("running docker build for %q", b.Context)
 	return util.NewDockerCommand().Build(b.Context).
+		TemplateData(map[string]string{"image": b.Image, "tag": b.Tag}).
 		ListArg(listArgOverride("--add-host", b.AddHost, args)).
 		ListArg(listArgOverride("--allow", b.Allow, args)).
 		ListArg(listArgOverride("--attest", b.Attest, args)).

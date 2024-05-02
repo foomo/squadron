@@ -13,12 +13,17 @@ import (
 
 type Cmd struct {
 	command       []string
+	templateData  any
 	cwd           string
 	env           []string
 	stdin         io.Reader
 	stdoutWriters []io.Writer
 	stderrWriters []io.Writer
 }
+
+// ------------------------------------------------------------------------------------------------
+// ~ Constructor
+// ------------------------------------------------------------------------------------------------
 
 func NewCommand(name string) *Cmd {
 	return &Cmd{
@@ -27,13 +32,22 @@ func NewCommand(name string) *Cmd {
 	}
 }
 
+// ------------------------------------------------------------------------------------------------
+// ~ Public methods
+// ------------------------------------------------------------------------------------------------
+
 func (c *Cmd) Args(args ...string) *Cmd {
 	for _, arg := range args {
 		if arg == "" {
 			continue
 		}
-		c.command = append(c.command, arg)
+		c.append(arg)
 	}
+	return c
+}
+
+func (c *Cmd) TemplateData(v any) *Cmd {
+	c.templateData = v
 	return c
 }
 
@@ -41,7 +55,7 @@ func (c *Cmd) Arg(name, v string) *Cmd {
 	if name == "" || v == "" {
 		return c
 	}
-	c.command = append(c.command, name, v)
+	c.append(name, v)
 	return c
 }
 
@@ -49,7 +63,7 @@ func (c *Cmd) BoolArg(name string, v bool) *Cmd {
 	if name == "" || !v {
 		return c
 	}
-	c.command = append(c.command, name)
+	c.append(name)
 	return c
 }
 
@@ -61,7 +75,7 @@ func (c *Cmd) ListArg(name string, vs []string) *Cmd {
 		if v == "" {
 			continue
 		}
-		c.command = append(c.command, name, v)
+		c.append(name, v)
 	}
 	return c
 }
@@ -126,4 +140,21 @@ func (c *Cmd) Run(ctx context.Context) (string, error) {
 
 	err := cmd.Run()
 	return stdout.String() + stderr.String(), err
+}
+
+// ------------------------------------------------------------------------------------------------
+// ~ Private methods
+// ------------------------------------------------------------------------------------------------
+
+func (c *Cmd) append(v ...string) {
+	if c.templateData != nil {
+		for i, s := range v {
+			if value, err := RenderTemplateString(s, c.templateData); err != nil {
+				pterm.Fatal.Println("failed to render template", err)
+			} else {
+				v[i] = value
+			}
+		}
+	}
+	c.command = append(c.command, v...)
 }

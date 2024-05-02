@@ -11,7 +11,6 @@ import (
 	"slices"
 	"strings"
 	"sync"
-	"text/template"
 
 	"github.com/foomo/squadron/internal/config"
 	templatex "github.com/foomo/squadron/internal/template"
@@ -54,15 +53,7 @@ func (sq *Squadron) Namespace(ctx context.Context, squadron, unit string) (strin
 	if sq.namespace == "" {
 		return "default", nil
 	}
-	var out bytes.Buffer
-	t, err := template.New("namespace").Parse(sq.namespace)
-	if err != nil {
-		return "", err
-	}
-	if err := t.Execute(&out, map[string]string{"Squadron": squadron, "Unit": unit}); err != nil {
-		return "", err
-	}
-	return out.String(), nil
+	return util.RenderTemplateString(sq.namespace, map[string]string{"Squadron": squadron, "Unit": unit})
 }
 
 func (sq *Squadron) Config() config.Config {
