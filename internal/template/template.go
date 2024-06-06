@@ -11,6 +11,7 @@ func ExecuteFileTemplate(ctx context.Context, text string, templateVars interfac
 		"env":          env,
 		"envDefault":   envDefault,
 		"op":           onePassword(ctx, templateVars, errorOnMissing),
+		"opDoc":        onePasswordDocument(ctx, templateVars, errorOnMissing),
 		"base64":       base64,
 		"default":      defaultValue,
 		"defaultIndex": defaultIndexValue,

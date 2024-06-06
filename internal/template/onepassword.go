@@ -49,6 +49,36 @@ func onePasswordConnectGet(client connect.Client, vaultUUID, itemUUID string) (m
 	return ret, nil
 }
 
+func onePasswordConnectGetDocument(client connect.Client, vaultUUID, itemUUID string) (string, error) {
+	var item *onepassword.Item
+	if onePasswordUUID.Match([]byte(itemUUID)) {
+		if v, err := client.GetItem(itemUUID, vaultUUID); err != nil {
+			return "", err
+		} else {
+			item = v
+		}
+	} else {
+		if v, err := client.GetItemByTitle(itemUUID, vaultUUID); err != nil {
+			return "", err
+		} else {
+			item = v
+		}
+	}
+
+	if item.Category != onepassword.Document {
+		return "", errors.Errorf("unexpected document type: %s", item.Category)
+	} else if len(item.Files) != 0 {
+		return "", errors.Errorf("unexpected document files length: %d", len(item.Files))
+	}
+
+	res, err := client.GetFileContent(item.Files[0])
+	if err != nil {
+		return "", err
+	}
+
+	return strings.Trim(string(res), "\n"), nil
+}
+
 func onePasswordGet(ctx context.Context, account, vaultUUID, itemUUID string) (map[string]string, error) {
 	var v struct {
 		Vault struct {
@@ -83,6 +113,16 @@ func onePasswordGet(ctx context.Context, account, vaultUUID, itemUUID string) (m
 		}
 		return ret, nil
 	}
+}
+
+func onePasswordGetDocument(ctx context.Context, account, vaultUUID, itemUUID string) (string, error) {
+	res, err := exec.CommandContext(ctx, "op", "document", "get", itemUUID, "--vault", vaultUUID, "--account", account).CombinedOutput()
+	if err != nil && strings.Contains(string(res), "You are not currently signed in") {
+		return "", ErrOnePasswordNotSignedIn
+	} else if err != nil {
+		return "", errors.Wrap(err, string(res))
+	}
+	return strings.Trim(string(res), "\n"), nil
 }
 
 func onePasswordSignIn(ctx context.Context, account string) error {
@@ -124,30 +164,30 @@ func isServiceAccount() bool {
 	return os.Getenv("OP_SERVICE_ACCOUNT_TOKEN") != ""
 }
 
-func onePassword(ctx context.Context, templateVars interface{}, errorOnMissing bool) func(account, vaultUUID, itemUUID, field string) (string, error) {
-	init := func(account string) error {
-		if onePasswordCache == nil {
-			onePasswordCache = map[string]map[string]string{}
-			if _, err := exec.LookPath("op"); err != nil {
-				pterm.Warning.Println("Your templates includes a call to 1Password, please install it:")
-				pterm.Warning.Println("https://support.1password.com/command-line-getting-started/#set-up-the-command-line-tool")
-				return errors.Wrap(err, "failed to lookup op")
-			} else if _, err := exec.CommandContext(ctx, "op", "account", "get", "--account", account).CombinedOutput(); err == nil {
-				// do nothing
-			} else if os.Getenv(fmt.Sprintf("OP_SESSION_%s", account)) == "" {
-				if err := onePasswordSignIn(ctx, account); err != nil {
-					return errors.Wrap(err, "failed to sign in")
-				}
+func onePasswordInit(ctx context.Context, account string) error {
+	if onePasswordCache == nil {
+		onePasswordCache = map[string]map[string]string{}
+		if _, err := exec.LookPath("op"); err != nil {
+			pterm.Warning.Println("Your templates includes a call to 1Password, please install it:")
+			pterm.Warning.Println("https://support.1password.com/command-line-getting-started/#set-up-the-command-line-tool")
+			return errors.Wrap(err, "failed to lookup op")
+		} else if _, err := exec.CommandContext(ctx, "op", "account", "get", "--account", account).CombinedOutput(); err == nil {
+			// do nothing
+		} else if os.Getenv(fmt.Sprintf("OP_SESSION_%s", account)) == "" {
+			if err := onePasswordSignIn(ctx, account); err != nil {
+				return errors.Wrap(err, "failed to sign in")
 			}
 		}
-		return nil
 	}
+	return nil
+}
 
+func onePassword(ctx context.Context, templateVars interface{}, errorOnMissing bool) func(account, vaultUUID, itemUUID, field string) (string, error) {
 	return func(account, vaultUUID, itemUUID, field string) (string, error) {
 		// validate command
 		if isConnect() || isServiceAccount() {
 			onePasswordCache = map[string]map[string]string{}
-		} else if err := init(account); err != nil {
+		} else if err := onePasswordInit(ctx, account); err != nil {
 			return "", err
 		}
 		// render uuid & field params
@@ -194,6 +234,60 @@ func onePassword(ctx context.Context, templateVars interface{}, errorOnMissing b
 		}
 
 		if value, ok := onePasswordCache[cacheKey][field]; !ok {
+			return "", nil
+		} else {
+			return value, nil
+		}
+	}
+}
+
+func onePasswordDocument(ctx context.Context, templateVars interface{}, errorOnMissing bool) func(account, vaultUUID, itemUUID string) (string, error) {
+	return func(account, vaultUUID, itemUUID string) (string, error) {
+		// validate command
+		if isConnect() || isServiceAccount() {
+			onePasswordCache = map[string]map[string]string{}
+		} else if err := onePasswordInit(ctx, account); err != nil {
+			return "", err
+		}
+		// render uuid & field params
+		if value, err := onePasswordRender("op", itemUUID, templateVars, errorOnMissing); err != nil {
+			return "", err
+		} else {
+			itemUUID = value
+		}
+
+		// create cache key
+		cacheKey := strings.Join([]string{account, vaultUUID, itemUUID}, "#")
+
+		if isConnect() {
+			if _, ok := onePasswordCache[cacheKey]; !ok {
+				if client, err := connect.NewClientFromEnvironment(); err != nil {
+					return "", err
+				} else if res, err := onePasswordConnectGetDocument(client, vaultUUID, itemUUID); err != nil {
+					return "", err
+				} else {
+					onePasswordCache[cacheKey] = map[string]string{"document": res}
+				}
+			}
+		} else {
+			if _, ok := onePasswordCache[cacheKey]; !ok {
+				if res, err := onePasswordGetDocument(ctx, account, vaultUUID, itemUUID); !errors.Is(err, ErrOnePasswordNotSignedIn) {
+					if err != nil {
+						return "", err
+					} else {
+						onePasswordCache[cacheKey] = map[string]string{"document": res}
+					}
+				} else if err := onePasswordSignIn(ctx, account); err != nil {
+					return "", errors.Wrap(err, "failed to sign in second time")
+				} else if res, err = onePasswordGetDocument(ctx, account, vaultUUID, itemUUID); err != nil {
+					return "", err
+				} else {
+					onePasswordCache[cacheKey] = map[string]string{"document": res}
+				}
+			}
+		}
+
+		if value, ok := onePasswordCache[cacheKey]["document"]; !ok {
 			return "", nil
 		} else {
 			return value, nil
