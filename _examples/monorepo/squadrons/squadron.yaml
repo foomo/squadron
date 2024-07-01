@@ -1,0 +1,16 @@
+version: '2.0'
+
+global:
+  docker:
+    tag: '230101.0'
+    registry: monorepo
+
+builds:
+  backend-base:
+    tag: <% .Global.docker.tag | quote %>
+    image: <% .Global.docker.registry %>/backend-base
+    dockerfile: <% env "PROJECT_ROOT" %>/../common/docker/backend-base.Dockerfile
+  frontend-base:
+    tag: <% .Global.docker.tag | quote %>
+    image: <% .Global.docker.registry %>/frontend-base
+    dockerfile: <% env "PROJECT_ROOT" %>/../common/docker/frontend-base.Dockerfile

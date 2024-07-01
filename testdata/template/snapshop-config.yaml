@@ -1,0 +1,45 @@
+version: "2.0"
+global:
+  host: mycompany.com
+squadron:
+  storefinder:
+    backend:
+      chart:
+        name: backend
+        repository: file://./_examples/common/charts/backend
+        version: 0.0.1
+      builds:
+        default:
+          tag: latest
+          image: docker.mycompany.com/mycomapny/frontend-admin
+      values:
+        image:
+          repository: docker.mycompany.com/mycomapny/frontend-admin
+          tag: latest
+    frontend:
+      chart:
+        name: frontend
+        repository: file://./_examples/common/charts/frontend
+        version: 0.0.1
+      builds:
+        default:
+          tag: latest
+          image: docker.mycompany.com/mycomapny/frontend
+      values:
+        env:
+          BASE64: MTIzNDU2Nzg5MA==
+          DEFAULT_INDEX_VALUE: fallback
+          DEFAULT_VALUE: fallback
+          ENV: /bin/zsh
+          GLOBAL: mycompany.com
+        image:
+          repository: docker.mycompany.com/mycomapny/frontend
+          tag: latest
+        values: |
+          foo: bar
+          bar:
+            - foo
+            - bar
+          env: /bin/zsh
+          global: mycompany.com
+          base64: MTIzNDU2Nzg5MA==

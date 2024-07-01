@@ -18,8 +18,6 @@
 
 ## === Tasks ===
 
-## === Tasks ===
-
 .PHONY: doc
 ## Run tests
 doc:
@@ -29,19 +27,12 @@ doc:
 .PHONY: test
 ## Run tests
 test:
-	@go test -v ./...
+	@go test -coverprofile=coverage.out -race -json ./... | gotestfmt
 
 .PHONY: test.update
 ## Run tests and update snapshots
 test.update:
-	go test -update ./...
-
-.PHONY: test.cover
-## Run tests with coverage
-test.cover:
-	@go test -v -coverprofile=coverage.out ./...
-	@go tool cover -func=coverage.out
-	@go tool cover -html=coverage.out
+	@go test -update -coverprofile=coverage.out -race -json ./... | gotestfmt
 
 .PHONY: lint
 ## Run linter
@@ -65,12 +56,12 @@ outdated:
 
 ## Install binary
 install:
-	go build -o ${GOPATH}/bin/squadron cmd/main.go
+	@go build -o ${GOPATH}/bin/squadron cmd/main.go
 
 ## Build binary
 build:
-	mkdir -p bin
-	go build -o bin/squadron cmd/main.go
+	@mkdir -p bin
+	@go build -o bin/squadron cmd/main.go
 
 ## === Utils ===
 

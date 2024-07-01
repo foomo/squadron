@@ -1,61 +1,54 @@
 package actions
 
 import (
-	"context"
-
-	"github.com/spf13/cobra"
+	"fmt"
 
 	"github.com/foomo/squadron"
+	"github.com/foomo/squadron/internal/util"
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
 )
 
 func init() {
-	templateCmd.Flags().StringVarP(&flagNamespace, "namespace", "n", "default", "specifies the namespace")
+	templateCmd.Flags().IntVar(&flagParallel, "parallel", 1, "run command in parallel")
+	templateCmd.Flags().StringVarP(&flagNamespace, "namespace", "n", "default", "set the namespace name or template (default, squadron-{{.Squadron}}-{{.Unit}})")
+	templateCmd.Flags().StringSliceVar(&flagTags, "tags", nil, "list of tags to include or exclude (can specify multiple or separate values with commas: tag1,tag2,-tag3)")
 }
 
 var templateCmd = &cobra.Command{
-	Use:     "template [UNIT...]",
+	Use:     "template [SQUADRON] [UNIT...]",
 	Short:   "render chart templates locally and display the output",
-	Example: "  squadron template frontend backend --namespace demo",
+	Example: "  squadron template storefinder frontend backend --namespace demo",
 	Args:    cobra.MinimumNArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return template(cmd.Context(), args, cwd, flagNamespace, flagFiles)
-	},
-}
+		sq := squadron.New(cwd, flagNamespace, flagFiles)
 
-func template(ctx context.Context, args []string, cwd, namespace string, files []string) error {
-	sq := squadron.New(cwd, namespace, files)
-
-	if err := sq.MergeConfigFiles(); err != nil {
-		return err
-	}
-
-	args, helmArgs := parseExtraArgs(args)
-
-	unitsNames, err := parseUnitNames(args, sq.GetConfig().Units)
-	if err != nil {
-		return err
-	}
-
-	if unitsNames != nil {
-		if err := sq.FilterConfig(unitsNames); err != nil {
-			return err
+		if err := sq.MergeConfigFiles(); err != nil {
+			return errors.Wrap(err, "failed to merge config files")
 		}
-	}
 
-	if err := sq.RenderConfig(ctx); err != nil {
-		return err
-	}
+		args, helmArgs := parseExtraArgs(args)
 
-	units, err := parseUnitArgs(args, sq.GetConfig().Units)
-	if err != nil {
-		return err
-	}
+		squadronName, unitNames := parseSquadronAndUnitNames(args)
+		if err := sq.FilterConfig(squadronName, unitNames, flagTags); err != nil {
+			return errors.Wrap(err, "failed to filter config")
+		}
 
-	if err := sq.Generate(ctx, sq.GetConfig().Units); err != nil {
-		return err
-	} else if err := sq.Template(ctx, units, helmArgs); err != nil {
-		return err
-	}
+		if err := sq.RenderConfig(cmd.Context()); err != nil {
+			return errors.Wrap(err, "failed to render config")
+		}
 
-	return nil
+		if err := sq.UpdateLocalDependencies(cmd.Context(), flagParallel); err != nil {
+			return errors.Wrap(err, "failed to update dependencies")
+		}
+
+		out, err := sq.Template(cmd.Context(), helmArgs, flagParallel)
+		if err != nil {
+			return errors.Wrap(err, "failed to render template")
+		}
+
+		fmt.Print(util.Highlight(out))
+
+		return nil
+	},
 }

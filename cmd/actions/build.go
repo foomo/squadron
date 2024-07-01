@@ -1,101 +1,50 @@
 package actions
 
 import (
-	"context"
-	"strings"
-
+	"github.com/foomo/squadron"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"golang.org/x/sync/errgroup"
-
-	"github.com/foomo/squadron"
 )
 
 func init() {
 	buildCmd.Flags().BoolVarP(&flagPush, "push", "p", false, "pushes built squadron units to the registry")
 	buildCmd.Flags().IntVar(&flagParallel, "parallel", 1, "run command in parallel")
-	buildCmd.Flags().StringVar(&flagBuildArgs, "build-args", "", "additional docker buildx build args")
-	buildCmd.Flags().StringVar(&flagPushArgs, "push-args", "", "additional docker push args")
+	buildCmd.Flags().StringArrayVar(&flagBuildArgs, "build-args", nil, "additional docker buildx build args")
+	buildCmd.Flags().StringArrayVar(&flagPushArgs, "push-args", nil, "additional docker push args")
+	buildCmd.Flags().StringSliceVar(&flagTags, "tags", nil, "list of tags to include or exclude (can specify multiple or separate values with commas: tag1,tag2,-tag3)")
 }
 
 var buildCmd = &cobra.Command{
-	Use:     "build [UNIT...]",
+	Use:     "build [SQUADRON.UNIT...]",
 	Short:   "build or rebuild squadron units",
-	Example: "  squadron build frontend backend",
+	Example: "  squadron build storefinder frontend backend",
 	Args:    cobra.MinimumNArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return build(cmd.Context(), args, cwd, flagFiles, flagPush, flagParallel)
+		sq := squadron.New(cwd, "", flagFiles)
+
+		if err := sq.MergeConfigFiles(); err != nil {
+			return errors.Wrap(err, "failed to merge config files")
+		}
+
+		squadronName, unitNames := parseSquadronAndUnitNames(args)
+		if err := sq.FilterConfig(squadronName, unitNames, flagTags); err != nil {
+			return errors.Wrap(err, "failed to filter config")
+		}
+
+		if err := sq.RenderConfig(cmd.Context()); err != nil {
+			return errors.Wrap(err, "failed to render config")
+		}
+
+		if err := sq.Build(cmd.Context(), flagBuildArgs, flagParallel); err != nil {
+			return errors.Wrap(err, "failed to build units")
+		}
+
+		if flagPush {
+			if err := sq.Push(cmd.Context(), flagPushArgs, flagParallel); err != nil {
+				return errors.Wrap(err, "failed to push units")
+			}
+		}
+
+		return nil
 	},
-}
-
-func build(ctx context.Context, args []string, cwd string, files []string, push bool, parallel int) error {
-	sq := squadron.New(cwd, "", files)
-
-	if err := sq.MergeConfigFiles(); err != nil {
-		return err
-	}
-
-	unitsNames, err := parseUnitNames(args, sq.GetConfig().Units)
-	if err != nil {
-		return err
-	}
-
-	if unitsNames != nil {
-		if err := sq.FilterConfig(unitsNames); err != nil {
-			return err
-		}
-	}
-
-	if err := sq.RenderConfig(ctx); err != nil {
-		return err
-	}
-
-	units, err := parseUnitArgs(args, sq.GetConfig().Units)
-	if err != nil {
-		return err
-	}
-
-	{
-		g, gctx := errgroup.WithContext(ctx)
-		g.SetLimit(parallel)
-
-		_ = squadron.Units(units).Iterate(func(n string, u *squadron.Unit) error {
-			name := n
-			unit := u
-			g.Go(func() error {
-				if out, err := unit.Build(gctx, sq.Name(), name, strings.Split(flagBuildArgs, " ")); err != nil {
-					return errors.Wrap(err, out)
-				}
-				return nil
-			})
-			return nil
-		})
-		err := g.Wait()
-		if err != nil {
-			return err
-		}
-	}
-
-	if push {
-		g, gctx := errgroup.WithContext(ctx)
-		g.SetLimit(parallel)
-
-		_ = squadron.Units(units).Iterate(func(n string, u *squadron.Unit) error {
-			name := n
-			unit := u
-			g.Go(func() error {
-				if out, err := unit.Push(gctx, sq.Name(), name, strings.Split(flagPushArgs, " ")); err != nil {
-					return errors.Wrap(err, out)
-				}
-				return nil
-			})
-			return nil
-		})
-
-		if err := g.Wait(); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }

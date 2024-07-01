@@ -1,0 +1,39 @@
+version: "2.0"
+global:
+  host: mycompany.com
+squadron:
+  storefinder:
+    backend:
+      chart:
+        name: backend
+        repository: file://<% env "PROJECT_ROOT" %>/_examples/common/charts/backend
+        version: 0.0.1
+      builds:
+        default:
+          tag: latest
+          image: docker.mycompany.com/mycomapny/frontend-admin
+      values:
+        image:
+          repository: <% .Squadron.storefinder.backend.builds.default.image %>
+          tag: <% .Squadron.storefinder.backend.builds.default.tag %>
+    frontend:
+      chart:
+        name: frontend
+        repository: file://<% env "PROJECT_ROOT" %>/_examples/common/charts/frontend
+        version: 0.0.1
+      builds:
+        default:
+          tag: latest
+          image: docker.mycompany.com/mycomapny/frontend
+      values:
+        env:
+          BASE64: <% base64 "1234567890" %>
+          DEFAULT_INDEX_VALUE: <% defaultIndex .Global "notexists" "fallback" %>
+          DEFAULT_VALUE: <% "" | default "fallback" %>
+          ENV: <% env "SHELL" %>
+          GLOBAL: <% .Global.host %>
+        image:
+          repository: <% .Squadron.storefinder.frontend.builds.default.image %>
+          tag: <% .Squadron.storefinder.frontend.builds.default.tag %>
+        values: |
+          <% file "testdata/template/squadron.values.yaml" | indent 5 %>

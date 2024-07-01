@@ -2,121 +2,95 @@ package squadron_test
 
 import (
 	"context"
+	"os"
 	"path"
 	"testing"
 
 	"github.com/foomo/squadron"
-	testutils "github.com/foomo/squadron/tests/utils"
-	"github.com/foomo/squadron/util"
+	"github.com/foomo/squadron/internal/testutils"
+	"github.com/foomo/squadron/internal/util"
+	"github.com/pterm/pterm"
+	"github.com/stretchr/testify/require"
 )
 
 func TestConfigSimpleSnapshot(t *testing.T) {
-	testConfigSnapshot(t,
-		[]string{
-			path.Join("testdata", "config-simple", "squadron.yaml"),
+	pterm.EnableDebugMessages()
+	require.NoError(t, os.Setenv("PROJECT_ROOT", "."))
+
+	tests := []struct {
+		name     string
+		files    []string
+		squadron string
+		units    []string
+		tags     []string
+	}{
+		{
+			name:  "blank",
+			files: []string{"squadron.yaml"},
 		},
-		path.Join("testdata", "config-simple", "squadron.yaml.snapshot"),
-		nil,
-		true,
-	)
+		{
+			name:  "simple",
+			files: []string{"squadron.yaml"},
+		},
+		{
+			name:  "override",
+			files: []string{"squadron.yaml", "squadron.override.yaml"},
+		},
+		{
+			name:  "global",
+			files: []string{"squadron.yaml", "squadron.override.yaml"},
+		},
+		{
+			name:  "template",
+			files: []string{"squadron.yaml"},
+		},
+		{
+			name:  "tags",
+			tags:  []string{"backend", "-skip"},
+			files: []string{"squadron.yaml"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(tt *testing.T) {
+			config(tt, test.name, test.files, test.squadron, test.units, test.tags)
+		})
+	}
 }
 
-func TestConfigNoValuesSnapshot(t *testing.T) {
-	testConfigSnapshot(t,
-		[]string{
-			path.Join("testdata", "config-no-values", "squadron.yaml"),
-		},
-		path.Join("testdata", "config-no-values", "squadron.yaml.snapshot"),
-		nil,
-		true,
-	)
-}
-
-func TestConfigOverrideSnapshot(t *testing.T) {
-	testConfigSnapshot(t,
-		[]string{
-			path.Join("testdata", "config-override", "squadron.yaml"),
-			path.Join("testdata", "config-override", "squadron.override.yaml"),
-		},
-		path.Join("testdata", "config-override", "squadron.yaml.snapshot"),
-		nil,
-		true,
-	)
-}
-
-func TestConfigGlobalSnapshot(t *testing.T) {
-	testConfigSnapshot(t,
-		[]string{
-			path.Join("testdata", "config-global", "squadron.yaml"),
-			path.Join("testdata", "config-global", "squadron.override.yaml"),
-		},
-		path.Join("testdata", "config-global", "squadron.yaml.snapshot"),
-		nil,
-		true,
-	)
-}
-
-func TestConfigTemplateSnapshot(t *testing.T) {
-	testConfigSnapshot(t,
-		[]string{
-			path.Join("testdata", "config-template", "squadron.yaml"),
-		},
-		path.Join("testdata", "config-template", "squadron.yaml.snapshot"),
-		nil,
-		true,
-	)
-}
-
-func TestConfigTemplateFrontendSnapshot(t *testing.T) {
-	testConfigSnapshot(t,
-		[]string{
-			path.Join("testdata", "config-template-frontend", "squadron.yaml"),
-		},
-		path.Join("testdata", "config-template-frontend", "squadron.yaml.snapshot"),
-		[]string{"frontend"},
-		true,
-	)
-}
-
-func TestConfigNoRenderSnapshot(t *testing.T) {
-	testConfigSnapshot(t,
-		[]string{
-			path.Join("testdata", "config-no-render", "squadron.yaml"),
-		},
-		path.Join("testdata", "config-no-render", "squadron.yaml.snapshot"),
-		nil,
-		false,
-	)
-}
-
-func TestConfigOverrideSnapshotNulled(t *testing.T) {
-	testConfigSnapshot(t,
-		[]string{
-			path.Join("testdata", "config-override-null", "squadron.yaml"),
-			path.Join("testdata", "config-override-null", "squadron.override.yaml"),
-		},
-		path.Join("testdata", "config-override-null", "squadron.yaml.snapshot"),
-		nil,
-		true,
-	)
-}
-
-func testConfigSnapshot(t *testing.T, configs []string, snapshot string, units []string, render bool) {
+func config(t *testing.T, name string, files []string, squadronName string, unitNames, tags []string) {
 	t.Helper()
 	var cwd string
-	testutils.Must(t, util.ValidatePath(".", &cwd))
+	ctx := context.TODO()
+	require.NoError(t, util.ValidatePath(".", &cwd))
 
-	sq := squadron.New(cwd, "", configs)
+	for i, file := range files {
+		files[i] = path.Join("testdata", name, file)
+	}
+	sq := squadron.New(cwd, "default", files)
 
-	testutils.Must(t, sq.MergeConfigFiles(), "failed to merge files")
-
-	if units != nil {
-		testutils.Must(t, sq.FilterConfig(units), "failed to filter units")
+	{
+		require.NoError(t, sq.MergeConfigFiles(), "failed to merge files")
 	}
 
-	if render {
-		testutils.Must(t, sq.RenderConfig(context.Background()), "failed to render config")
+	{
+		require.NoError(t, sq.FilterConfig(squadronName, unitNames, tags), "failed to filter config")
+		testutils.Snapshot(t, path.Join("testdata", name, "snapshop-config-norender.yaml"), sq.ConfigYAML())
 	}
 
-	testutils.MustCheckSnapshot(t, snapshot, sq.GetConfigYAML())
+	{
+		require.NoError(t, sq.RenderConfig(ctx), "failed to render config")
+		testutils.Snapshot(t, path.Join("testdata", name, "snapshop-config.yaml"), sq.ConfigYAML())
+	}
+
+	{
+		require.NoError(t, sq.RenderConfig(ctx), "failed to render config")
+		testutils.Snapshot(t, path.Join("testdata", name, "snapshop-config.yaml"), sq.ConfigYAML())
+	}
+
+	{
+		out, err := sq.Template(ctx, nil, 1)
+		require.NoError(t, err, "failed to render template")
+		testutils.Snapshot(t, path.Join("testdata", name, "snapshop-template.yaml"), out)
+	}
 }

@@ -1,0 +1,19 @@
+version: '2.0'
+
+squadron:
+  storefinder:
+    backend:
+      chart: <% env "PROJECT_ROOT" %>/../common/charts/backend
+      builds:
+        default:
+          tag: latest
+          context: <% env "PROJECT_ROOT" %>/app
+          dockerfile: <% env "PROJECT_ROOT" %>/../common/docker/backend.Dockerfile
+          image: helloworld/app
+      values:
+        image:
+          tag: <% .Squadron.storefinder.backend.builds.default.tag | quote %>
+          repository: <% .Squadron.storefinder.backend.builds.default.image %>
+        service:
+          ports:
+            - 80

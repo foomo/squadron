@@ -1,144 +1,79 @@
 package actions
 
 import (
-	"context"
-	"fmt"
 	"os/user"
 	"strings"
 
+	"github.com/foomo/squadron"
+	"github.com/foomo/squadron/internal/util"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"golang.org/x/sync/errgroup"
-	"golang.org/x/sync/semaphore"
-
-	"github.com/foomo/squadron"
-	"github.com/foomo/squadron/util"
 )
 
 func init() {
-	upCmd.Flags().StringVarP(&flagNamespace, "namespace", "n", "default", "specifies the namespace")
+	upCmd.Flags().StringVarP(&flagNamespace, "namespace", "n", "default", "set the namespace name or template (default, squadron-{{.Squadron}}-{{.Unit}})")
 	upCmd.Flags().BoolVarP(&flagBuild, "build", "b", false, "builds or rebuilds units")
 	upCmd.Flags().BoolVarP(&flagPush, "push", "p", false, "pushes units to the registry")
-	upCmd.Flags().BoolVar(&flagDiff, "diff", false, "preview upgrade as a coloured diff")
 	upCmd.Flags().IntVar(&flagParallel, "parallel", 1, "run command in parallel")
-	upCmd.Flags().StringVar(&flagBuildArgs, "build-args", "", "additional docker buildx build args")
-	upCmd.Flags().StringVar(&flagPushArgs, "push-args", "", "additional docker push args")
+	upCmd.Flags().StringArrayVar(&flagBuildArgs, "build-args", nil, "additional docker buildx build args")
+	upCmd.Flags().StringArrayVar(&flagPushArgs, "push-args", nil, "additional docker push args")
+	upCmd.Flags().StringSliceVar(&flagTags, "tags", nil, "list of tags to include or exclude (can specify multiple or separate values with commas: tag1,tag2,-tag3)")
 }
 
 var upCmd = &cobra.Command{
-	Use:     "up [UNIT...]",
+	Use:     "up [SQUADRON] [UNIT...]",
 	Short:   "installs the squadron or given units",
-	Example: "  squadron up frontend backend --namespace demo --build --push -- --dry-run",
+	Example: "  squadron up storefinder frontend backend --namespace demo --build --push -- --dry-run",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return up(cmd.Context(), args, cwd, flagNamespace, flagBuild, flagPush, flagDiff, flagParallel, flagFiles)
+		sq := squadron.New(cwd, flagNamespace, flagFiles)
+
+		if err := sq.MergeConfigFiles(); err != nil {
+			return errors.Wrap(err, "failed to merge config files")
+		}
+
+		args, helmArgs := parseExtraArgs(args)
+
+		squadronName, unitNames := parseSquadronAndUnitNames(args)
+		if err := sq.FilterConfig(squadronName, unitNames, flagTags); err != nil {
+			return errors.Wrap(err, "failed to filter config")
+		}
+
+		if err := sq.RenderConfig(cmd.Context()); err != nil {
+			return errors.Wrap(err, "failed to render config")
+		}
+
+		if flagBuild {
+			if err := sq.Build(cmd.Context(), flagBuildArgs, flagParallel); err != nil {
+				return errors.Wrap(err, "failed to build units")
+			}
+		}
+
+		if flagPush {
+			if err := sq.Push(cmd.Context(), flagPushArgs, flagParallel); err != nil {
+				return errors.Wrap(err, "failed to push units")
+			}
+		}
+
+		if err := sq.UpdateLocalDependencies(cmd.Context(), flagParallel); err != nil {
+			return err
+		}
+
+		username := "unknown"
+		if value, err := util.NewCommand("git").Args("config", "user.name").Run(cmd.Context()); err == nil {
+			username = strings.TrimSpace(value)
+		} else if value, err := user.Current(); err == nil {
+			username = strings.TrimSpace(value.Name)
+		}
+
+		branch := ""
+		if value, err := util.NewCommand("sh").Args("-c", "git describe --tags --exact-match 2> /dev/null || git symbolic-ref -q --short HEAD || git rev-parse --short HEAD").Run(cmd.Context()); err == nil {
+			branch = strings.TrimSpace(value)
+		}
+		commit := ""
+		if value, err := util.NewCommand("sh").Args("-c", "git rev-parse --short HEAD").Run(cmd.Context()); err == nil {
+			commit = strings.TrimSpace(value)
+		}
+
+		return sq.Up(cmd.Context(), helmArgs, username, version, commit, branch, flagParallel)
 	},
-}
-
-func up(ctx context.Context, args []string, cwd, namespace string, build, push, diff bool, parallel int, files []string) error {
-	sq := squadron.New(cwd, namespace, files)
-
-	if err := sq.MergeConfigFiles(); err != nil {
-		return err
-	}
-
-	args, helmArgs := parseExtraArgs(args)
-
-	unitsNames, err := parseUnitNames(args, sq.GetConfig().Units)
-	if err != nil {
-		return err
-	}
-
-	if unitsNames != nil {
-		if err := sq.FilterConfig(unitsNames); err != nil {
-			return err
-		}
-	}
-
-	if err := sq.RenderConfig(ctx); err != nil {
-		return err
-	}
-
-	units, err := parseUnitArgs(args, sq.GetConfig().Units)
-	if err != nil {
-		return err
-	}
-
-	if build {
-		sem := semaphore.NewWeighted(int64(parallel))
-		wg, wgCtx := errgroup.WithContext(ctx)
-
-		_ = sq.GetConfig().Units.Iterate(func(n string, u *squadron.Unit) error {
-			name := n
-			unit := u
-			wg.Go(func() error {
-				if err := sem.Acquire(wgCtx, 1); err != nil {
-					return err
-				}
-				defer sem.Release(1)
-				if out, err := unit.Build(wgCtx, sq.Name(), name, strings.Split(flagBuildArgs, " ")); err != nil {
-					return errors.Wrap(err, out)
-				}
-				return nil
-			})
-			return nil
-		})
-		if err := wg.Wait(); err != nil {
-			return err
-		}
-	}
-
-	if push {
-		sem := semaphore.NewWeighted(int64(parallel))
-		wg, wgCtx := errgroup.WithContext(ctx)
-
-		_ = sq.GetConfig().Units.Iterate(func(n string, u *squadron.Unit) error {
-			name := n
-			unit := u
-			wg.Go(func() error {
-				if err := sem.Acquire(wgCtx, 1); err != nil {
-					return err
-				}
-				defer sem.Release(1)
-				if out, err := unit.Push(wgCtx, sq.Name(), name, strings.Split(flagPushArgs, " ")); err != nil {
-					return errors.Wrap(err, out)
-				}
-				return nil
-			})
-			return nil
-		})
-
-		if err := wg.Wait(); err != nil {
-			return err
-		}
-	}
-
-	if err := sq.Generate(ctx, units); err != nil {
-		return err
-	}
-
-	username := "unknown"
-	if value, err := util.NewCommand("git").Args("config", "user.name").Run(ctx); err == nil {
-		username = strings.TrimSpace(value)
-	} else if value, err := user.Current(); err == nil {
-		username = strings.TrimSpace(value.Name)
-	}
-
-	branch := ""
-	if value, err := util.NewCommand("sh").Args("-c", "git describe --tags --exact-match 2> /dev/null || git symbolic-ref -q --short HEAD || git rev-parse --short HEAD").Run(ctx); err == nil {
-		branch = strings.TrimSpace(value)
-	}
-	commit := ""
-	if value, err := util.NewCommand("sh").Args("-c", "git rev-parse --short HEAD").Run(ctx); err == nil {
-		commit = strings.TrimSpace(value)
-	}
-
-	if !diff {
-		return sq.Up(ctx, units, helmArgs, username, version, commit, branch, parallel)
-	} else if out, err := sq.Diff(ctx, units, helmArgs); err != nil {
-		return err
-	} else {
-		fmt.Println(out)
-	}
-
-	return nil
 }

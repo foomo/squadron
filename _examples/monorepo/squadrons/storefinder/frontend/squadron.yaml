@@ -1,0 +1,22 @@
+# Schema version
+version: '2.0'
+
+squadron:
+  storefinder:
+    frontend:
+      chart: <% env "PROJECT_ROOT" %>/../common/charts/frontend
+      tags: ['frontend']
+      builds:
+        default:
+          tag: <% .Global.docker.tag | quote %>
+          image: <% .Global.docker.registry %>/storefinder-frontend
+          context: <% env "PROJECT_ROOT" %>/squadrons/storefinder/frontend
+          dockerfile: <% env "PROJECT_ROOT" %>/../common/docker/frontend.Dockerfile
+          dependencies: ['frontend-base']
+          args:
+            - 'BASE_IMAGE=<% .Global.docker.registry %>/frontend-base'
+            - 'BASE_IMAGE_TAG=<% .Global.docker.tag | quote %>'
+      values:
+        image:
+          tag: <% .Global.docker.tag | quote %>
+          repository: <% .Squadron.storefinder.frontend.builds.default.image %>

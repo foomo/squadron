@@ -1,55 +1,37 @@
 package actions
 
 import (
-	"context"
-
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"github.com/foomo/squadron"
 )
 
 func init() {
-	rollbackCmd.Flags().StringVarP(&flagNamespace, "namespace", "n", "default", "specifies the namespace")
+	rollbackCmd.Flags().IntVar(&flagParallel, "parallel", 1, "run command in parallel")
+	rollbackCmd.Flags().StringVarP(&flagNamespace, "namespace", "n", "default", "set the namespace name or template (default, squadron-{{.Squadron}}-{{.Unit}})")
 	rollbackCmd.Flags().StringVarP(&flagRevision, "revision", "r", "", "specifies the revision to roll back to")
+	rollbackCmd.Flags().StringSliceVar(&flagTags, "tags", nil, "list of tags to include or exclude (can specify multiple or separate values with commas: tag1,tag2,-tag3)")
 }
 
 var rollbackCmd = &cobra.Command{
-	Use:     "rollback [UNIT...]",
+	Use:     "rollback [SQUADRON] [UNIT...]",
 	Short:   "rolls back the squadron or given units",
-	Example: "  squadron rollback frontend backend --namespace demo",
+	Example: "  squadron rollback storefinder frontend backend --namespace demo",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return rollback(cmd.Context(), args, cwd, flagNamespace, flagRevision, flagFiles)
-	},
-}
+		sq := squadron.New(cwd, flagNamespace, flagFiles)
 
-func rollback(ctx context.Context, args []string, cwd, namespace string, revision string, files []string) error {
-	sq := squadron.New(cwd, namespace, files)
-
-	if err := sq.MergeConfigFiles(); err != nil {
-		return err
-	}
-
-	args, helmArgs := parseExtraArgs(args)
-
-	unitsNames, err := parseUnitNames(args, sq.GetConfig().Units)
-	if err != nil {
-		return err
-	}
-
-	if unitsNames != nil {
-		if err := sq.FilterConfig(unitsNames); err != nil {
-			return err
+		if err := sq.MergeConfigFiles(); err != nil {
+			return errors.Wrap(err, "failed to merge config files")
 		}
-	}
 
-	if err := sq.RenderConfig(ctx); err != nil {
-		return err
-	}
+		args, helmArgs := parseExtraArgs(args)
 
-	units, err := parseUnitArgs(args, sq.GetConfig().Units)
-	if err != nil {
-		return err
-	}
+		squadronName, unitNames := parseSquadronAndUnitNames(args)
+		if err := sq.FilterConfig(squadronName, unitNames, flagTags); err != nil {
+			return errors.Wrap(err, "failed to filter config")
+		}
 
-	return sq.Rollback(ctx, units, revision, helmArgs)
+		return sq.Rollback(cmd.Context(), flagRevision, helmArgs, flagParallel)
+	},
 }

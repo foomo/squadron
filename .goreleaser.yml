@@ -1,10 +1,13 @@
-# .goreleaser.yml
-# Build customization
+project_name: squadron
+
+release:
+  github:
+    owner: foomo
+    name: squadron
+  prerelease: auto
+
 builds:
   - binary: squadron
-    main: ./cmd/main.go
-    env:
-      - CGO_ENABLED=0
     goos:
       - windows
       - darwin
@@ -13,55 +16,33 @@ builds:
       - amd64
       - arm64
     goarm:
-      - 7
+      - '7'
+    env:
+      - CGO_ENABLED=0
+    main: ./cmd/main.go
     flags:
       - -trimpath
-    ldflags:
-      - -s -w -X github.com/foomo/squadron/cmd/actions.version={{.Version}}
+    ldflags: -s -w -X github.com/foomo/squadron/cmd/actions.version={{.Version}}
 
 archives:
   - format: tar.gz
     format_overrides:
       - goos: windows
         format: zip
+    files:
+      - LICENSE
+      - README.md
 
 changelog:
-  filters:
-    exclude:
-      - "^wip"
-      - "^test"
-      - "^docs"
-      - "^chore"
-      - "^style"
-      - "go mod tidy"
-      - "merge conflict"
-      - "Merge pull request"
-      - "Merge remote-tracking branch"
-      - "Merge branch"
-  groups:
-    - title: Features
-      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
-      order: 0
-    - title: Dependency updates
-      regexp: '^.*?(feat|fix)\(deps\)!?:.+$'
-      order: 100
-    - title: "Bug fixes"
-      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
-      order: 150
-    - title: "Security"
-      regexp: '^.*?sec(\([[:word:]]+\))??!?:.+$'
-      order: 200
-    - title: "Performace"
-      regexp: '^.*?perf(\([[:word:]]+\))??!?:.+$'
-      order: 250
-    - title: Other
-      order: 999
+  use: github-native
 
 brews:
   # Repository to push the tap to.
-  - tap:
+  - repository:
       owner: foomo
-      name: homebrew-squadron
+      name: homebrew-tap
     caveats: "squadron -h"
     homepage: "https://github.com/foomo/squadron"
     description: "CLI utility manage infrastructure as code with helm"
+    test: |
+      system "#{bin}/squadron --version"
