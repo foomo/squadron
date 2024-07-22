@@ -6,7 +6,7 @@ import (
 	"text/template"
 )
 
-func ExecuteFileTemplate(ctx context.Context, text string, templateVars interface{}, errorOnMissing bool) ([]byte, error) {
+func ExecuteFileTemplate(ctx context.Context, text string, templateVars any, errorOnMissing bool) ([]byte, error) {
 	funcMap := template.FuncMap{
 		"env":          env,
 		"envDefault":   envDefault,

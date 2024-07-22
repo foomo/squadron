@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func file(ctx context.Context, templateVars interface{}, errorOnMissing bool) func(v string) (string, error) {
+func file(ctx context.Context, templateVars any, errorOnMissing bool) func(v string) (string, error) {
 	return func(v string) (string, error) {
 		if v == "" {
 			return "", nil

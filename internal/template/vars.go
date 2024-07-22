@@ -1,7 +1,7 @@
 package template
 
-type Vars map[string]interface{}
+type Vars map[string]any
 
-func (tv *Vars) Add(name string, value interface{}) {
+func (tv *Vars) Add(name string, value any) {
 	(*tv)[name] = value
 }

@@ -15,21 +15,21 @@ import (
 )
 
 type Unit struct {
-	Chart     helm.Dependency        `yaml:"chart,omitempty"`
-	Kustomize string                 `yaml:"kustomize,omitempty"`
-	Tags      Tags                   `yaml:"tags,omitempty"`
-	Builds    map[string]Build       `yaml:"builds,omitempty"`
-	Values    map[string]interface{} `yaml:"values,omitempty"`
+	Chart     helm.Dependency  `yaml:"chart,omitempty"`
+	Kustomize string           `yaml:"kustomize,omitempty"`
+	Tags      Tags             `yaml:"tags,omitempty"`
+	Builds    map[string]Build `yaml:"builds,omitempty"`
+	Values    map[string]any   `yaml:"values,omitempty"`
 }
 
 // ------------------------------------------------------------------------------------------------
 // ~ Public methods
 // ------------------------------------------------------------------------------------------------
 
-func (u *Unit) ValuesYAML(global map[string]interface{}) ([]byte, error) {
+func (u *Unit) ValuesYAML(global map[string]any) ([]byte, error) {
 	values := u.Values
 	if values == nil {
-		values = map[string]interface{}{}
+		values = map[string]any{}
 	}
 	if global != nil {
 		if _, ok := values["global"]; !ok {
@@ -69,7 +69,7 @@ func (u *Unit) Push(ctx context.Context, squadron, unit string, args []string) (
 	return "", nil
 }
 
-func (u *Unit) Template(ctx context.Context, name, squadron, unit, namespace string, global map[string]interface{}, helmArgs []string) ([]byte, error) {
+func (u *Unit) Template(ctx context.Context, name, squadron, unit, namespace string, global map[string]any, helmArgs []string) ([]byte, error) {
 	var ret bytes.Buffer
 	valueBytes, err := u.ValuesYAML(global)
 	if err != nil {

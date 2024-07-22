@@ -71,7 +71,7 @@ func Execute() {
 }
 
 // parseExtraArgs ...
-func parseExtraArgs(args []string) (out []string, extraArgs []string) {
+func parseExtraArgs(args []string) (out []string, extraArgs []string) { //nolint:nonamedreturns
 	for i, arg := range args {
 		if strings.HasPrefix(arg, "--") && i > 0 {
 			return args[:i], args[i:]
@@ -82,7 +82,7 @@ func parseExtraArgs(args []string) (out []string, extraArgs []string) {
 	return args, nil
 }
 
-func parseSquadronAndUnitNames(args []string) (squadron string, units []string) {
+func parseSquadronAndUnitNames(args []string) (squadron string, units []string) { //nolint:nonamedreturns
 	if len(args) == 0 {
 		return "", nil
 	}
