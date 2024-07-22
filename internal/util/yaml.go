@@ -6,7 +6,7 @@ import (
 	yamlv2 "gopkg.in/yaml.v2"
 )
 
-func GenerateYaml(path string, data interface{}) (err error) {
+func GenerateYaml(path string, data any) (err error) {
 	out, marshalErr := yamlv2.Marshal(data)
 	if marshalErr != nil {
 		return marshalErr
@@ -21,5 +21,5 @@ func GenerateYaml(path string, data interface{}) (err error) {
 		}
 	}()
 	_, err = file.Write(out)
-	return
+	return err
 }

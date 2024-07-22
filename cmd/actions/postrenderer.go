@@ -19,7 +19,6 @@ var postRendererCmd = &cobra.Command{
 	Example: "  squadron template storefinder frontend backend --namespace demo",
 	Args:    cobra.MinimumNArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
-
 		// this does the trick
 		r, err := io.ReadAll(cmd.InOrStdin())
 		if err != nil {

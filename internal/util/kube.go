@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	v1 "k8s.io/api/apps/v1"
+	k8s "k8s.io/api/apps/v1"
 )
 
 type KubeCmd struct {
@@ -85,12 +85,12 @@ func (c KubeCmd) DeleteService(service string) *Cmd {
 	return c.Args("delete", "service", service)
 }
 
-func (c KubeCmd) GetDeployment(ctx context.Context, deployment string) (*v1.Deployment, error) {
+func (c KubeCmd) GetDeployment(ctx context.Context, deployment string) (*k8s.Deployment, error) {
 	out, err := c.Args("get", "deployment", deployment, "-o", "json").Run(ctx)
 	if err != nil {
 		return nil, err
 	}
-	var d v1.Deployment
+	var d k8s.Deployment
 	if err := json.Unmarshal([]byte(out), &d); err != nil {
 		return nil, err
 	}
@@ -127,7 +127,7 @@ func (c KubeCmd) GetPods(ctx context.Context, selectors map[string]string) ([]st
 	return parseResources(out, "pod/")
 }
 
-func (c KubeCmd) GetContainers(deployment v1.Deployment) []string {
+func (c KubeCmd) GetContainers(deployment k8s.Deployment) []string {
 	containers := make([]string, len(deployment.Spec.Template.Spec.Containers))
 	for i, c := range deployment.Spec.Template.Spec.Containers {
 		containers[i] = c.Name

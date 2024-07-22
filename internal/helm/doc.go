@@ -1,9 +1,9 @@
 package helm
 
 import (
-	"fmt"
 	"os"
 
+	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
 
@@ -18,10 +18,10 @@ func loadChart(path string) (*Chart, error) {
 	c := Chart{}
 	file, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("error while opening file: %v", err)
+		return nil, errors.Wrap(err, "error while opening file")
 	}
 	if err := yaml.Unmarshal(file, &c); err != nil {
-		return nil, fmt.Errorf("error while unmarshalling template file: %s", err)
+		return nil, errors.Wrap(err, "error while unmarshalling template file")
 	}
 	return &c, nil
 }

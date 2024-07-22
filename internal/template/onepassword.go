@@ -28,7 +28,7 @@ var ErrOnePasswordNotSignedIn = errors.New("not signed in")
 
 func onePasswordConnectGet(client connect.Client, vaultUUID, itemUUID string) (map[string]string, error) {
 	var item *onepassword.Item
-	if onePasswordUUID.Match([]byte(itemUUID)) {
+	if onePasswordUUID.MatchString(itemUUID) {
 		if v, err := client.GetItem(itemUUID, vaultUUID); err != nil {
 			return nil, err
 		} else {
@@ -52,7 +52,7 @@ func onePasswordConnectGet(client connect.Client, vaultUUID, itemUUID string) (m
 
 func onePasswordConnectGetDocument(client connect.Client, vaultUUID, itemUUID string) (string, error) {
 	var item *onepassword.Item
-	if onePasswordUUID.Match([]byte(itemUUID)) {
+	if onePasswordUUID.MatchString(itemUUID) {
 		if v, err := client.GetItem(itemUUID, vaultUUID); err != nil {
 			return "", err
 		} else {
@@ -90,10 +90,10 @@ func onePasswordGet(ctx context.Context, account, vaultUUID, itemUUID string) (m
 			ID string `json:"id"`
 		} `json:"vault"`
 		Fields []struct {
-			ID    string      `json:"id"`
-			Type  string      `json:"type"` // CONCEALED, STRING
-			Label string      `json:"label"`
-			Value interface{} `json:"value"`
+			ID    string `json:"id"`
+			Type  string `json:"type"` // CONCEALED, STRING
+			Label string `json:"label"`
+			Value any    `json:"value"`
 		} `json:"fields"`
 	}
 	if res, err := exec.CommandContext(ctx, "op", "item", "get", itemUUID, "--vault", vaultUUID, "--account", account, "--format", "json").CombinedOutput(); err != nil && strings.Contains(string(res), "You are not currently signed in") {
@@ -184,6 +184,8 @@ func onePasswordInit(ctx context.Context, account string) error {
 		return nil
 	}
 
+	onePasswordCache = map[string]map[string]string{}
+
 	// validate env
 	if isConnect() || isServiceAccount() {
 		return nil
@@ -208,11 +210,10 @@ func onePasswordInit(ctx context.Context, account string) error {
 		}
 	}
 
-	onePasswordCache = map[string]map[string]string{}
 	return nil
 }
 
-func onePassword(ctx context.Context, templateVars interface{}, errorOnMissing bool) func(account, vaultUUID, itemUUID, field string) (string, error) {
+func onePassword(ctx context.Context, templateVars any, errorOnMissing bool) func(account, vaultUUID, itemUUID, field string) (string, error) {
 	return func(account, vaultUUID, itemUUID, field string) (string, error) {
 		// init
 		if err := onePasswordInit(ctx, account); err != nil {
@@ -261,7 +262,7 @@ func onePassword(ctx context.Context, templateVars interface{}, errorOnMissing b
 	}
 }
 
-func onePasswordDocument(ctx context.Context, templateVars interface{}, errorOnMissing bool) func(account, vaultUUID, itemUUID string) (string, error) {
+func onePasswordDocument(ctx context.Context, templateVars any, errorOnMissing bool) func(account, vaultUUID, itemUUID string) (string, error) {
 	return func(account, vaultUUID, itemUUID string) (string, error) {
 		// init
 		if err := onePasswordInit(ctx, account); err != nil {
@@ -304,7 +305,7 @@ func onePasswordDocument(ctx context.Context, templateVars interface{}, errorOnM
 	}
 }
 
-func onePasswordRender(name, text string, data interface{}, errorOnMissing bool) (string, error) {
+func onePasswordRender(name, text string, data any, errorOnMissing bool) (string, error) {
 	var opts []string
 	if !errorOnMissing {
 		opts = append(opts, "missingkey=error")

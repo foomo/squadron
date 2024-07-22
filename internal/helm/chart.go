@@ -31,7 +31,7 @@ func (c *Chart) AddDependency(alias string, cd Dependency) {
 	c.Dependencies = append(c.Dependencies, cd)
 }
 
-func (c *Chart) Generate(chartPath string, overrides interface{}) error {
+func (c *Chart) Generate(chartPath string, overrides any) error {
 	// generate Chart.yaml
 	if err := util.GenerateYaml(path.Join(chartPath, chartFile), c); err != nil {
 		return err

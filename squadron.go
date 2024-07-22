@@ -147,7 +147,7 @@ func (sq *Squadron) RenderConfig(ctx context.Context) error {
 	pterm.Debug.Println("rendering config")
 
 	var tv templatex.Vars
-	var vars map[string]interface{}
+	var vars map[string]any
 	if err := yaml.Unmarshal([]byte(sq.config), &vars); err != nil {
 		return err
 	}
@@ -239,8 +239,6 @@ func (sq *Squadron) BuildDependencies(ctx context.Context, buildArgs []string, p
 	dependencies := sq.c.BuildDependencies()
 	for name, dependency := range dependencies {
 		i := i + 1
-		name := name
-		dependency := dependency
 		wg.Go(func() error {
 			pterm.Info.Printfln("[%d/%d] Building dependency `%s`", i, len(dependencies), name)
 			pterm.FgGray.Printfln("└ %s:%s", dependency.Image, dependency.Tag)
@@ -408,9 +406,9 @@ func (sq *Squadron) Status(ctx context.Context, helmArgs []string, parallel int)
 			LastDeployed  string `json:"last_deployed"`
 			Description   string `json:"description"`
 		} `json:"info"`
-		deployedBy string `json:"-"`
-		gitCommit  string `json:"-"`
-		gitBranch  string `json:"-"`
+		deployedBy string `json:"-"` //nolint:revive
+		gitCommit  string `json:"-"` //nolint:revive
+		gitBranch  string `json:"-"` //nolint:revive
 	}
 
 	wg, ctx := errgroup.WithContext(ctx)
@@ -528,7 +526,6 @@ func (sq *Squadron) UpdateLocalDependencies(ctx context.Context, parallel int) e
 	wg.SetLimit(parallel)
 
 	for repository := range repositories {
-		repository := repository
 		wg.Go(func() error {
 			pterm.Debug.Printfln("running helm dependency update for %s", repository)
 			if out, err := util.NewHelmCommand().
