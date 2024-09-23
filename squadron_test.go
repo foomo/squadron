@@ -2,7 +2,6 @@ package squadron_test
 
 import (
 	"context"
-	"os"
 	"path"
 	"testing"
 
@@ -15,7 +14,7 @@ import (
 
 func TestConfigSimpleSnapshot(t *testing.T) {
 	pterm.EnableDebugMessages()
-	require.NoError(t, os.Setenv("PROJECT_ROOT", "."))
+	t.Setenv("PROJECT_ROOT", ".")
 
 	tests := []struct {
 		name     string
