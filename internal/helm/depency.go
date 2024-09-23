@@ -33,7 +33,7 @@ func (d *Dependency) UnmarshalYAML(value *yaml.Node) error {
 		}
 		localChart, err := loadChart(path.Join(string(vBytes), chartFile))
 		if err != nil {
-			return fmt.Errorf("failed to load local chart: " + vString)
+			return errors.New("failed to load local chart: " + vString)
 		}
 		d.Name = localChart.Name
 		d.Repository = fmt.Sprintf("file://%v", vString)
