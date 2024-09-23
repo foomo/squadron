@@ -13,6 +13,7 @@ func ExecuteFileTemplate(ctx context.Context, text string, templateVars any, err
 		"op":           onePassword(ctx, templateVars, errorOnMissing),
 		"opDoc":        onePasswordDocument(ctx, templateVars, errorOnMissing),
 		"base64":       base64,
+		"b64enc":       base64,
 		"default":      defaultValue,
 		"defaultIndex": defaultIndexValue,
 		"indent":       indent,
