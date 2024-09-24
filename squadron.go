@@ -157,6 +157,10 @@ func (sq *Squadron) RenderConfig(ctx context.Context) error {
 		util.ToSnakeCaseKeys(value)
 		tv.Add("Global", value)
 	}
+	if value, ok := vars["vars"]; ok {
+		util.ToSnakeCaseKeys(value)
+		tv.Add("Vars", value)
+	}
 	if value, ok := vars["squadron"]; ok {
 		util.ToSnakeCaseKeys(value)
 		tv.Add("Squadron", value)
@@ -189,6 +193,10 @@ func (sq *Squadron) RenderConfig(ctx context.Context) error {
 	if value, ok := vars["global"]; ok {
 		util.ToSnakeCaseKeys(value)
 		tv.Add("Global", value)
+	}
+	if value, ok := vars["vars"]; ok {
+		util.ToSnakeCaseKeys(value)
+		tv.Add("Vars", value)
 	}
 	if value, ok := vars["squadron"]; ok {
 		util.ToSnakeCaseKeys(value)
@@ -330,7 +338,7 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) e
 				if err != nil {
 					return err
 				}
-				valueBytes, err := v.ValuesYAML(sq.c.Global)
+				valueBytes, err := v.ValuesYAML(sq.c.Global, sq.c.Vars)
 				if err != nil {
 					return err
 				}
@@ -557,7 +565,7 @@ func (sq *Squadron) Up(ctx context.Context, helmArgs []string, username, version
 				if err != nil {
 					return err
 				}
-				valueBytes, err := v.ValuesYAML(sq.c.Global)
+				valueBytes, err := v.ValuesYAML(sq.c.Global, sq.c.Vars)
 				if err != nil {
 					return err
 				}
@@ -625,7 +633,7 @@ func (sq *Squadron) Template(ctx context.Context, helmArgs []string, parallel in
 				}
 
 				pterm.Debug.Printfln("running helm template for chart: %s", name)
-				out, err := v.Template(gctx, name, key, k, namespace, sq.c.Global, helmArgs)
+				out, err := v.Template(gctx, name, key, k, namespace, sq.c.Global, sq.c.Vars, helmArgs)
 				if err != nil {
 					return err
 				}

@@ -2,6 +2,7 @@ version: "2.0"
 
 global:
   host: mycompany.com
+  enabled: true
 
 squadron:
   storefinder:
@@ -10,7 +11,7 @@ squadron:
       builds:
         default:
           tag: latest
-          image: docker.mycompany.com/mycomapny/frontend
+          image: storefinder/frontend
       values:
         image:
           tag: <% .Squadron.storefinder.frontend.builds.default.tag %>
@@ -18,7 +19,7 @@ squadron:
         env:
           ENV: <% env "SHELL" %>
           GLOBAL: <% .Global.host %>
-          BASE64: <% base64 "1234567890" %>
+          BASE64: <% "1234567890" | b64enc %>
           DEFAULT_VALUE: <% "" | default "fallback" %>
           DEFAULT_INDEX_VALUE: <% defaultIndex .Global "notexists" "fallback" %>
           # ONE_PASSWORD: <% op "ACCOUNT_NAME" "UUID" "FIELD" %>
@@ -31,7 +32,7 @@ squadron:
       builds:
         default:
           tag: latest
-          image: docker.mycompany.com/mycomapny/frontend-admin
+          image: storefinder/backend
       values:
         image:
           tag: <% .Squadron.storefinder.backend.builds.default.tag %>

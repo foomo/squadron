@@ -1,0 +1,26 @@
+version: "2.0"
+vars:
+  bar:
+  - one
+  - two
+  baz: null
+  foo: two
+squadron:
+  storefinder:
+    backend:
+      chart:
+        name: backend
+        repository: file://./_examples/common/charts/backend
+        version: 0.0.1
+      builds:
+        default:
+          tag: latest
+          image: storefinder/backend
+      values:
+        env:
+          bar: [one two]
+          baz: <no value>
+          foo: two
+        image:
+          repository: storefinder/backend
+          tag: latest

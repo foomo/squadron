@@ -11,6 +11,8 @@ type Config struct {
 	// Version of the schema
 	Version string `yaml:"version,omitempty"`
 	// Global values to be injected into all squadron values
+	Vars map[string]any `yaml:"vars,omitempty"`
+	// Global values to be injected into all squadron values
 	Global map[string]any `yaml:"global,omitempty"`
 	// Global builds that can be referenced as dependencies
 	Builds map[string]Build `yaml:"builds,omitempty"`

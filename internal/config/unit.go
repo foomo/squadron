@@ -26,7 +26,7 @@ type Unit struct {
 // ~ Public methods
 // ------------------------------------------------------------------------------------------------
 
-func (u *Unit) ValuesYAML(global map[string]any) ([]byte, error) {
+func (u *Unit) ValuesYAML(global, vars map[string]any) ([]byte, error) {
 	values := u.Values
 	if values == nil {
 		values = map[string]any{}
@@ -34,6 +34,11 @@ func (u *Unit) ValuesYAML(global map[string]any) ([]byte, error) {
 	if global != nil {
 		if _, ok := values["global"]; !ok {
 			values["global"] = global
+		}
+	}
+	if vars != nil {
+		if _, ok := values["vars"]; !ok {
+			values["vars"] = vars
 		}
 	}
 	return yamlv2.Marshal(values)
@@ -69,9 +74,9 @@ func (u *Unit) Push(ctx context.Context, squadron, unit string, args []string) (
 	return "", nil
 }
 
-func (u *Unit) Template(ctx context.Context, name, squadron, unit, namespace string, global map[string]any, helmArgs []string) ([]byte, error) {
+func (u *Unit) Template(ctx context.Context, name, squadron, unit, namespace string, global, vars map[string]any, helmArgs []string) ([]byte, error) {
 	var ret bytes.Buffer
-	valueBytes, err := u.ValuesYAML(global)
+	valueBytes, err := u.ValuesYAML(global, vars)
 	if err != nil {
 		return nil, err
 	}

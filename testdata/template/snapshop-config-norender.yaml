@@ -1,5 +1,6 @@
 version: "2.0"
 global:
+  enabled: true
   host: mycompany.com
 squadron:
   storefinder:
@@ -11,7 +12,7 @@ squadron:
       builds:
         default:
           tag: latest
-          image: docker.mycompany.com/mycomapny/frontend-admin
+          image: storefinder/backend
       values:
         image:
           repository: <% .Squadron.storefinder.backend.builds.default.image %>
@@ -24,10 +25,10 @@ squadron:
       builds:
         default:
           tag: latest
-          image: docker.mycompany.com/mycomapny/frontend
+          image: storefinder/frontend
       values:
         env:
-          BASE64: <% base64 "1234567890" %>
+          BASE64: <% "1234567890" | b64enc %>
           DEFAULT_INDEX_VALUE: <% defaultIndex .Global "notexists" "fallback" %>
           DEFAULT_VALUE: <% "" | default "fallback" %>
           ENV: <% env "SHELL" %>
