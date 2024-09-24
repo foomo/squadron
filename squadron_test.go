@@ -40,6 +40,10 @@ func TestConfigSimpleSnapshot(t *testing.T) {
 			files: []string{"squadron.yaml", "squadron.override.yaml"},
 		},
 		{
+			name:  "vars",
+			files: []string{"squadron.yaml", "squadron.override.yaml"},
+		},
+		{
 			name:  "template",
 			files: []string{"squadron.yaml"},
 		},
@@ -89,7 +93,7 @@ func config(t *testing.T, name string, files []string, squadronName string, unit
 
 	{
 		out, err := sq.Template(ctx, nil, 1)
-		require.NoError(t, err, "failed to render template")
+		require.NoError(t, err)
 		testutils.Snapshot(t, path.Join("testdata", name, "snapshop-template.yaml"), out)
 	}
 }

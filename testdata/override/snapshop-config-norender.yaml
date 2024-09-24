@@ -15,7 +15,7 @@ squadron:
           - baz=baz
           file: Dockerfile
           tag: nightly
-          image: docker.mycompany.com/mycomapny/frontend
+          image: storefinder/frontend
       values:
         image:
           repository: <% .Squadron.storefinder.frontend.builds.default.image %>

@@ -1,0 +1,26 @@
+version: "2.0"
+vars:
+  bar:
+  - one
+  - two
+  baz: null
+  foo: two
+squadron:
+  storefinder:
+    backend:
+      chart:
+        name: backend
+        repository: file://<% env "PROJECT_ROOT" %>/_examples/common/charts/backend
+        version: 0.0.1
+      builds:
+        default:
+          tag: latest
+          image: storefinder/backend
+      values:
+        env:
+          bar: <% .Vars.bar %>
+          baz: <% .Vars.baz %>
+          foo: <% .Vars.foo %>
+        image:
+          repository: <% .Squadron.storefinder.backend.builds.default.image %>
+          tag: <% .Squadron.storefinder.backend.builds.default.tag %>

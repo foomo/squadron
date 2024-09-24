@@ -1,5 +1,6 @@
 version: "2.0"
 global:
+  enabled: true
   host: mycompany.com
 squadron:
   storefinder:
@@ -11,10 +12,10 @@ squadron:
       builds:
         default:
           tag: latest
-          image: docker.mycompany.com/mycomapny/frontend-admin
+          image: storefinder/backend
       values:
         image:
-          repository: docker.mycompany.com/mycomapny/frontend-admin
+          repository: storefinder/backend
           tag: latest
     frontend:
       chart:
@@ -24,7 +25,7 @@ squadron:
       builds:
         default:
           tag: latest
-          image: docker.mycompany.com/mycomapny/frontend
+          image: storefinder/frontend
       values:
         env:
           BASE64: MTIzNDU2Nzg5MA==
@@ -33,7 +34,7 @@ squadron:
           ENV: /bin/zsh
           GLOBAL: mycompany.com
         image:
-          repository: docker.mycompany.com/mycomapny/frontend
+          repository: storefinder/frontend
           tag: latest
         values: |
           foo: bar

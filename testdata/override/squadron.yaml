@@ -8,7 +8,7 @@ squadron:
         default:
           tag: latest
           file: Dockerfile
-          image: docker.mycompany.com/mycomapny/frontend
+          image: storefinder/frontend
           build_arg:
             - "foo=foo"
             - "bar=bar"
@@ -22,7 +22,7 @@ squadron:
         default:
           tag: latest
           file: Dockerfile
-          image: docker.mycompany.com/mycomapny/backend
+          image: storefinder/backend
           build_arg:
             - "foo=foo"
             - "bar=bar"

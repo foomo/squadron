@@ -43,7 +43,7 @@ spec:
     spec:
       containers:
         - name: storefinder-backend
-          image: 'docker.mycompany.com/mycomapny/frontend-admin:latest'
+          image: 'storefinder/backend:latest'
           ports:
             - name: http
               protocol: TCP
@@ -93,7 +93,7 @@ spec:
     spec:
       containers:
         - name: storefinder-frontend
-          image: 'docker.mycompany.com/mycomapny/frontend:latest'
+          image: 'storefinder/frontend:latest'
           ports:
             - name: http
               protocol: TCP
