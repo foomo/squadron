@@ -73,11 +73,11 @@ func config(t *testing.T, name string, files []string, squadronName string, unit
 	sq := squadron.New(cwd, "default", files)
 
 	{
-		require.NoError(t, sq.MergeConfigFiles(), "failed to merge files")
+		require.NoError(t, sq.MergeConfigFiles(ctx), "failed to merge files")
 	}
 
 	{
-		require.NoError(t, sq.FilterConfig(squadronName, unitNames, tags), "failed to filter config")
+		require.NoError(t, sq.FilterConfig(ctx, squadronName, unitNames, tags), "failed to filter config")
 		testutils.Snapshot(t, path.Join("testdata", name, "snapshop-config-norender.yaml"), sq.ConfigYAML())
 	}
 

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"reflect"
 	"slices"
 	"sort"
@@ -89,12 +90,15 @@ func (m Map[T]) FilterFn(handler func(key string, value T) bool) error {
 	return nil
 }
 
-func (m Map[T]) Iterate(handler func(key string, value T) error) error {
+func (m Map[T]) Iterate(ctx context.Context, handler func(ctx context.Context, key string, value T) error) error {
 	if len(m) == 0 {
 		return nil
 	}
 	for _, key := range m.Keys() {
-		if err := handler(key, m[key]); err != nil {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if err := handler(ctx, key, m[key]); err != nil {
 			return err
 		}
 	}

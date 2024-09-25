@@ -14,6 +14,8 @@ func ExecuteFileTemplate(ctx context.Context, text string, templateVars any, err
 	delete(funcMap, "expandenv")
 
 	funcMap["env"] = env
+	funcMap["quote"] = quote
+	funcMap["quoteAll"] = quoteAll
 	funcMap["envDefault"] = envDefault
 
 	// deprecated

@@ -1,6 +1,8 @@
 package actions
 
 import (
+	"context"
+
 	"github.com/foomo/squadron"
 	"github.com/foomo/squadron/internal/config"
 	"github.com/pkg/errors"
@@ -30,21 +32,21 @@ var listCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		sq := squadron.New(cwd, "", flagFiles)
 
-		if err := sq.MergeConfigFiles(); err != nil {
+		if err := sq.MergeConfigFiles(cmd.Context()); err != nil {
 			return errors.Wrap(err, "failed to merge config files")
 		}
 
 		squadronName, unitNames := parseSquadronAndUnitNames(args)
-		if err := sq.FilterConfig(squadronName, unitNames, flagTags); err != nil {
+		if err := sq.FilterConfig(cmd.Context(), squadronName, unitNames, flagTags); err != nil {
 			return errors.Wrap(err, "failed to filter config")
 		}
 
 		var list pterm.LeveledList
 
 		// List squadrons
-		_ = sq.Config().Squadrons.Iterate(func(key string, value config.Map[*config.Unit]) error {
+		_ = sq.Config().Squadrons.Iterate(cmd.Context(), func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
 			list = append(list, pterm.LeveledListItem{Level: 0, Text: key})
-			return value.Iterate(func(k string, v *config.Unit) error {
+			return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 				list = append(list, pterm.LeveledListItem{Level: 1, Text: k})
 				if flagWithTags && len(v.Tags) > 0 {
 					list = append(list, pterm.LeveledListItem{Level: 2, Text: "🔖: " + v.Tags.SortedString()})

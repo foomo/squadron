@@ -23,14 +23,14 @@ var templateCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		sq := squadron.New(cwd, flagNamespace, flagFiles)
 
-		if err := sq.MergeConfigFiles(); err != nil {
+		if err := sq.MergeConfigFiles(cmd.Context()); err != nil {
 			return errors.Wrap(err, "failed to merge config files")
 		}
 
 		args, helmArgs := parseExtraArgs(args)
 
 		squadronName, unitNames := parseSquadronAndUnitNames(args)
-		if err := sq.FilterConfig(squadronName, unitNames, flagTags); err != nil {
+		if err := sq.FilterConfig(cmd.Context(), squadronName, unitNames, flagTags); err != nil {
 			return errors.Wrap(err, "failed to filter config")
 		}
 

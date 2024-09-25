@@ -58,9 +58,12 @@ func init() {
 
 	rootCmd.AddCommand(upCmd, diffCmd, downCmd, buildCmd, pushCmd, listCmd, rollbackCmd, statusCmd, configCmd, versionCmd, completionCmd, templateCmd, postRendererCmd)
 
-	pterm.Info = *pterm.Info.WithPrefix(pterm.Prefix{Text: "INFO", Style: pterm.Info.Prefix.Style})
-	pterm.Error = *pterm.Info.WithPrefix(pterm.Prefix{Text: "ERROR", Style: pterm.Error.Prefix.Style})
-	pterm.Warning = *pterm.Info.WithPrefix(pterm.Prefix{Text: "WARNING", Style: pterm.Warning.Prefix.Style})
+	pterm.Info = *pterm.Info.WithPrefix(pterm.Prefix{Text: "⎈", Style: pterm.Info.Prefix.Style})
+	pterm.Debug = *pterm.Debug.WithPrefix(pterm.Prefix{Text: "⚒︎", Style: pterm.Debug.Prefix.Style})
+	pterm.Fatal = *pterm.Fatal.WithPrefix(pterm.Prefix{Text: "💀", Style: pterm.Fatal.Prefix.Style})
+	pterm.Error = *pterm.Error.WithPrefix(pterm.Prefix{Text: "⛌", Style: pterm.Error.Prefix.Style})
+	pterm.Warning = *pterm.Info.WithPrefix(pterm.Prefix{Text: "⚠", Style: pterm.Warning.Prefix.Style})
+	pterm.Success = *pterm.Success.WithPrefix(pterm.Prefix{Text: "✓", Style: pterm.Success.Prefix.Style})
 }
 
 func Execute() {

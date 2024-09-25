@@ -2,6 +2,7 @@ package util
 
 import (
 	"bytes"
+	"fmt"
 
 	"github.com/alecthomas/chroma"
 	"github.com/alecthomas/chroma/formatters"
@@ -11,7 +12,10 @@ import (
 )
 
 func Highlight(source string) string {
-	var out bytes.Buffer
+	out := &numberWriter{
+		w:           bytes.NewBufferString(""),
+		currentLine: 1,
+	}
 	// Determine lexer.
 	l := lexers.Get("yaml")
 	if l == nil {
@@ -38,10 +42,57 @@ func Highlight(source string) string {
 	if err != nil {
 		pterm.Error.Println(err.Error())
 	}
-	err = f.Format(&out, s, it)
-	if err != nil {
+
+	if err = f.Format(out, s, it); err != nil {
 		pterm.Error.Println(err.Error())
 	}
 
-	return out.String()
+	return out.w.String()
+}
+
+type numberWriter struct {
+	w           *bytes.Buffer
+	currentLine uint64
+	buf         []byte
+}
+
+func (w *numberWriter) Write(p []byte) (int, error) {
+	// Early return.
+	// Can't calculate the line numbers until the line breaks are made, so store them all in a buffer.
+	if !bytes.Contains(p, []byte{'\n'}) {
+		w.buf = append(w.buf, p...)
+		return len(p), nil
+	}
+
+	var (
+		original = p
+		tokenLen uint
+	)
+	for i, c := range original {
+		tokenLen++
+		if c != '\n' {
+			continue
+		}
+
+		token := p[:tokenLen]
+		p = original[i+1:]
+		tokenLen = 0
+
+		format := "%4d |\t%s%s"
+		if w.currentLine > 9999 {
+			format = "%d |\t%s%s"
+		}
+		format = "\033[34m" + format + "\033[0m"
+
+		if _, err := fmt.Fprintf(w.w, format, w.currentLine, string(w.buf), string(token)); err != nil {
+			return i + 1, err
+		}
+		w.buf = w.buf[:0]
+		w.currentLine++
+	}
+
+	if len(p) > 0 {
+		w.buf = append(w.buf, p...)
+	}
+	return len(original), nil
 }

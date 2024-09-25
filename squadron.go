@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/foomo/squadron/internal/config"
 	templatex "github.com/foomo/squadron/internal/template"
@@ -68,7 +69,7 @@ func (sq *Squadron) ConfigYAML() string {
 // ~ Public methods
 // ------------------------------------------------------------------------------------------------
 
-func (sq *Squadron) MergeConfigFiles() error {
+func (sq *Squadron) MergeConfigFiles(ctx context.Context) error {
 	pterm.Debug.Println("merging config files")
 	pterm.Debug.Println(strings.Join(append([]string{"using files"}, sq.files...), "\n└ "))
 
@@ -87,7 +88,7 @@ func (sq *Squadron) MergeConfigFiles() error {
 		return errors.New("Please upgrade your YAML definition to 2.0")
 	}
 
-	sq.c.Trim()
+	sq.c.Trim(ctx)
 
 	value, err := yamlv2.Marshal(sq.c)
 	if err != nil {
@@ -99,7 +100,7 @@ func (sq *Squadron) MergeConfigFiles() error {
 	return nil
 }
 
-func (sq *Squadron) FilterConfig(squadron string, units, tags []string) error {
+func (sq *Squadron) FilterConfig(ctx context.Context, squadron string, units, tags []string) error {
 	if len(squadron) > 0 {
 		if err := sq.Config().Squadrons.Filter(squadron); err != nil {
 			return err
@@ -113,7 +114,7 @@ func (sq *Squadron) FilterConfig(squadron string, units, tags []string) error {
 	}
 
 	if len(tags) > 0 {
-		if err := sq.Config().Squadrons.Iterate(func(key string, value config.Map[*config.Unit]) error {
+		if err := sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
 			return value.FilterFn(func(k string, v *config.Unit) bool {
 				for _, tag := range tags {
 					if strings.HasPrefix(tag, "-") {
@@ -131,7 +132,7 @@ func (sq *Squadron) FilterConfig(squadron string, units, tags []string) error {
 		}
 	}
 
-	sq.c.Trim()
+	sq.c.Trim(ctx)
 
 	value, err := yamlv2.Marshal(sq.c)
 	if err != nil {
@@ -169,22 +170,22 @@ func (sq *Squadron) RenderConfig(ctx context.Context) error {
 	// execute without errors to get existing values
 	pterm.Debug.Println("executing file template")
 	// pterm.Debug.Println(sq.config)
-	out, err := templatex.ExecuteFileTemplate(ctx, sq.config, tv, false)
+	out1, err := templatex.ExecuteFileTemplate(ctx, sq.config, tv, false)
 	if err != nil {
 		return errors.Wrapf(err, "failed to execute initial file template\n%s", util.Highlight(sq.config))
 	}
 
 	// re-execute for rendering copied values
 	pterm.Debug.Println("re-executing file template")
-	// pterm.Debug.Println(string(out))
-	out, err = templatex.ExecuteFileTemplate(ctx, string(out), tv, false)
+	out2, err := templatex.ExecuteFileTemplate(ctx, string(out1), tv, false)
 	if err != nil {
+		fmt.Print(util.Highlight(string(out1)))
 		return errors.Wrap(err, "failed to re-execute initial file template")
 	}
 
 	pterm.Debug.Println("unmarshalling vars")
-	if err := yaml.Unmarshal(out, &vars); err != nil {
-		pterm.Error.Println(string(out))
+	if err := yaml.Unmarshal(out2, &vars); err != nil {
+		fmt.Print(util.Highlight(string(out2)))
 		return errors.Wrap(err, "failed to unmarshal vars")
 	}
 
@@ -204,34 +205,47 @@ func (sq *Squadron) RenderConfig(ctx context.Context) error {
 	}
 
 	pterm.Debug.Println("executing file template")
-	out, err = templatex.ExecuteFileTemplate(ctx, sq.config, tv, true)
+	out3, err := templatex.ExecuteFileTemplate(ctx, sq.config, tv, true)
 	if err != nil {
+		fmt.Print(util.Highlight(sq.config))
 		return errors.Wrap(err, "failed to execute second file template")
 	}
 
 	pterm.Debug.Println("unmarshalling vars")
-	if err := yaml.Unmarshal(out, &sq.c); err != nil {
-		pterm.Error.Println(string(out))
+	if err := yaml.Unmarshal(out3, &sq.c); err != nil {
+		fmt.Print(util.Highlight(string(out3)))
 		return errors.Wrap(err, "failed to unmarshal vars")
 	}
 
-	sq.config = string(out)
+	sq.config = string(out3)
 
 	return nil
 }
 
 func (sq *Squadron) Push(ctx context.Context, pushArgs []string, parallel int) error {
-	wg, gctx := errgroup.WithContext(ctx)
+	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
-	_ = sq.Config().Squadrons.Iterate(func(key string, value config.Map[*config.Unit]) error {
-		return value.Iterate(func(k string, v *config.Unit) error {
-			wg.Go(func() error {
-				if out, err := v.Push(gctx, key, k, pushArgs); err != nil {
-					return errors.Wrap(err, out)
-				}
-				return nil
-			})
+	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
+		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
+			for _, name := range v.BuildNames() {
+				build := v.Builds[name]
+				id := fmt.Sprintf("%s/%s.%s", key, k, name)
+				wg.Go(func() error {
+					if err := ctx.Err(); err != nil {
+						return err
+					}
+
+					start := time.Now()
+					pterm.Info.Printfln("Push | %s [%s:%s]", id, build.Image, build.Tag)
+					if out, err := build.Push(ctx, pushArgs); err != nil {
+						pterm.Error.Printfln("Push | %s [%s:%s] ⏱ %s", id, build.Image, build.Tag, time.Since(start).Round(time.Millisecond))
+						return errors.Wrap(err, out)
+					}
+					pterm.Success.Printfln("Push | %s [%s:%s] ⏱ %s", id, build.Image, build.Tag, time.Since(start).Round(time.Millisecond))
+					return nil
+				})
+			}
 			return nil
 		})
 	})
@@ -240,21 +254,23 @@ func (sq *Squadron) Push(ctx context.Context, pushArgs []string, parallel int) e
 }
 
 func (sq *Squadron) BuildDependencies(ctx context.Context, buildArgs []string, parallel int) error {
-	wg, gctx := errgroup.WithContext(ctx)
+	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
-	var i int
-	dependencies := sq.c.BuildDependencies()
-	for name, dependency := range dependencies {
-		i := i + 1
+	dependencies := sq.c.BuildDependencies(ctx)
+	for name, build := range dependencies {
 		wg.Go(func() error {
-			pterm.Info.Printfln("[%d/%d] Building dependency `%s`", i, len(dependencies), name)
-			pterm.FgGray.Printfln("└ %s:%s", dependency.Image, dependency.Tag)
-			if out, err := dependency.Build(gctx, buildArgs); err != nil {
-				pterm.Error.Printfln("[%d/%d] Failed to build dependency `%s`", i, len(dependencies), name)
-				pterm.FgGray.Printfln("└ %s:%s", dependency.Image, dependency.Tag)
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+
+			start := time.Now()
+			pterm.Info.Printfln("Build | %s [%s:%s]", name, build.Image, build.Tag)
+			if out, err := build.Build(ctx, buildArgs); err != nil {
+				pterm.Error.Printfln("Build | %s [%s:%s] ⏱ %s", name, build.Image, build.Tag, time.Since(start).Round(time.Millisecond))
 				return errors.Wrap(err, out)
 			}
+			pterm.Success.Printfln("Build | %s [%s:%s] ⏱ %s", name, build.Image, build.Tag, time.Since(start).Round(time.Millisecond))
 			return nil
 		})
 	}
@@ -267,17 +283,29 @@ func (sq *Squadron) Build(ctx context.Context, buildArgs []string, parallel int)
 		return err
 	}
 
-	wg, gctx := errgroup.WithContext(ctx)
+	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
-	_ = sq.Config().Squadrons.Iterate(func(key string, value config.Map[*config.Unit]) error {
-		return value.Iterate(func(k string, v *config.Unit) error {
-			wg.Go(func() error {
-				if out, err := v.Build(gctx, key, k, buildArgs); err != nil {
-					return errors.Wrap(err, out)
-				}
-				return nil
-			})
+	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
+		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
+			for _, name := range v.BuildNames() {
+				build := v.Builds[name]
+				id := fmt.Sprintf("%s/%s.%s", key, k, name)
+				wg.Go(func() error {
+					if err := ctx.Err(); err != nil {
+						return err
+					}
+
+					start := time.Now()
+					pterm.Info.Printfln("Build | %s [%s:%s]", id, build.Image, build.Tag)
+					if out, err := build.Build(ctx, buildArgs); err != nil {
+						pterm.Error.Printfln("Build | %s [%s:%s] ⏱ %s", id, build.Image, build.Tag, time.Since(start).Round(time.Millisecond))
+						return errors.Wrap(err, out)
+					}
+					pterm.Success.Printfln("Build | %s [%s:%s] ⏱ %s", id, build.Image, build.Tag, time.Since(start).Round(time.Millisecond))
+					return nil
+				})
+			}
 			return nil
 		})
 	})
@@ -289,9 +317,14 @@ func (sq *Squadron) Down(ctx context.Context, helmArgs []string, parallel int) e
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
-	_ = sq.Config().Squadrons.Iterate(func(key string, value config.Map[*config.Unit]) error {
-		return value.Iterate(func(k string, v *config.Unit) error {
+	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
+		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 			wg.Go(func() error {
+				if err := ctx.Err(); err != nil {
+					return err
+				}
+
+				start := time.Now()
 				name := fmt.Sprintf("%s-%s", key, k)
 				namespace, err := sq.Namespace(ctx, key, k)
 				if err != nil {
@@ -299,7 +332,7 @@ func (sq *Squadron) Down(ctx context.Context, helmArgs []string, parallel int) e
 				}
 
 				stdErr := bytes.NewBuffer([]byte{})
-				pterm.Debug.Printfln("running helm uninstall for: %s", name)
+				pterm.Info.Printfln("Down | %s/%s", key, k)
 				if out, err := util.NewHelmCommand().Args("uninstall", name).
 					Stderr(stdErr).
 					Stdout(os.Stdout).
@@ -307,8 +340,10 @@ func (sq *Squadron) Down(ctx context.Context, helmArgs []string, parallel int) e
 					Args(helmArgs...).
 					Run(ctx); err != nil &&
 					string(bytes.TrimSpace(stdErr.Bytes())) != fmt.Sprintf("Error: uninstall: Release not loaded: %s: release: not found", name) {
+					pterm.Error.Printfln("Down | %s/%s] ⏱ %s", key, k, time.Since(start).Round(time.Millisecond))
 					return errors.Wrap(err, out)
 				}
+				pterm.Success.Printfln("Down | %s/%s] ⏱ %s", key, k, time.Since(start).Round(time.Millisecond))
 				return nil
 			})
 			return nil
@@ -330,9 +365,13 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) e
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
-	_ = sq.Config().Squadrons.Iterate(func(key string, value config.Map[*config.Unit]) error {
-		return value.Iterate(func(k string, v *config.Unit) error {
+	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
+		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 			wg.Go(func() error {
+				if err := ctx.Err(); err != nil {
+					return err
+				}
+
 				name := fmt.Sprintf("%s-%s", key, k)
 				namespace, err := sq.Namespace(ctx, key, k)
 				if err != nil {
@@ -422,8 +461,8 @@ func (sq *Squadron) Status(ctx context.Context, helmArgs []string, parallel int)
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
-	_ = sq.Config().Squadrons.Iterate(func(key string, value config.Map[*config.Unit]) error {
-		return value.Iterate(func(k string, v *config.Unit) error {
+	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
+		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 			var status statusType
 			name := fmt.Sprintf("%s-%s", key, k)
 			namespace, err := sq.Namespace(ctx, key, k)
@@ -486,8 +525,8 @@ func (sq *Squadron) Rollback(ctx context.Context, revision string, helmArgs []st
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
-	_ = sq.Config().Squadrons.Iterate(func(key string, value config.Map[*config.Unit]) error {
-		return value.Iterate(func(k string, v *config.Unit) error {
+	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
+		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 			name := fmt.Sprintf("%s-%s", key, k)
 			namespace, err := sq.Namespace(ctx, key, k)
 			if err != nil {
@@ -518,8 +557,8 @@ func (sq *Squadron) Rollback(ctx context.Context, revision string, helmArgs []st
 func (sq *Squadron) UpdateLocalDependencies(ctx context.Context, parallel int) error {
 	// collect unique entrie
 	repositories := map[string]struct{}{}
-	err := sq.Config().Squadrons.Iterate(func(key string, value config.Map[*config.Unit]) error {
-		return value.Iterate(func(k string, v *config.Unit) error {
+	err := sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
+		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 			if strings.HasPrefix(v.Chart.Repository, "file:///") {
 				repositories[v.Chart.Repository] = struct{}{}
 			}
@@ -530,7 +569,7 @@ func (sq *Squadron) UpdateLocalDependencies(ctx context.Context, parallel int) e
 		return err
 	}
 
-	wg, gctx := errgroup.WithContext(ctx)
+	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
 	for repository := range repositories {
@@ -539,7 +578,7 @@ func (sq *Squadron) UpdateLocalDependencies(ctx context.Context, parallel int) e
 			if out, err := util.NewHelmCommand().
 				Cwd(path.Clean(strings.TrimPrefix(repository, "file://"))).
 				Args("dependency", "update", "--skip-refresh", "--debug").
-				Run(gctx); err != nil {
+				Run(ctx); err != nil {
 				return errors.Wrap(err, out)
 			} else {
 				pterm.Debug.Println(out)
@@ -554,12 +593,16 @@ func (sq *Squadron) UpdateLocalDependencies(ctx context.Context, parallel int) e
 func (sq *Squadron) Up(ctx context.Context, helmArgs []string, username, version, commit, branch string, parallel int) error {
 	description := fmt.Sprintf("\nDeployed-By: %s\nManaged-By: Squadron %s\nGit-Commit: %s\nGit-Branch: %s", username, version, commit, branch)
 
-	wg, gctx := errgroup.WithContext(ctx)
+	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
-	_ = sq.Config().Squadrons.Iterate(func(key string, value config.Map[*config.Unit]) error {
-		return value.Iterate(func(k string, v *config.Unit) error {
+	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
+		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 			wg.Go(func() error {
+				if err := ctx.Err(); err != nil {
+					return err
+				}
+
 				name := fmt.Sprintf("%s-%s", key, k)
 				namespace, err := sq.Namespace(ctx, key, k)
 				if err != nil {
@@ -597,7 +640,7 @@ func (sq *Squadron) Up(ctx context.Context, helmArgs []string, username, version
 					}
 				}
 
-				if out, err := cmd.Run(gctx); err != nil {
+				if out, err := cmd.Run(ctx); err != nil {
 					return errors.Wrap(err, out)
 				}
 
@@ -620,12 +663,16 @@ func (sq *Squadron) Template(ctx context.Context, helmArgs []string, parallel in
 		return err
 	}
 
-	wg, gctx := errgroup.WithContext(ctx)
+	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
-	_ = sq.Config().Squadrons.Iterate(func(key string, value config.Map[*config.Unit]) error {
-		return value.Iterate(func(k string, v *config.Unit) error {
+	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
+		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 			wg.Go(func() error {
+				if err := ctx.Err(); err != nil {
+					return err
+				}
+
 				name := fmt.Sprintf("%s-%s", key, k)
 				namespace, err := sq.Namespace(ctx, key, k)
 				if err != nil {
@@ -633,7 +680,7 @@ func (sq *Squadron) Template(ctx context.Context, helmArgs []string, parallel in
 				}
 
 				pterm.Debug.Printfln("running helm template for chart: %s", name)
-				out, err := v.Template(gctx, name, key, k, namespace, sq.c.Global, sq.c.Vars, helmArgs)
+				out, err := v.Template(ctx, name, key, k, namespace, sq.c.Global, sq.c.Vars, helmArgs)
 				if err != nil {
 					return err
 				}
