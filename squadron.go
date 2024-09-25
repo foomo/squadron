@@ -19,7 +19,7 @@ import (
 	"github.com/miracl/conflate"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
-	"github.com/sergi/go-diff/diffmatchpatch"
+	"github.com/sters/yaml-diff/yamldiff"
 	"golang.org/x/sync/errgroup"
 	yamlv2 "gopkg.in/yaml.v2"
 	"gopkg.in/yaml.v3"
@@ -355,12 +355,12 @@ func (sq *Squadron) Down(ctx context.Context, helmArgs []string, parallel int) e
 
 func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) error {
 	var m sync.Mutex
-	var ret string
-	write := func(b string) {
-		m.Lock()
-		defer m.Unlock()
-		ret += b
-	}
+	// var ret string
+	// write := func(b string) {
+	// 	m.Lock()
+	// 	defer m.Unlock()
+	// 	ret += b
+	// }
 
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
@@ -392,6 +392,7 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) e
 					"--namespace", namespace,
 					"--set", fmt.Sprintf("squadron=%s", key),
 					"--set", fmt.Sprintf("unit=%s", k),
+					"--hide-notes",
 					"--values", "-",
 					"--dry-run",
 				)
@@ -415,8 +416,29 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) e
 					return errors.Wrap(err, string(out))
 				}
 
-				dmp := diffmatchpatch.New()
-				write(dmp.DiffPrettyText(dmp.DiffMain(string(manifest), string(out), false)))
+				yamls1, err := yamldiff.Load(string(manifest))
+				if err != nil {
+					fmt.Print(util.Highlight(string(manifest)))
+					return errors.Wrap(err, "failed to load yaml diff")
+				}
+
+				outStr := strings.Split(string(out), "\n")
+				yamls2, err := yamldiff.Load(strings.Join(outStr[10:], "\n"))
+				if err != nil {
+					fmt.Print(util.Highlight(string(out)))
+					return errors.Wrap(err, "failed to load yaml diff")
+				}
+
+				var res string
+				for _, diff := range yamldiff.Do(yamls1, yamls2) {
+					res += diff.Dump() + "  ---\n"
+				}
+
+				m.Lock()
+				defer m.Unlock()
+				pterm.Info.Printfln("Diff | %s/%s", key, k)
+				fmt.Print(util.Highlight(res))
+
 				return nil
 			})
 			return nil
@@ -427,7 +449,7 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) e
 		return err
 	}
 
-	fmt.Println(ret)
+	// fmt.Print(ret)
 
 	return nil
 }
