@@ -5,12 +5,12 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"sort"
 	"strings"
 
 	"github.com/foomo/squadron/internal/helm"
 	"github.com/foomo/squadron/internal/util"
 	"github.com/pkg/errors"
-	"github.com/pterm/pterm"
 	yamlv2 "gopkg.in/yaml.v2"
 )
 
@@ -44,34 +44,13 @@ func (u *Unit) ValuesYAML(global, vars map[string]any) ([]byte, error) {
 	return yamlv2.Marshal(values)
 }
 
-func (u *Unit) Build(ctx context.Context, squadron, unit string, args []string) (string, error) {
-	var i int
-	for _, build := range u.Builds {
-		i++
-		pterm.Info.Printfln("[%d/%d] Building %s/%s", i, len(u.Builds), squadron, unit)
-		pterm.FgGray.Printfln("└ %s:%s", build.Image, build.Tag)
-		if out, err := build.Build(ctx, args); err != nil {
-			pterm.Error.Printfln("[%d/%d] Failed to build squadron unit %s/%s", i, len(u.Builds), squadron, unit)
-			pterm.FgGray.Printfln("└ %s:%s", build.Image, build.Tag)
-			return out, err
-		}
+func (u *Unit) BuildNames() []string {
+	ret := make([]string, 0, len(u.Builds))
+	for name := range u.Builds {
+		ret = append(ret, name)
 	}
-	return "", nil
-}
-
-func (u *Unit) Push(ctx context.Context, squadron, unit string, args []string) (string, error) {
-	var i int
-	for _, build := range u.Builds {
-		i++
-		pterm.Info.Printfln("[%d/%d] Pushing %s/%s", i, len(u.Builds), squadron, unit)
-		pterm.FgGray.Printfln("└ %s:%s", build.Image, build.Tag)
-		if out, err := build.Push(ctx, args); err != nil {
-			pterm.Error.Printfln("[%d/%d] Failed to push %s/%s", i, len(u.Builds), squadron, unit)
-			pterm.FgGray.Printfln("└ %s:%s", build.Image, build.Tag)
-			return out, err
-		}
-	}
-	return "", nil
+	sort.Strings(ret)
+	return ret
 }
 
 func (u *Unit) Template(ctx context.Context, name, squadron, unit, namespace string, global, vars map[string]any, helmArgs []string) ([]byte, error) {

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -21,10 +22,10 @@ type Config struct {
 }
 
 // BuildDependencies returns a map of requested build dependencies
-func (c *Config) BuildDependencies() map[string]Build {
+func (c *Config) BuildDependencies(ctx context.Context) map[string]Build {
 	ret := map[string]Build{}
-	_ = c.Squadrons.Iterate(func(key string, value Map[*Unit]) error {
-		return value.Iterate(func(k string, v *Unit) error {
+	_ = c.Squadrons.Iterate(ctx, func(ctx context.Context, key string, value Map[*Unit]) error {
+		return value.Iterate(ctx, func(ctx context.Context, k string, v *Unit) error {
 			for _, build := range v.Builds {
 				for _, dependency := range build.Dependencies {
 					b, ok := c.Builds[dependency]
@@ -44,8 +45,8 @@ func (c *Config) BuildDependencies() map[string]Build {
 }
 
 // Trim delete empty squadron recursively
-func (c *Config) Trim() {
-	_ = c.Squadrons.Iterate(func(key string, value Map[*Unit]) error {
+func (c *Config) Trim(ctx context.Context) {
+	_ = c.Squadrons.Iterate(ctx, func(ctx context.Context, key string, value Map[*Unit]) error {
 		value.Trim()
 		return nil
 	})
