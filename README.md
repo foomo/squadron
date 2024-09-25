@@ -29,9 +29,9 @@ squadron:
       builds:
         service:
           tag: latest
-          dockerfile: Dockerfile
+          file: Dockerfile
           image: docker.mycompany.com/mycomapny/frontend
-          args:
+          build_arg:
             - "foo=foo"
             - "bar=bar"
       values:
@@ -42,9 +42,9 @@ squadron:
       builds:
         service:
           tag: latest
-          dockerfile: Dockerfile
+          file: Dockerfile
           image: docker.mycompany.com/mycomapny/backend
-          args:
+          build_arg:
             - "foo=foo"
             - "bar=bar"
       values:
