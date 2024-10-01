@@ -237,12 +237,12 @@ func (sq *Squadron) Push(ctx context.Context, pushArgs []string, parallel int) e
 					}
 
 					start := time.Now()
-					pterm.Info.Printfln("Push | %s [%s:%s]", id, build.Image, build.Tag)
+					pterm.Info.Printfln("Push | %s\n└ %s:%s", id, build.Image, build.Tag)
 					if out, err := build.Push(ctx, pushArgs); err != nil {
-						pterm.Error.Printfln("Push | %s [%s:%s] ⏱ %s", id, build.Image, build.Tag, time.Since(start).Round(time.Millisecond))
+						pterm.Error.Printfln("Push | %s ⏱ %s\n└ %s:%s", id, time.Since(start).Round(time.Millisecond), build.Image, build.Tag)
 						return errors.Wrap(err, out)
 					}
-					pterm.Success.Printfln("Push | %s [%s:%s] ⏱ %s", id, build.Image, build.Tag, time.Since(start).Round(time.Millisecond))
+					pterm.Success.Printfln("Push | %s ⏱ %s\n└ %s:%s", id, time.Since(start).Round(time.Millisecond), build.Image, build.Tag)
 					return nil
 				})
 			}
@@ -265,12 +265,12 @@ func (sq *Squadron) BuildDependencies(ctx context.Context, buildArgs []string, p
 			}
 
 			start := time.Now()
-			pterm.Info.Printfln("Build | %s [%s:%s]", name, build.Image, build.Tag)
+			pterm.Info.Printfln("Build | %s\n└ %s:%s", name, build.Image, build.Tag)
 			if out, err := build.Build(ctx, buildArgs); err != nil {
-				pterm.Error.Printfln("Build | %s [%s:%s] ⏱ %s", name, build.Image, build.Tag, time.Since(start).Round(time.Millisecond))
+				pterm.Error.Printfln("Build | %s ⏱ %s\n└ %s:%s", name, time.Since(start).Round(time.Millisecond), build.Image, build.Tag)
 				return errors.Wrap(err, out)
 			}
-			pterm.Success.Printfln("Build | %s [%s:%s] ⏱ %s", name, build.Image, build.Tag, time.Since(start).Round(time.Millisecond))
+			pterm.Success.Printfln("Build | %s ⏱ %s\n└ %s:%s", name, time.Since(start).Round(time.Millisecond), build.Image, build.Tag)
 			return nil
 		})
 	}
@@ -297,12 +297,12 @@ func (sq *Squadron) Build(ctx context.Context, buildArgs []string, parallel int)
 					}
 
 					start := time.Now()
-					pterm.Info.Printfln("Build | %s [%s:%s]", id, build.Image, build.Tag)
+					pterm.Info.Printfln("Build | %s\n└ %s:%s", id, build.Image, build.Tag)
 					if out, err := build.Build(ctx, buildArgs); err != nil {
-						pterm.Error.Printfln("Build | %s [%s:%s] ⏱ %s", id, build.Image, build.Tag, time.Since(start).Round(time.Millisecond))
+						pterm.Error.Printfln("Build | %s ⏱ %s\n└ %s:%s", id, time.Since(start).Round(time.Millisecond), build.Image, build.Tag)
 						return errors.Wrap(err, out)
 					}
-					pterm.Success.Printfln("Build | %s [%s:%s] ⏱ %s", id, build.Image, build.Tag, time.Since(start).Round(time.Millisecond))
+					pterm.Success.Printfln("Build | %s ⏱ %s\n└ %s:%s", id, time.Since(start).Round(time.Millisecond), build.Image, build.Tag)
 					return nil
 				})
 			}
@@ -340,10 +340,10 @@ func (sq *Squadron) Down(ctx context.Context, helmArgs []string, parallel int) e
 					Args(helmArgs...).
 					Run(ctx); err != nil &&
 					string(bytes.TrimSpace(stdErr.Bytes())) != fmt.Sprintf("Error: uninstall: Release not loaded: %s: release: not found", name) {
-					pterm.Error.Printfln("Down | %s/%s] ⏱ %s", key, k, time.Since(start).Round(time.Millisecond))
+					pterm.Error.Printfln("Down | %s/%s ⏱ %s", key, k, time.Since(start).Round(time.Millisecond))
 					return errors.Wrap(err, out)
 				}
-				pterm.Success.Printfln("Down | %s/%s] ⏱ %s", key, k, time.Since(start).Round(time.Millisecond))
+				pterm.Success.Printfln("Down | %s/%s ⏱ %s", key, k, time.Since(start).Round(time.Millisecond))
 				return nil
 			})
 			return nil
