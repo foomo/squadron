@@ -21,6 +21,14 @@ type Config struct {
 	Squadrons Map[Map[*Unit]] `json:"squadron,omitempty" yaml:"squadron,omitempty"`
 }
 
+// JSONSchemaProperty type workaround
+func (Config) JSONSchemaProperty(prop string) any {
+	if prop == "squadron" {
+		return map[string]map[string]*Unit{}
+	}
+	return nil
+}
+
 // BuildDependencies returns a map of requested build dependencies
 func (c *Config) BuildDependencies(ctx context.Context) map[string]Build {
 	ret := map[string]Build{}

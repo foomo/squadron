@@ -138,7 +138,13 @@
           "type": "object"
         },
         "squadron": {
-          "$ref": "#/$defs/Map[github.com/foomo/squadron/internal/config.Map[*github.com/foomo/squadron/internal/config.Unit]]"
+          "additionalProperties": {
+            "additionalProperties": {
+              "$ref": "#/$defs/Unit"
+            },
+            "type": "object"
+          },
+          "type": "object"
         }
       },
       "additionalProperties": false,
@@ -170,18 +176,6 @@
         "Version",
         "Alias"
       ]
-    },
-    "Map[*github.com/foomo/squadron/internal/config.Unit]": {
-      "additionalProperties": {
-        "$ref": "#/$defs/Unit"
-      },
-      "type": "object"
-    },
-    "Map[github.com/foomo/squadron/internal/config.Map[*github.com/foomo/squadron/internal/config.Unit]]": {
-      "additionalProperties": {
-        "$ref": "#/$defs/Map[*github.com/foomo/squadron/internal/config.Unit]"
-      },
-      "type": "object"
     },
     "Tags": {
       "items": {
