@@ -12,60 +12,60 @@ import (
 )
 
 type Build struct {
-	Context string `yaml:"context,omitempty"`
+	Context string `json:"context,omitempty" yaml:"context,omitempty"`
 	// AddHost add a custom host-to-IP mapping (format: "host:ip")
-	AddHost []string `yaml:"add_host,omitempty"`
+	AddHost []string `json:"add_host,omitempty" yaml:"add_host,omitempty"`
 	// Allow extra privileged entitlement (e.g., "network.host", "security.insecure")
-	Allow []string `yaml:"allow,omitempty"`
+	Allow []string `json:"allow,omitempty" yaml:"allow,omitempty"`
 	// Attest parameters (format: "type=sbom,generator=image")
-	Attest []string `yaml:"attest,omitempty"`
+	Attest []string `json:"attest,omitempty" yaml:"attest,omitempty"`
 	// BuildArg set build-time variables
-	BuildArg []string `yaml:"build_arg,omitempty"`
+	BuildArg []string `json:"build_arg,omitempty" yaml:"build_arg,omitempty"`
 	// BuildContext additional build contexts (e.g., name=path)
-	BuildContext []string `yaml:"build_context,omitempty"`
+	BuildContext []string `json:"build_context,omitempty" yaml:"build_context,omitempty"`
 	// Builder override the configured builder instance
-	Builder string `yaml:"builder,omitempty"`
+	Builder string `json:"builder,omitempty" yaml:"builder,omitempty"`
 	// CacheFrom external cache sources (e.g., "user/app:cache", "type=local,src=path/to/dir")
-	CacheFrom string `yaml:"cache_from,omitempty"`
+	CacheFrom string `json:"cache_from,omitempty" yaml:"cache_from,omitempty"`
 	// CacheTo cache export destinations (e.g., "user/app:cache", "type=local,dest=path/to/dir")
-	CacheTo string `yaml:"cache_to,omitempty"`
+	CacheTo string `json:"cache_to,omitempty" yaml:"cache_to,omitempty"`
 	// CGroupParent optional parent cgroup for the container
-	CGroupParent string `yaml:"cgroup_parent,omitempty"`
+	CGroupParent string `json:"cgroup_parent,omitempty" yaml:"cgroup_parent,omitempty"`
 	// File name of the Dockerfile (default: "PATH/Dockerfile")
-	File string `yaml:"file,omitempty"`
+	File string `json:"file,omitempty" yaml:"file,omitempty"`
 	// IIDFile write the image ID to the file
-	IIDFile string `yaml:"iidfile,omitempty"`
+	IIDFile string `json:"iidfile,omitempty" yaml:"iidfile,omitempty"`
 	// Label wet metadata for an image
-	Label []string `yaml:"label,omitempty"`
+	Label []string `json:"label,omitempty" yaml:"label,omitempty"`
 	// Load shorthand for "--output=type=docker"
-	Load bool `yaml:"load,omitempty"`
+	Load bool `json:"load,omitempty" yaml:"load,omitempty"`
 	// MetadataFile write build result metadata to the file
-	MetadataFile string `yaml:"metadata_file,omitempty"`
+	MetadataFile string `json:"metadata_file,omitempty" yaml:"metadata_file,omitempty"`
 	// Network set the networking mode for the "RUN" instructions during build (default "default")
-	Network string `yaml:"network,omitempty"`
+	Network string `json:"network,omitempty" yaml:"network,omitempty"`
 	// NoCache do not use cache when building the image
-	NoCache bool `yaml:"no_cache,omitempty"`
+	NoCache bool `json:"no_cache,omitempty" yaml:"no_cache,omitempty"`
 	// NoCacheFilter do not cache specified stages
-	NoCacheFilter []string `yaml:"no_cache_filter,omitempty"`
+	NoCacheFilter []string `json:"no_cache_filter,omitempty" yaml:"no_cache_filter,omitempty"`
 	// Output destination (format: "type=local,dest=path")
-	Output string `yaml:"output,omitempty"`
+	Output string `json:"output,omitempty" yaml:"output,omitempty"`
 	// Platform set target platform for build
-	Platform string `yaml:"platform,omitempty"`
+	Platform string `json:"platform,omitempty" yaml:"platform,omitempty"`
 	// Secret to expose to the build (format: "id=mysecret[,src=/local/secret]")
-	Secret []string `yaml:"secret,omitempty"`
+	Secret []string `json:"secret,omitempty" yaml:"secret,omitempty"`
 	// ShmSize size of "/dev/shm"
-	ShmSize string `yaml:"shm_size,omitempty"`
+	ShmSize string `json:"shm_size,omitempty" yaml:"shm_size,omitempty"`
 	// SSH agent socket or keys to expose to the build (format: "default|<id>[=<socket>|<key>[,<key>]]")
-	SSH string `yaml:"ssh,omitempty"`
+	SSH string `json:"ssh,omitempty" yaml:"ssh,omitempty"`
 	// Tag name and optionally a tag (format: "name:tag")
-	Tag   string `yaml:"tag,omitempty"`
-	Image string `yaml:"image,omitempty"`
+	Tag   string `json:"tag,omitempty" yaml:"tag,omitempty"`
+	Image string `json:"image,omitempty" yaml:"image,omitempty"`
 	// Target set the target build stage to build
-	Target string `yaml:"target,omitempty"`
+	Target string `json:"target,omitempty" yaml:"target,omitempty"`
 	// ULimit ulimit options (default []
-	ULimit string `yaml:"ulimit,omitempty"`
+	ULimit string `json:"ulimit,omitempty" yaml:"ulimit,omitempty"`
 	// Dependencies list of build names defined in the squadron configuration
-	Dependencies []string `yaml:"dependencies,omitempty"`
+	Dependencies []string `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
 }
 
 // ------------------------------------------------------------------------------------------------

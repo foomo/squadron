@@ -84,8 +84,8 @@ func (sq *Squadron) MergeConfigFiles(ctx context.Context) error {
 	if err := yaml.Unmarshal(fileBytes, &sq.c); err != nil {
 		return err
 	}
-	if sq.c.Version != "2.0" {
-		return errors.New("Please upgrade your YAML definition to 2.0")
+	if sq.c.Version != config.Version {
+		return errors.New("Please upgrade your YAML definition to: " + config.Version)
 	}
 
 	sq.c.Trim(ctx)

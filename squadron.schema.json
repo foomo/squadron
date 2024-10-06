@@ -1,0 +1,217 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/foomo/squadron/internal/config/config",
+  "$ref": "#/$defs/Config",
+  "$defs": {
+    "Build": {
+      "properties": {
+        "context": {
+          "type": "string"
+        },
+        "add_host": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "allow": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "attest": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "build_arg": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "build_context": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "builder": {
+          "type": "string"
+        },
+        "cache_from": {
+          "type": "string"
+        },
+        "cache_to": {
+          "type": "string"
+        },
+        "cgroup_parent": {
+          "type": "string"
+        },
+        "file": {
+          "type": "string"
+        },
+        "iidfile": {
+          "type": "string"
+        },
+        "label": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "load": {
+          "type": "boolean"
+        },
+        "metadata_file": {
+          "type": "string"
+        },
+        "network": {
+          "type": "string"
+        },
+        "no_cache": {
+          "type": "boolean"
+        },
+        "no_cache_filter": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "output": {
+          "type": "string"
+        },
+        "platform": {
+          "type": "string"
+        },
+        "secret": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "shm_size": {
+          "type": "string"
+        },
+        "ssh": {
+          "type": "string"
+        },
+        "tag": {
+          "type": "string"
+        },
+        "image": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        },
+        "ulimit": {
+          "type": "string"
+        },
+        "dependencies": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "Config": {
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "vars": {
+          "type": "object"
+        },
+        "global": {
+          "type": "object"
+        },
+        "builds": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Build"
+          },
+          "type": "object"
+        },
+        "squadron": {
+          "$ref": "#/$defs/Map[github.com/foomo/squadron/internal/config.Map[*github.com/foomo/squadron/internal/config.Unit]]"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "version"
+      ]
+    },
+    "Dependency": {
+      "properties": {
+        "Name": {
+          "type": "string"
+        },
+        "Repository": {
+          "type": "string"
+        },
+        "Version": {
+          "type": "string"
+        },
+        "Alias": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "Name",
+        "Repository",
+        "Version",
+        "Alias"
+      ]
+    },
+    "Map[*github.com/foomo/squadron/internal/config.Unit]": {
+      "additionalProperties": {
+        "$ref": "#/$defs/Unit"
+      },
+      "type": "object"
+    },
+    "Map[github.com/foomo/squadron/internal/config.Map[*github.com/foomo/squadron/internal/config.Unit]]": {
+      "additionalProperties": {
+        "$ref": "#/$defs/Map[*github.com/foomo/squadron/internal/config.Unit]"
+      },
+      "type": "object"
+    },
+    "Tags": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "Unit": {
+      "properties": {
+        "chart": {
+          "$ref": "#/$defs/Dependency"
+        },
+        "kustomize": {
+          "type": "string"
+        },
+        "tags": {
+          "$ref": "#/$defs/Tags"
+        },
+        "builds": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Build"
+          },
+          "type": "object"
+        },
+        "values": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    }
+  }
+}

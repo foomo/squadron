@@ -15,11 +15,11 @@ import (
 )
 
 type Unit struct {
-	Chart     helm.Dependency  `yaml:"chart,omitempty"`
-	Kustomize string           `yaml:"kustomize,omitempty"`
-	Tags      Tags             `yaml:"tags,omitempty"`
-	Builds    map[string]Build `yaml:"builds,omitempty"`
-	Values    map[string]any   `yaml:"values,omitempty"`
+	Chart     helm.Dependency  `json:"chart,omitempty" yaml:"chart,omitempty"`
+	Kustomize string           `json:"kustomize,omitempty" yaml:"kustomize,omitempty"`
+	Tags      Tags             `json:"tags,omitempty" yaml:"tags,omitempty"`
+	Builds    map[string]Build `json:"builds,omitempty" yaml:"builds,omitempty"`
+	Values    map[string]any   `json:"values,omitempty" yaml:"values,omitempty"`
 }
 
 // ------------------------------------------------------------------------------------------------
