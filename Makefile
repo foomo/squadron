@@ -27,12 +27,12 @@ doc:
 .PHONY: test
 ## Run tests
 test:
-	@go test -coverprofile=coverage.out -race -json ./... | gotestfmt
+	@GO_TEST_TAGS=-skip go test -coverprofile=coverage.out -race -json ./... | gotestfmt
 
 .PHONY: test.update
 ## Run tests and update snapshots
 test.update:
-	@go test -update -coverprofile=coverage.out -race -json ./... | gotestfmt
+	@GO_TEST_TAGS=-skip go test -update -coverprofile=coverage.out -race -json ./... | gotestfmt
 
 .PHONY: lint
 ## Run linter

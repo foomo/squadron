@@ -5,6 +5,8 @@ import (
 	"path"
 	"testing"
 
+	testingx "github.com/foomo/go/testing"
+	tagx "github.com/foomo/go/testing/tag"
 	"github.com/foomo/squadron"
 	"github.com/foomo/squadron/internal/testutils"
 	"github.com/foomo/squadron/internal/util"
@@ -13,6 +15,8 @@ import (
 )
 
 func TestConfigSimpleSnapshot(t *testing.T) {
+	testingx.Tags(t, tagx.Short)
+
 	pterm.EnableDebugMessages()
 	t.Setenv("PROJECT_ROOT", ".")
 

@@ -6,6 +6,8 @@ import (
 	"path"
 	"testing"
 
+	testingx "github.com/foomo/go/testing"
+	tagx "github.com/foomo/go/testing/tag"
 	"github.com/foomo/squadron/internal/config"
 	"github.com/invopop/jsonschema"
 	"github.com/stretchr/testify/assert"
@@ -13,6 +15,8 @@ import (
 )
 
 func TestConfig(t *testing.T) {
+	testingx.Tags(t, tagx.Short)
+
 	schema := jsonschema.Reflect(&config.Config{})
 	out, err := json.MarshalIndent(schema, "", "  ")
 	require.NoError(t, err)

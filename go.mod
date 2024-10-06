@@ -9,6 +9,7 @@ require (
 	github.com/BurntSushi/toml v1.4.0
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/alecthomas/chroma v0.10.0
+	github.com/foomo/go v0.0.3
 	github.com/invopop/jsonschema v0.12.0
 	github.com/miracl/conflate v1.2.1
 	github.com/pkg/errors v0.9.1

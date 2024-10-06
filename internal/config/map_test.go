@@ -3,11 +3,15 @@ package config_test
 import (
 	"testing"
 
+	testingx "github.com/foomo/go/testing"
+	tagx "github.com/foomo/go/testing/tag"
 	"github.com/foomo/squadron/internal/config"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestMap_Trim(t *testing.T) {
+	testingx.Tags(t, tagx.Short)
+
 	tests := []struct {
 		name  string
 		value config.Map[any]
