@@ -10,15 +10,15 @@ import (
 
 type Config struct {
 	// Version of the schema
-	Version string `yaml:"version,omitempty"`
+	Version string `json:"version,omitempty" yaml:"version,omitempty" jsonschema:"required"`
 	// Global values to be injected into all squadron values
-	Vars map[string]any `yaml:"vars,omitempty"`
+	Vars map[string]any `json:"vars,omitempty" yaml:"vars,omitempty"`
 	// Global values to be injected into all squadron values
-	Global map[string]any `yaml:"global,omitempty"`
+	Global map[string]any `json:"global,omitempty" yaml:"global,omitempty"`
 	// Global builds that can be referenced as dependencies
-	Builds map[string]Build `yaml:"builds,omitempty"`
+	Builds map[string]Build `json:"builds,omitempty" yaml:"builds,omitempty"`
 	// Squadron definitions
-	Squadrons Map[Map[*Unit]] `yaml:"squadron,omitempty"`
+	Squadrons Map[Map[*Unit]] `json:"squadron,omitempty" yaml:"squadron,omitempty"`
 }
 
 // BuildDependencies returns a map of requested build dependencies
