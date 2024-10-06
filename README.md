@@ -16,16 +16,27 @@ Another way to think of it would be `helm-compose`, because it makes k8s and hel
 Configure your squadron
 
 ```yaml
-# squadron.yaml
-version: '2.0'
+# https://raw.githubusercontent.com/foomo/squadron/refs/heads/main/squadron.schema.json
+version: '2.1'
 
+# squadron template vars
+vars: {}
+
+# helm global vars
+global: {}
+
+# squadron definitions
 squadron:
+  # squadron units
   site:
+    # squadron unit
     frontend:
+      # helm chart definition
       chart:
         name: mychart
         version: 0.1.0
         repository: http://helm.mycompany.com/repository
+      # container builds
       builds:
         service:
           tag: latest
@@ -34,11 +45,16 @@ squadron:
           build_arg:
             - "foo=foo"
             - "bar=bar"
+      # helm chart values
       values:
         image: docker.mycompany.com/mycomapny/frontend:latest
+    # squadron unit
     backend:
+      # helm chart definition
       chart: <% env "PROJECT_ROOT" %>/path/to/chart
+      # kustomize path
       kustomize: <% env "PROJECT_ROOT" %>/path/to/kustomize
+      # container builds
       builds:
         service:
           tag: latest
@@ -47,6 +63,7 @@ squadron:
           build_arg:
             - "foo=foo"
             - "bar=bar"
+      # helm chart values
       values:
         image: docker.mycompany.com/mycomapny/backend:latest
 ```
