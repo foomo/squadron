@@ -8,14 +8,13 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/foomo/squadron/internal/helm"
 	"github.com/foomo/squadron/internal/util"
 	"github.com/pkg/errors"
 	yamlv2 "gopkg.in/yaml.v2"
 )
 
 type Unit struct {
-	Chart     helm.Dependency  `json:"chart,omitempty" yaml:"chart,omitempty"`
+	Chart     Chart            `json:"chart,omitempty" yaml:"chart,omitempty" jsonschema:"anyof_type=string;Chart"`
 	Kustomize string           `json:"kustomize,omitempty" yaml:"kustomize,omitempty"`
 	Tags      Tags             `json:"tags,omitempty" yaml:"tags,omitempty"`
 	Builds    map[string]Build `json:"builds,omitempty" yaml:"builds,omitempty"`

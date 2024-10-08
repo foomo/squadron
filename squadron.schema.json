@@ -120,6 +120,24 @@
       "additionalProperties": false,
       "type": "object"
     },
+    "Chart": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "repository": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "alias": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
     "Config": {
       "properties": {
         "version": {
@@ -153,30 +171,6 @@
         "version"
       ]
     },
-    "Dependency": {
-      "properties": {
-        "Name": {
-          "type": "string"
-        },
-        "Repository": {
-          "type": "string"
-        },
-        "Version": {
-          "type": "string"
-        },
-        "Alias": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "Name",
-        "Repository",
-        "Version",
-        "Alias"
-      ]
-    },
     "Tags": {
       "items": {
         "type": "string"
@@ -186,7 +180,15 @@
     "Unit": {
       "properties": {
         "chart": {
-          "$ref": "#/$defs/Dependency"
+          "$ref": "#/$defs/Chart",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "Chart"
+            }
+          ]
         },
         "kustomize": {
           "type": "string"

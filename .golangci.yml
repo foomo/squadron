@@ -28,6 +28,9 @@ linters-settings:
   testifylint:
     disable:
       - float-compare
+  # https://golangci-lint.run/usage/linters/#goconst
+  goconst:
+    ignore-strings: '!!.+'
   # https://golangci-lint.run/usage/linters/#gosec
   gosec:
     confidence: medium
