@@ -180,13 +180,12 @@
     "Unit": {
       "properties": {
         "chart": {
-          "$ref": "#/$defs/Chart",
           "anyOf": [
             {
               "type": "string"
             },
             {
-              "type": "Chart"
+              "$ref": "#/$defs/Chart"
             }
           ]
         },

@@ -14,7 +14,7 @@ import (
 )
 
 type Unit struct {
-	Chart     Chart            `json:"chart,omitempty" yaml:"chart,omitempty" jsonschema:"anyof_type=string;Chart"`
+	Chart     Chart            `json:"chart,omitempty" yaml:"chart,omitempty" jsonschema:"anyof_type=string,anyof_ref=#/$defs/Chart"`
 	Kustomize string           `json:"kustomize,omitempty" yaml:"kustomize,omitempty"`
 	Tags      Tags             `json:"tags,omitempty" yaml:"tags,omitempty"`
 	Builds    map[string]Build `json:"builds,omitempty" yaml:"builds,omitempty"`
@@ -24,6 +24,15 @@ type Unit struct {
 // ------------------------------------------------------------------------------------------------
 // ~ Public methods
 // ------------------------------------------------------------------------------------------------
+
+// JSONSchemaProperty type workaround
+func (Unit) JSONSchemaProperty(prop string) any {
+	var x any
+	if prop == "chart" {
+		return x
+	}
+	return nil
+}
 
 func (u *Unit) ValuesYAML(global, vars map[string]any) ([]byte, error) {
 	values := u.Values
