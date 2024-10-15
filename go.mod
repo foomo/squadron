@@ -1,6 +1,6 @@
 module github.com/foomo/squadron
 
-go 1.23.1
+go 1.23.2
 
 replace github.com/miracl/conflate v1.2.1 => github.com/runz0rd/conflate v1.2.2-0.20210920145208-fa48576ef06d
 
@@ -12,6 +12,7 @@ require (
 	github.com/foomo/go v0.0.3
 	github.com/invopop/jsonschema v0.12.0
 	github.com/miracl/conflate v1.2.1
+	github.com/p12se/merger-json-schemas v0.0.0-20230809180605-04bf9b969093
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.79
 	github.com/sirupsen/logrus v1.9.3

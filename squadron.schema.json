@@ -1,212 +1,258 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/foomo/squadron/internal/config/config",
-  "$ref": "#/$defs/Config",
-  "$defs": {
-    "Build": {
-      "properties": {
-        "context": {
-          "type": "string"
-        },
-        "add_host": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "allow": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "attest": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "build_arg": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "build_context": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "builder": {
-          "type": "string"
-        },
-        "cache_from": {
-          "type": "string"
-        },
-        "cache_to": {
-          "type": "string"
-        },
-        "cgroup_parent": {
-          "type": "string"
-        },
-        "file": {
-          "type": "string"
-        },
-        "iidfile": {
-          "type": "string"
-        },
-        "label": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "load": {
-          "type": "boolean"
-        },
-        "metadata_file": {
-          "type": "string"
-        },
-        "network": {
-          "type": "string"
-        },
-        "no_cache": {
-          "type": "boolean"
-        },
-        "no_cache_filter": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "output": {
-          "type": "string"
-        },
-        "platform": {
-          "type": "string"
-        },
-        "secret": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "shm_size": {
-          "type": "string"
-        },
-        "ssh": {
-          "type": "string"
-        },
-        "tag": {
-          "type": "string"
-        },
-        "image": {
-          "type": "string"
-        },
-        "target": {
-          "type": "string"
-        },
-        "ulimit": {
-          "type": "string"
-        },
-        "dependencies": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object"
-    },
-    "Chart": {
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "repository": {
-          "type": "string"
-        },
-        "version": {
-          "type": "string"
-        },
-        "alias": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object"
-    },
-    "Config": {
-      "properties": {
-        "version": {
-          "type": "string"
-        },
-        "vars": {
-          "type": "object"
-        },
-        "global": {
-          "type": "object"
-        },
-        "builds": {
-          "additionalProperties": {
-            "$ref": "#/$defs/Build"
-          },
-          "type": "object"
-        },
-        "squadron": {
-          "additionalProperties": {
-            "additionalProperties": {
-              "$ref": "#/$defs/Unit"
-            },
-            "type": "object"
-          },
-          "type": "object"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "version"
-      ]
-    },
-    "Tags": {
-      "items": {
-        "type": "string"
-      },
-      "type": "array"
-    },
-    "Unit": {
-      "properties": {
-        "chart": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "$ref": "#/$defs/Chart"
-            }
-          ]
-        },
-        "kustomize": {
-          "type": "string"
-        },
-        "tags": {
-          "$ref": "#/$defs/Tags"
-        },
-        "builds": {
-          "additionalProperties": {
-            "$ref": "#/$defs/Build"
-          },
-          "type": "object"
-        },
-        "values": {
-          "type": "object"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object"
-    }
-  }
+	"$defs": {
+		"Build": {
+			"additionalProperties": false,
+			"properties": {
+				"add_host": {
+					"items": {
+						"type": "string"
+					},
+					"type": "array"
+				},
+				"allow": {
+					"items": {
+						"type": "string"
+					},
+					"type": "array"
+				},
+				"attest": {
+					"items": {
+						"type": "string"
+					},
+					"type": "array"
+				},
+				"build_arg": {
+					"items": {
+						"type": "string"
+					},
+					"type": "array"
+				},
+				"build_context": {
+					"items": {
+						"type": "string"
+					},
+					"type": "array"
+				},
+				"builder": {
+					"type": "string"
+				},
+				"cache_from": {
+					"type": "string"
+				},
+				"cache_to": {
+					"type": "string"
+				},
+				"cgroup_parent": {
+					"type": "string"
+				},
+				"context": {
+					"type": "string"
+				},
+				"dependencies": {
+					"items": {
+						"type": "string"
+					},
+					"type": "array"
+				},
+				"file": {
+					"type": "string"
+				},
+				"iidfile": {
+					"type": "string"
+				},
+				"image": {
+					"type": "string"
+				},
+				"label": {
+					"items": {
+						"type": "string"
+					},
+					"type": "array"
+				},
+				"load": {
+					"type": "boolean"
+				},
+				"metadata_file": {
+					"type": "string"
+				},
+				"network": {
+					"type": "string"
+				},
+				"no_cache": {
+					"type": "boolean"
+				},
+				"no_cache_filter": {
+					"items": {
+						"type": "string"
+					},
+					"type": "array"
+				},
+				"output": {
+					"type": "string"
+				},
+				"platform": {
+					"type": "string"
+				},
+				"secret": {
+					"items": {
+						"type": "string"
+					},
+					"type": "array"
+				},
+				"shm_size": {
+					"type": "string"
+				},
+				"ssh": {
+					"type": "string"
+				},
+				"tag": {
+					"type": "string"
+				},
+				"target": {
+					"type": "string"
+				},
+				"ulimit": {
+					"type": "string"
+				}
+			},
+			"type": "object"
+		},
+		"Chart": {
+			"additionalProperties": false,
+			"properties": {
+				"alias": {
+					"type": "string"
+				},
+				"name": {
+					"type": "string"
+				},
+				"repository": {
+					"type": "string"
+				},
+				"version": {
+					"type": "string"
+				}
+			},
+			"type": "object"
+		},
+		"Config": {
+			"additionalProperties": false,
+			"properties": {
+				"builds": {
+					"additionalProperties": {
+						"$ref": "#/$defs/Build"
+					},
+					"type": "object"
+				},
+				"global": {
+					"type": "object"
+				},
+				"squadron": {
+					"additionalProperties": {
+						"additionalProperties": {
+							"$ref": "#/$defs/Unit"
+						},
+						"type": "object"
+					},
+					"properties": {
+						"site": {
+							"additionalProperties": {
+								"$ref": "#/$defs/Unit"
+							},
+							"properties": {
+								"namespace": {
+									"$ref": "#/$defs/Unit",
+									"properties": {
+										"values": {
+											"properties": {
+												"fullnameOverride": {
+													"type": "string"
+												},
+												"nameOverride": {
+													"type": "string"
+												},
+												"namespaceOverride": {
+													"type": "string"
+												},
+												"secrets": {
+													"properties": {
+														"dockerConfigs": {
+															"type": "object"
+														},
+														"opaque": {
+															"type": "object"
+														},
+														"tls": {
+															"type": "object"
+														}
+													},
+													"type": "object"
+												},
+												"serviceAccounts": {
+													"type": "object"
+												}
+											},
+											"type": "object"
+										}
+									}
+								}
+							},
+							"type": "object"
+						}
+					},
+					"type": "object"
+				},
+				"vars": {
+					"type": "object"
+				},
+				"version": {
+					"type": "string"
+				}
+			},
+			"required": [
+				"version"
+			],
+			"type": "object"
+		},
+		"Tags": {
+			"items": {
+				"type": "string"
+			},
+			"type": "array"
+		},
+		"Unit": {
+			"additionalProperties": false,
+			"properties": {
+				"builds": {
+					"additionalProperties": {
+						"$ref": "#/$defs/Build"
+					},
+					"type": "object"
+				},
+				"chart": {
+					"anyOf": [
+						{
+							"type": "string"
+						},
+						{
+							"$ref": "#/$defs/Chart"
+						}
+					]
+				},
+				"kustomize": {
+					"type": "string"
+				},
+				"tags": {
+					"$ref": "#/$defs/Tags"
+				},
+				"values": {
+					"type": "object"
+				}
+			},
+			"type": "object"
+		}
+	},
+	"$id": "https://github.com/foomo/squadron/internal/config/config",
+	"$ref": "#/$defs/Config",
+	"$schema": "https://json-schema.org/draft/2020-12/schema"
 }

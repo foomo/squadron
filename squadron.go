@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/foomo/squadron/internal/config"
+	"github.com/foomo/squadron/internal/jsonschema"
 	templatex "github.com/foomo/squadron/internal/template"
 	"github.com/foomo/squadron/internal/util"
 	"github.com/miracl/conflate"
@@ -353,14 +354,44 @@ func (sq *Squadron) Down(ctx context.Context, helmArgs []string, parallel int) e
 	return wg.Wait()
 }
 
+func (sq *Squadron) WriteSchema(ctx context.Context, baseSchema string, parallel int) error {
+	wg, ctx := errgroup.WithContext(ctx)
+	wg.SetLimit(parallel)
+
+	pterm.Debug.Println("rendering schema")
+	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
+		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
+			wg.Go(func() error {
+				if err := ctx.Err(); err != nil {
+					return err
+				}
+
+				js := jsonschema.New(path.Join("squadrons", key, k, "squadron.schema.json"))
+				if err := js.LoadBaseSchema(ctx, baseSchema); err != nil {
+					return errors.Wrap(err, "failed to load base schema")
+				}
+
+				if v.Chart.Schema != "" {
+					if err := js.SetSquadronUnitSchema(ctx, key, k, v.Chart.Schema); err != nil {
+						return err
+					}
+				}
+
+				return js.WritePretty()
+			})
+			return nil
+		})
+	})
+
+	if err := wg.Wait(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) error {
 	var m sync.Mutex
-	// var ret string
-	// write := func(b string) {
-	// 	m.Lock()
-	// 	defer m.Unlock()
-	// 	ret += b
-	// }
 
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
@@ -448,8 +479,6 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) e
 	if err := wg.Wait(); err != nil {
 		return err
 	}
-
-	// fmt.Print(ret)
 
 	return nil
 }

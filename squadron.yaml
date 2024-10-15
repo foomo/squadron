@@ -1,0 +1,11 @@
+# $schema: ./squadron.schema.json
+version: '2.1'
+
+squadron:
+  site:
+    namespace:
+      tags:
+        - dsfads
+      values:
+        fullnameOverride:
+

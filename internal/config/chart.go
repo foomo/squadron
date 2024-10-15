@@ -14,6 +14,7 @@ import (
 type Chart struct {
 	Name       string `json:"name,omitempty" yaml:"name,omitempty"`
 	Repository string `json:"repository,omitempty" yaml:"repository,omitempty"`
+	Schema     string `json:"schema,omitempty" yaml:"schema,omitempty"`
 	Version    string `json:"version,omitempty" yaml:"version,omitempty"`
 	Alias      string `json:"alias,omitempty" yaml:"alias,omitempty"`
 }
