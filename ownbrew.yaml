@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/foomo/ownbrew/refs/tags/v0.1.0/ownbrew.schema.json
+version: '1.0'
+
+binDir: "bin"
+tapDir: ".ownbrew/tap"
+tempDir: ".ownbrew/tmp"
+cellarDir: ".ownbrew/bin"
+packages:
+  ## https://github.com/golangci/golangci-lint/releases
+  - name: golangci-lint
+    tap: foomo/tap/golangci/golangci-lint
+    version: 1.61.0
+  ## https://github.com/go-courier/husky/releases
+  - name: husky
+    tap: foomo/tap/go-courier/husky
+    version: 1.8.1
