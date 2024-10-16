@@ -12,6 +12,7 @@ import (
 )
 
 type Build struct {
+	// Build context
 	Context string `json:"context,omitempty" yaml:"context,omitempty"`
 	// AddHost add a custom host-to-IP mapping (format: "host:ip")
 	AddHost []string `json:"add_host,omitempty" yaml:"add_host,omitempty"`
@@ -58,7 +59,8 @@ type Build struct {
 	// SSH agent socket or keys to expose to the build (format: "default|<id>[=<socket>|<key>[,<key>]]")
 	SSH string `json:"ssh,omitempty" yaml:"ssh,omitempty"`
 	// Tag name and optionally a tag (format: "name:tag")
-	Tag   string `json:"tag,omitempty" yaml:"tag,omitempty"`
+	Tag string `json:"tag,omitempty" yaml:"tag,omitempty"`
+	// Image name
 	Image string `json:"image,omitempty" yaml:"image,omitempty"`
 	// Target set the target build stage to build
 	Target string `json:"target,omitempty" yaml:"target,omitempty"`

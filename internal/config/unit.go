@@ -14,11 +14,16 @@ import (
 )
 
 type Unit struct {
-	Chart     Chart            `json:"chart,omitempty" yaml:"chart,omitempty" jsonschema:"anyof_type=string,anyof_ref=#/$defs/Chart"`
-	Kustomize string           `json:"kustomize,omitempty" yaml:"kustomize,omitempty"`
-	Tags      Tags             `json:"tags,omitempty" yaml:"tags,omitempty"`
-	Builds    map[string]Build `json:"builds,omitempty" yaml:"builds,omitempty"`
-	Values    map[string]any   `json:"values,omitempty" yaml:"values,omitempty"`
+	// Chart settings
+	Chart Chart `json:"chart,omitempty" yaml:"chart,omitempty" jsonschema:"anyof_type=string,anyof_ref=#/$defs/Chart"`
+	// Kustomize files path
+	Kustomize string `json:"kustomize,omitempty" yaml:"kustomize,omitempty"`
+	// List of tags
+	Tags Tags `json:"tags,omitempty" yaml:"tags,omitempty"`
+	// Map of containers to build
+	Builds map[string]Build `json:"builds,omitempty" yaml:"builds,omitempty"`
+	// Chart values
+	Values map[string]any `json:"values,omitempty" yaml:"values,omitempty"`
 }
 
 // ------------------------------------------------------------------------------------------------
