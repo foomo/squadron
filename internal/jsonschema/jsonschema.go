@@ -18,7 +18,7 @@ func New() *JSONSchema {
 }
 
 func (js *JSONSchema) LoadBaseSchema(ctx context.Context, url string) error {
-	baseSchema, err := Fetch(ctx, url)
+	baseSchema, err := LoadMap(ctx, url)
 	if err != nil {
 		return err
 	}
@@ -48,7 +48,7 @@ func (js *JSONSchema) SetSquadronUnitSchema(ctx context.Context, squardon, unit,
 
 	// add definition
 	if _, ok := defsMap[ref]; !ok {
-		valuesMap, err := Fetch(ctx, url)
+		valuesMap, err := LoadMap(ctx, url)
 		if err != nil {
 			return err
 		}

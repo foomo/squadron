@@ -9,8 +9,8 @@ import (
 	"strings"
 )
 
-// Fetch fetches the JSON schema from a given URL
-func Fetch(ctx context.Context, url string) (map[string]any, error) {
+// LoadMap fetches the JSON schema from a given URL
+func LoadMap(ctx context.Context, url string) (map[string]any, error) {
 	var err error
 	var body []byte
 

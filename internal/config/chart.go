@@ -13,11 +13,16 @@ import (
 )
 
 type Chart struct {
-	Name       string `json:"name,omitempty" yaml:"name,omitempty"`
+	// Chart name
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+	// Chart repository
 	Repository string `json:"repository,omitempty" yaml:"repository,omitempty"`
-	Schema     string `json:"schema,omitempty" yaml:"schema,omitempty"`
-	Version    string `json:"version,omitempty" yaml:"version,omitempty"`
-	Alias      string `json:"alias,omitempty" yaml:"alias,omitempty"`
+	// Values schema json
+	Schema string `json:"schema,omitempty" yaml:"schema,omitempty"`
+	// Chart version
+	Version string `json:"version,omitempty" yaml:"version,omitempty"`
+	// Chart alias
+	Alias string `json:"alias,omitempty" yaml:"alias,omitempty"`
 }
 
 func (d *Chart) UnmarshalYAML(value *yaml.Node) error {

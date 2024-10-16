@@ -6,7 +6,8 @@
     "Build": {
       "properties": {
         "context": {
-          "type": "string"
+          "type": "string",
+          "description": "Build context"
         },
         "add_host": {
           "items": {
@@ -125,7 +126,8 @@
           "description": "Tag name and optionally a tag (format: \"name:tag\")"
         },
         "image": {
-          "type": "string"
+          "type": "string",
+          "description": "Image name"
         },
         "target": {
           "type": "string",
@@ -149,19 +151,24 @@
     "Chart": {
       "properties": {
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "Chart name"
         },
         "repository": {
-          "type": "string"
+          "type": "string",
+          "description": "Chart repository"
         },
         "schema": {
-          "type": "string"
+          "type": "string",
+          "description": "Values schema json"
         },
         "version": {
-          "type": "string"
+          "type": "string",
+          "description": "Chart version"
         },
         "alias": {
-          "type": "string"
+          "type": "string",
+          "description": "Chart alias"
         }
       },
       "additionalProperties": false,
@@ -222,22 +229,27 @@
             {
               "$ref": "#/$defs/Chart"
             }
-          ]
+          ],
+          "description": "Chart settings"
         },
         "kustomize": {
-          "type": "string"
+          "type": "string",
+          "description": "Kustomize files path"
         },
         "tags": {
-          "$ref": "#/$defs/Tags"
+          "$ref": "#/$defs/Tags",
+          "description": "List of tags"
         },
         "builds": {
           "additionalProperties": {
             "$ref": "#/$defs/Build"
           },
-          "type": "object"
+          "type": "object",
+          "description": "Map of containers to build"
         },
         "values": {
-          "type": "object"
+          "type": "object",
+          "description": "Chart values"
         }
       },
       "additionalProperties": false,
