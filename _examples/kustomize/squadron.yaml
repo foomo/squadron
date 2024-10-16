@@ -1,0 +1,20 @@
+version: '2.1'
+
+squadron:
+  storefinder:
+    backend:
+      chart: <% env "PROJECT_ROOT" %>/../common/charts/backend
+      kustomize: <% env "PROJECT_ROOT" %>/kustomize
+      builds:
+        default:
+          tag: latest
+          context: <% env "PROJECT_ROOT" %>/app
+          dockerfile: <% env "PROJECT_ROOT" %>/../common/docker/backend.Dockerfile
+          image: kustomize/app
+      values:
+        image:
+          tag: <% .Squadron.storefinder.backend.builds.default.tag | quote %>
+          repository: <% .Squadron.storefinder.backend.builds.default.image %>
+        service:
+          ports:
+            - 80
