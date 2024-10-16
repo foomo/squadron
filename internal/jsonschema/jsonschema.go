@@ -3,20 +3,18 @@ package jsonschema
 import (
 	"context"
 	"encoding/json"
-	"os"
+	"path"
+	"strings"
 )
 
 // JSONSchema represents the structure of a JSON schema
 type JSONSchema struct {
-	filename   string
 	baseSchema map[string]any
 }
 
 // New takes a URL to the base JSON schema and returns a JSONSchema instance
-func New(filename string) *JSONSchema {
-	return &JSONSchema{
-		filename: filename,
-	}
+func New() *JSONSchema {
+	return &JSONSchema{}
 }
 
 func (js *JSONSchema) LoadBaseSchema(ctx context.Context, url string) error {
@@ -30,13 +28,35 @@ func (js *JSONSchema) LoadBaseSchema(ctx context.Context, url string) error {
 
 // SetSquadronUnitSchema overrides the base schema at the given path with another JSON schema from a URL
 func (js *JSONSchema) SetSquadronUnitSchema(ctx context.Context, squardon, unit, url string) error {
-	valuesMap, err := Fetch(ctx, url)
-	if err != nil {
-		return err
+	var ref string
+	if strings.HasPrefix(url, "http") {
+		ref = strings.TrimPrefix(url, "https:")
+		ref = strings.TrimPrefix(ref, "http:")
+		ref = strings.TrimPrefix(ref, "//")
+	} else {
+		ref = path.Clean(url)
+		ref = strings.TrimPrefix(ref, "..")
+		ref = strings.TrimPrefix(ref, ".")
+		ref = strings.TrimPrefix(ref, "/")
 	}
-	delete(valuesMap, "$schema")
+	ref = strings.TrimSuffix(ref, "/")
+	ref = strings.ReplaceAll(ref, "/", "-")
+	ref = strings.ToLower(ref)
 
+	// retrieve definitions
 	defsMap := js.ensure(js.baseSchema, "$defs", map[string]any{})
+
+	// add definition
+	if _, ok := defsMap[ref]; !ok {
+		valuesMap, err := Fetch(ctx, url)
+		if err != nil {
+			return err
+		}
+		delete(valuesMap, "$schema")
+		js.ensure(defsMap, ref, valuesMap)
+	}
+
+	// extend Config
 	configMap := js.ensure(defsMap, "Config", map[string]any{})
 	configPropertiesMap := js.ensure(configMap, "properties", map[string]any{})
 	squadronsMap := js.ensure(configPropertiesMap, "squadron", map[string]any{})
@@ -49,29 +69,22 @@ func (js *JSONSchema) SetSquadronUnitSchema(ctx context.Context, squardon, unit,
 	})
 	squadronPropertiesMap := js.ensure(squadronMap, "properties", map[string]any{})
 	_ = js.ensure(squadronPropertiesMap, unit, map[string]any{
-		"$ref": "#/$defs/Unit",
-		"properties": map[string]any{
-			"values": valuesMap,
+		"anyOf": []map[string]any{
+			{
+				"$ref": "#/$defs/Unit",
+			},
+			{
+				"type": "object",
+				"properties": map[string]any{
+					"values": map[string]any{
+						"$ref": "#/$defs/" + ref,
+					},
+				},
+			},
 		},
 	})
 
 	return nil
-}
-
-func (js *JSONSchema) Write() error {
-	out, err := js.String()
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(js.filename, []byte(out), 0600)
-}
-
-func (js *JSONSchema) WritePretty() error {
-	out, err := js.PrettyString()
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(js.filename, []byte(out), 0600)
 }
 
 // String outputs the resulting JSON schema as string

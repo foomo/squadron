@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/foomo/squadron/internal/template"
 	"github.com/pkg/errors"
@@ -40,6 +41,18 @@ func (d *Chart) UnmarshalYAML(value *yaml.Node) error {
 		d.Name = localChart.Name
 		d.Repository = fmt.Sprintf("file://%v", vString)
 		d.Version = localChart.Version
+		wd, err := os.Getwd()
+		if err != nil {
+			return errors.Wrap(err, "failed to get working directory")
+		}
+		schemaPath := string(vBytes)
+		if value, err := filepath.Rel(wd, string(vBytes)); err == nil {
+			schemaPath = value
+		}
+
+		if _, err := os.Stat(path.Join(schemaPath, "values.schema.json")); err == nil {
+			d.Schema = path.Join(schemaPath, "values.schema.json")
+		}
 		return nil
 	default:
 		return fmt.Errorf("unsupported node tag type for %T: %q", d, value.Tag)

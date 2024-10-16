@@ -354,40 +354,30 @@ func (sq *Squadron) Down(ctx context.Context, helmArgs []string, parallel int) e
 	return wg.Wait()
 }
 
-func (sq *Squadron) WriteSchema(ctx context.Context, baseSchema string, parallel int) error {
-	wg, ctx := errgroup.WithContext(ctx)
-	wg.SetLimit(parallel)
-
-	pterm.Debug.Println("rendering schema")
-	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
-		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
-			wg.Go(func() error {
-				if err := ctx.Err(); err != nil {
-					return err
-				}
-
-				js := jsonschema.New(path.Join("squadrons", key, k, "squadron.schema.json"))
-				if err := js.LoadBaseSchema(ctx, baseSchema); err != nil {
-					return errors.Wrap(err, "failed to load base schema")
-				}
-
-				if v.Chart.Schema != "" {
-					if err := js.SetSquadronUnitSchema(ctx, key, k, v.Chart.Schema); err != nil {
-						return err
-					}
-				}
-
-				return js.WritePretty()
-			})
-			return nil
-		})
-	})
-
-	if err := wg.Wait(); err != nil {
-		return err
+func (sq *Squadron) RenderSchema(ctx context.Context, baseSchema string) (string, error) {
+	js := jsonschema.New()
+	if err := js.LoadBaseSchema(ctx, baseSchema); err != nil {
+		return "", errors.Wrap(err, "failed to load base schema")
 	}
 
-	return nil
+	pterm.Debug.Println("rendering schema")
+	if err := sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
+		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+
+			if v.Chart.Schema == "" {
+				return nil
+			}
+
+			return js.SetSquadronUnitSchema(ctx, key, k, v.Chart.Schema)
+		})
+	}); err != nil {
+		return "", errors.Wrap(err, "failed to render schema")
+	}
+
+	return js.PrettyString()
 }
 
 func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) error {
@@ -476,11 +466,7 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) e
 		})
 	})
 
-	if err := wg.Wait(); err != nil {
-		return err
-	}
-
-	return nil
+	return wg.Wait()
 }
 
 func (sq *Squadron) Status(ctx context.Context, helmArgs []string, parallel int) error {
