@@ -47,9 +47,9 @@ var schemaCmd = &cobra.Command{
 			if err := os.WriteFile(flagOutput, []byte(js), 0600); err != nil {
 				return errors.Wrap(err, "failed to write schema")
 			}
+		} else {
+			fmt.Print(util.Highlight(js))
 		}
-
-		fmt.Print(util.Highlight(js))
 
 		return nil
 	},
