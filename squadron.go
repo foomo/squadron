@@ -469,10 +469,17 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) e
 	return wg.Wait()
 }
 
+type statusDescription struct {
+	ManagedBy  string `json:"managedBy,omitempty"`
+	DeployedBy string `json:"deployedBy,omitempty"`
+	GitCommit  string `json:"gitCommit,omitempty"`
+	GitBranch  string `json:"gitBranch,omitempty"`
+}
+
 func (sq *Squadron) Status(ctx context.Context, helmArgs []string, parallel int) error {
 	var m sync.Mutex
 	tbd := pterm.TableData{
-		{"Name", "Revision", "Status", "Deployed by", "Commit", "Branch", "Last deployed", "Notes"},
+		{"Name", "Revision", "Status", "Managed by", "Deployed by", "Commit", "Branch", "Last deployed", "Notes"},
 	}
 	write := func(b []string) {
 		m.Lock()
@@ -490,6 +497,7 @@ func (sq *Squadron) Status(ctx context.Context, helmArgs []string, parallel int)
 			LastDeployed  string `json:"last_deployed"`
 			Description   string `json:"description"`
 		} `json:"info"`
+		managedBy  string `json:"-"` //nolint:revive
 		deployedBy string `json:"-"` //nolint:revive
 		gitCommit  string `json:"-"` //nolint:revive
 		gitBranch  string `json:"-"` //nolint:revive
@@ -520,27 +528,42 @@ func (sq *Squadron) Status(ctx context.Context, helmArgs []string, parallel int)
 				return errors.Wrap(err, out)
 			} else {
 				var notes []string
-				for _, line := range strings.Split(status.Info.Description, "\n") {
-					if strings.HasPrefix(line, "Managed-By: ") {
-						// do nothing
-					} else if strings.HasPrefix(line, "Deployed-By: ") {
-						status.deployedBy = strings.TrimPrefix(line, "Deployed-By: ")
-					} else if strings.HasPrefix(line, "Git-Commit: ") {
-						status.gitCommit = strings.TrimPrefix(line, "Git-Commit: ")
-					} else if strings.HasPrefix(line, "Git-Branch: ") {
-						status.gitBranch = strings.TrimPrefix(line, "Git-Branch: ")
-					} else {
-						notes = append(notes, line)
+				lines := strings.Split(status.Info.Description, "\n")
+				var statusDescription statusDescription
+
+				if err := json.Unmarshal([]byte(status.Info.Description), &statusDescription); err == nil {
+					status.managedBy = statusDescription.ManagedBy
+					status.deployedBy = statusDescription.DeployedBy
+					status.gitCommit = statusDescription.GitCommit
+					status.gitBranch = statusDescription.GitBranch
+				} else if len(lines) > 1 {
+					for _, line := range lines {
+						if strings.HasPrefix(line, "Managed-By: ") {
+							status.managedBy = strings.TrimPrefix(line, "Managed-By: ")
+						} else if strings.HasPrefix(line, "Deployed-By: ") {
+							status.deployedBy = strings.TrimPrefix(line, "Deployed-By: ")
+						} else if strings.HasPrefix(line, "Git-Commit: ") {
+							status.gitCommit = strings.TrimPrefix(line, "Git-Commit: ")
+						} else if strings.HasPrefix(line, "Git-Branch: ") {
+							status.gitBranch = strings.TrimPrefix(line, "Git-Branch: ")
+						} else {
+							notes = append(notes, line)
+						}
 					}
+				} else {
+					notes = append(notes, status.Info.Description)
 				}
+
 				write([]string{
 					status.Name,
 					fmt.Sprintf("%d", status.Version),
 					status.Info.Status,
+					status.managedBy,
 					status.deployedBy,
 					status.gitCommit,
 					status.gitBranch,
-					status.Info.LastDeployed, strings.Join(notes, " | "),
+					status.Info.LastDeployed,
+					strings.Join(notes, "\n"),
 				})
 			}
 			return nil
@@ -628,7 +651,15 @@ func (sq *Squadron) UpdateLocalDependencies(ctx context.Context, parallel int) e
 }
 
 func (sq *Squadron) Up(ctx context.Context, helmArgs []string, username, version, commit, branch string, parallel int) error {
-	description := fmt.Sprintf("\nDeployed-By: %s\nManaged-By: Squadron %s\nGit-Commit: %s\nGit-Branch: %s", username, version, commit, branch)
+	description, err := json.Marshal(statusDescription{
+		ManagedBy:  version,
+		DeployedBy: username,
+		GitCommit:  commit,
+		GitBranch:  branch,
+	})
+	if err != nil {
+		return err
+	}
 
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
@@ -657,7 +688,7 @@ func (sq *Squadron) Up(ctx context.Context, helmArgs []string, username, version
 					Stdout(os.Stdout).
 					Args("upgrade", name, "--install").
 					Args("--set", fmt.Sprintf("squadron=%s,unit=%s", key, k)).
-					Args("--description", description).
+					Args("--description", string(description)).
 					Args("--namespace", namespace).
 					Args("--dependency-update").
 					Args(v.PostRendererArgs()...).
