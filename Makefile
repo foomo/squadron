@@ -1,6 +1,10 @@
 .DEFAULT_GOAL:=help
 -include .makerc
 
+# --- Config -----------------------------------------------------------------
+
+export PATH := bin:$(PATH)
+
 # --- Targets -----------------------------------------------------------------
 
 # This allows us to accept extra arguments
@@ -17,6 +21,11 @@
 	@git config core.hooksPath .husky
 
 ## === Tasks ===
+
+.PHONY: brew
+## Install project binaries
+brew:
+	@ownbrew install
 
 .PHONY: doc
 ## Run tests

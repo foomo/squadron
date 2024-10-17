@@ -1,0 +1,3 @@
+resources:
+  - .chart.yaml # will be auto generated
+  - serviceaccount.yaml

@@ -10,7 +10,7 @@ import (
 
 type Config struct {
 	// Version of the schema
-	Version string `json:"version,omitempty" yaml:"version,omitempty" jsonschema:"required"`
+	Version string `json:"version,omitempty" yaml:"version,omitempty" jsonschema:"pattern=^[0-9]\\.[0-9]$,required"`
 	// Global values to be injected into all squadron values
 	Vars map[string]any `json:"vars,omitempty" yaml:"vars,omitempty"`
 	// Global values to be injected into all squadron values

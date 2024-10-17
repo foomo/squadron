@@ -4,12 +4,13 @@ squadron:
   storefinder:
     backend:
       chart: <% env "PROJECT_ROOT" %>/../common/charts/backend
+      kustomize: <% env "PROJECT_ROOT" %>/kustomize
       builds:
         default:
           tag: latest
           context: <% env "PROJECT_ROOT" %>/app
           dockerfile: <% env "PROJECT_ROOT" %>/../common/docker/backend.Dockerfile
-          image: helloworld/app
+          image: kustomize/app
       values:
         image:
           tag: <% .Squadron.storefinder.backend.builds.default.tag | quote %>

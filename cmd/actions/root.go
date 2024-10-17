@@ -56,7 +56,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&flagVerbose, "verbose", "v", false, "show more output")
 	rootCmd.PersistentFlags().StringSliceVarP(&flagFiles, "file", "f", []string{"squadron.yaml"}, "specify alternative squadron files")
 
-	rootCmd.AddCommand(upCmd, diffCmd, downCmd, buildCmd, pushCmd, listCmd, rollbackCmd, statusCmd, configCmd, versionCmd, completionCmd, templateCmd, postRendererCmd)
+	rootCmd.AddCommand(upCmd, diffCmd, downCmd, buildCmd, pushCmd, listCmd, rollbackCmd, statusCmd, configCmd, versionCmd, completionCmd, templateCmd, postRendererCmd, schemaCmd)
 
 	pterm.Info = *pterm.Info.WithPrefix(pterm.Prefix{Text: "⎈", Style: pterm.Info.Prefix.Style})
 	pterm.Debug = *pterm.Debug.WithPrefix(pterm.Prefix{Text: "⚒︎", Style: pterm.Debug.Prefix.Style})
