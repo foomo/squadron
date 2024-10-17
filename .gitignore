@@ -20,6 +20,9 @@
 !.husky/
 !.husky.yaml
 
+## Ownbrew
+!.ownbrew.yaml
+
 ## Golang
 !.golangci.yml
 !.goreleaser.yml
