@@ -7,6 +7,7 @@ import (
 	"github.com/foomo/squadron"
 	"github.com/foomo/squadron/internal/util"
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 )
 
@@ -23,7 +24,7 @@ func init() {
 
 var schemaCmd = &cobra.Command{
 	Use:     "schema [SQUADRON]",
-	Short:   "generate squadron schemas",
+	Short:   "generate squadron json schema",
 	Example: "  squadron schema",
 	Args:    cobra.MinimumNArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -44,6 +45,7 @@ var schemaCmd = &cobra.Command{
 		}
 
 		if flagOutput != "" {
+			pterm.Info.Printfln("Writing JSON schema to %s", flagOutput)
 			if err := os.WriteFile(flagOutput, []byte(js), 0600); err != nil {
 				return errors.Wrap(err, "failed to write schema")
 			}
