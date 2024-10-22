@@ -1,0 +1,16 @@
+version: "2.2"
+
+squadron:
+  storefinder:
+    frontend:
+      chart: <% env "PROJECT_ROOT" %>/_examples/common/charts/frontend
+      extends: <% env "PROJECT_ROOT" %>/testdata/extends/squadron.base.yaml
+      values:
+        image:
+          tag: latest
+        env:
+          ONE: foo
+          TWO: bar
+        tags:
+          - ONE
+          - TWO

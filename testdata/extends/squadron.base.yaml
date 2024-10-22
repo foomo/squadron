@@ -1,0 +1,8 @@
+image:
+  tag: unknown
+  repository: nginx
+env:
+  ONE: unknown
+  THREE: baz
+tags:
+  - unknown

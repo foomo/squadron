@@ -58,12 +58,11 @@ func (u *Unit) UnmarshalYAML(value *yaml.Node) error {
 		if err := yaml.Unmarshal(defaults, &m); err != nil {
 			return errors.Wrap(err, "failed to unmarshal defaults")
 		}
-		if err := mergo.Merge(&m, u.Values); err != nil {
+		if err := mergo.Merge(&u.Values, m); err != nil {
 			return err
 		}
 
 		u.Extends = ""
-		u.Values = m
 	}
 	return nil
 }
