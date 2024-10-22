@@ -7,6 +7,13 @@ squadron:
         repository: file://<% env "PROJECT_ROOT" %>/_examples/common/charts/frontend
         version: 0.0.1
       values:
+        env:
+          ONE: foo
+          THREE: baz
+          TWO: bar
         image:
           repository: nginx
           tag: latest
+        tags:
+        - ONE
+        - TWO

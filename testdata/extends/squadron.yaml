@@ -4,7 +4,13 @@ squadron:
   storefinder:
     frontend:
       chart: <% env "PROJECT_ROOT" %>/_examples/common/charts/frontend
+      extends: <% env "PROJECT_ROOT" %>/testdata/extends/squadron.base.yaml
       values:
         image:
           tag: latest
-          repository: nginx
+        env:
+          ONE: foo
+          TWO: bar
+        tags:
+          - ONE
+          - TWO

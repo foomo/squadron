@@ -5,6 +5,7 @@ go 1.23.2
 replace github.com/miracl/conflate v1.2.1 => github.com/runz0rd/conflate v1.2.2-0.20210920145208-fa48576ef06d
 
 require (
+	dario.cat/mergo v1.0.1
 	github.com/1Password/connect-sdk-go v1.5.3
 	github.com/BurntSushi/toml v1.4.0
 	github.com/Masterminds/sprig/v3 v3.3.0
@@ -29,7 +30,6 @@ require (
 	atomicgo.dev/cursor v0.2.0 // indirect
 	atomicgo.dev/keyboard v0.2.9 // indirect
 	atomicgo.dev/schedule v0.1.0 // indirect
-	dario.cat/mergo v1.0.1 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.3.0 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect

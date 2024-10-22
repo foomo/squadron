@@ -66,6 +66,10 @@ func TestConfigSimpleSnapshot(t *testing.T) {
 			files: []string{"squadron.yaml"},
 		},
 		{
+			name:  "extends",
+			files: []string{"squadron.yaml"},
+		},
+		{
 			name:  "override",
 			files: []string{"squadron.yaml", "squadron.override.yaml"},
 		},
