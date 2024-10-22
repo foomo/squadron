@@ -4,13 +4,17 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"path"
 	"sort"
 	"strings"
 
+	"dario.cat/mergo"
+	"github.com/foomo/squadron/internal/template"
 	"github.com/foomo/squadron/internal/util"
 	"github.com/pkg/errors"
 	yamlv2 "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 type Unit struct {
@@ -24,11 +28,45 @@ type Unit struct {
 	Builds map[string]Build `json:"builds,omitempty" yaml:"builds,omitempty"`
 	// Chart values
 	Values map[string]any `json:"values,omitempty" yaml:"values,omitempty"`
+	// Extend chart values
+	Extends string `json:"extends,omitempty" yaml:"extends,omitempty"`
 }
 
 // ------------------------------------------------------------------------------------------------
 // ~ Public methods
 // ------------------------------------------------------------------------------------------------
+
+func (u *Unit) UnmarshalYAML(value *yaml.Node) error {
+	type wrapper Unit
+	if err := value.Decode((*wrapper)(u)); err != nil {
+		return err
+	}
+	if u.Extends != "" {
+		// render filename
+		filename, err := template.ExecuteFileTemplate(context.Background(), u.Extends, nil, true)
+		if err != nil {
+			return errors.Wrap(err, "failed to render defaults filename")
+		}
+
+		// read defaults
+		defaults, err := os.ReadFile(string(filename))
+		if err != nil {
+			return errors.Wrap(err, "failed to read defaults")
+		}
+
+		var m map[string]any
+		if err := yaml.Unmarshal(defaults, &m); err != nil {
+			return errors.Wrap(err, "failed to unmarshal defaults")
+		}
+		if err := mergo.Merge(&m, u.Values); err != nil {
+			return err
+		}
+
+		u.Extends = ""
+		u.Values = m
+	}
+	return nil
+}
 
 // JSONSchemaProperty type workaround
 func (Unit) JSONSchemaProperty(prop string) any {
@@ -39,7 +77,7 @@ func (Unit) JSONSchemaProperty(prop string) any {
 	return nil
 }
 
-func (u *Unit) ValuesYAML(global, vars map[string]any) ([]byte, error) {
+func (u *Unit) ValuesYAML(global map[string]any) ([]byte, error) {
 	values := u.Values
 	if values == nil {
 		values = map[string]any{}
@@ -47,11 +85,6 @@ func (u *Unit) ValuesYAML(global, vars map[string]any) ([]byte, error) {
 	if global != nil {
 		if _, ok := values["global"]; !ok {
 			values["global"] = global
-		}
-	}
-	if vars != nil {
-		if _, ok := values["vars"]; !ok {
-			values["vars"] = vars
 		}
 	}
 	return yamlv2.Marshal(values)
@@ -66,9 +99,9 @@ func (u *Unit) BuildNames() []string {
 	return ret
 }
 
-func (u *Unit) Template(ctx context.Context, name, squadron, unit, namespace string, global, vars map[string]any, helmArgs []string) ([]byte, error) {
+func (u *Unit) Template(ctx context.Context, name, squadron, unit, namespace string, global map[string]any, helmArgs []string) ([]byte, error) {
 	var ret bytes.Buffer
-	valueBytes, err := u.ValuesYAML(global, vars)
+	valueBytes, err := u.ValuesYAML(global)
 	if err != nil {
 		return nil, err
 	}

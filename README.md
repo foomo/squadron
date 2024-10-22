@@ -17,7 +17,7 @@ Configure your squadron
 
 ```yaml
 # https://raw.githubusercontent.com/foomo/squadron/refs/heads/main/squadron.schema.json
-version: '2.1'
+version: '2.2'
 
 # squadron template vars
 vars: {}

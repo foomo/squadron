@@ -250,6 +250,10 @@
         "values": {
           "type": "object",
           "description": "Chart values"
+        },
+        "extends": {
+          "type": "string",
+          "description": "Extend chart values"
         }
       },
       "additionalProperties": false,

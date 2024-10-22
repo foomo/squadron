@@ -398,7 +398,7 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) e
 				if err != nil {
 					return err
 				}
-				valueBytes, err := v.ValuesYAML(sq.c.Global, sq.c.Vars)
+				valueBytes, err := v.ValuesYAML(sq.c.Global)
 				if err != nil {
 					return err
 				}
@@ -676,7 +676,7 @@ func (sq *Squadron) Up(ctx context.Context, helmArgs []string, username, version
 				if err != nil {
 					return err
 				}
-				valueBytes, err := v.ValuesYAML(sq.c.Global, sq.c.Vars)
+				valueBytes, err := v.ValuesYAML(sq.c.Global)
 				if err != nil {
 					return err
 				}
@@ -687,7 +687,8 @@ func (sq *Squadron) Up(ctx context.Context, helmArgs []string, username, version
 					Stdin(bytes.NewReader(valueBytes)).
 					Stdout(os.Stdout).
 					Args("upgrade", name, "--install").
-					Args("--set", fmt.Sprintf("squadron=%s,unit=%s", key, k)).
+					Args("--set", fmt.Sprintf("squadron=%s", key)).
+					Args("--set", fmt.Sprintf("unit=%s", k)).
 					Args("--description", string(description)).
 					Args("--namespace", namespace).
 					Args("--dependency-update").
@@ -748,7 +749,7 @@ func (sq *Squadron) Template(ctx context.Context, helmArgs []string, parallel in
 				}
 
 				pterm.Debug.Printfln("running helm template for chart: %s", name)
-				out, err := v.Template(ctx, name, key, k, namespace, sq.c.Global, sq.c.Vars, helmArgs)
+				out, err := v.Template(ctx, name, key, k, namespace, sq.c.Global, helmArgs)
 				if err != nil {
 					return err
 				}

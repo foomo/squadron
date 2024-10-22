@@ -35,21 +35,26 @@ func (d *Chart) UnmarshalYAML(value *yaml.Node) error {
 		if err := value.Decode(&vString); err != nil {
 			return err
 		}
+
 		vBytes, err := template.ExecuteFileTemplate(context.Background(), vString, nil, true)
 		if err != nil {
 			return errors.Wrap(err, "failed to render chart string")
 		}
+
 		localChart, err := loadChart(path.Join(string(vBytes), "Chart.yaml"))
 		if err != nil {
 			return errors.New("failed to load local chart: " + vString)
 		}
+
 		d.Name = localChart.Name
 		d.Repository = fmt.Sprintf("file://%v", vString)
 		d.Version = localChart.Version
+
 		wd, err := os.Getwd()
 		if err != nil {
 			return errors.Wrap(err, "failed to get working directory")
 		}
+
 		schemaPath := string(vBytes)
 		if value, err := filepath.Rel(wd, string(vBytes)); err == nil {
 			schemaPath = value
