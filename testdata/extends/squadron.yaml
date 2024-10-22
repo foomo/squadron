@@ -12,5 +12,6 @@ squadron:
           ONE: foo
           TWO: bar
         tags:
-          - ONE
-          - TWO
+          - THREE
+        null_obj: ~
+        null_tags: ~

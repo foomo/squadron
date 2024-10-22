@@ -5,4 +5,10 @@ env:
   ONE: unknown
   THREE: baz
 tags:
-  - unknown
+  - ONE
+  - TWO
+null_tags:
+  - TWO
+null_obj:
+  ONE: unknown
+  THREE: baz
