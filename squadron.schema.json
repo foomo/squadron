@@ -135,7 +135,7 @@
         },
         "ulimit": {
           "type": "string",
-          "description": "ULimit ulimit options (default []"
+          "description": "ULimit ulimit options (default [])"
         },
         "dependencies": {
           "items": {
@@ -143,6 +143,18 @@
           },
           "type": "array",
           "description": "Dependencies list of build names defined in the squadron configuration"
+        },
+        "quiet": {
+          "type": "boolean",
+          "description": "Suppress the build output and print image ID on succes"
+        },
+        "pull": {
+          "type": "boolean",
+          "description": "Always attempt to pull all referenced images"
+        },
+        "push": {
+          "type": "boolean",
+          "description": "Shorthand for \"--output=type=registry\""
         }
       },
       "additionalProperties": false,

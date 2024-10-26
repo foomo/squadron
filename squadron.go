@@ -239,7 +239,7 @@ func (sq *Squadron) Push(ctx context.Context, pushArgs []string, parallel int) e
 
 					start := time.Now()
 					pterm.Info.Printfln("Push | %s\n└ %s:%s", id, build.Image, build.Tag)
-					if out, err := build.Push(ctx, pushArgs); err != nil {
+					if out, err := build.PushImage(ctx, key, k, pushArgs); err != nil {
 						pterm.Error.Printfln("Push | %s ⏱ %s\n└ %s:%s", id, time.Since(start).Round(time.Millisecond), build.Image, build.Tag)
 						return errors.Wrap(err, out)
 					}
@@ -267,7 +267,7 @@ func (sq *Squadron) BuildDependencies(ctx context.Context, buildArgs []string, p
 
 			start := time.Now()
 			pterm.Info.Printfln("Build | %s\n└ %s:%s", name, build.Image, build.Tag)
-			if out, err := build.Build(ctx, buildArgs); err != nil {
+			if out, err := build.Build(ctx, "", "", buildArgs); err != nil {
 				pterm.Error.Printfln("Build | %s ⏱ %s\n└ %s:%s", name, time.Since(start).Round(time.Millisecond), build.Image, build.Tag)
 				return errors.Wrap(err, out)
 			}
@@ -299,7 +299,7 @@ func (sq *Squadron) Build(ctx context.Context, buildArgs []string, parallel int)
 
 					start := time.Now()
 					pterm.Info.Printfln("Build | %s\n└ %s:%s", id, build.Image, build.Tag)
-					if out, err := build.Build(ctx, buildArgs); err != nil {
+					if out, err := build.Build(ctx, key, k, buildArgs); err != nil {
 						pterm.Error.Printfln("Build | %s ⏱ %s\n└ %s:%s", id, time.Since(start).Round(time.Millisecond), build.Image, build.Tag)
 						return errors.Wrap(err, out)
 					}
