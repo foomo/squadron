@@ -1,9 +1,13 @@
-# Squadron
-
 [![Build Status](https://github.com/foomo/squadron/actions/workflows/pr.yml/badge.svg?branch=main&event=push)](https://github.com/foomo/squadron/actions/workflows/pr.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/foomo/squadron)](https://goreportcard.com/report/github.com/foomo/squadron)
 [![Coverage Status](https://coveralls.io/repos/github/foomo/squadron/badge.svg?branch=main&)](https://coveralls.io/github/foomo/squadron?branch=main)
 [![GoDoc](https://godoc.org/github.com/foomo/squadron?status.svg)](https://godoc.org/github.com/foomo/squadron)
+
+<p align="center">
+  <img alt="squadron" src=".github/assets/squadron.png"/>
+</p>
+
+# Squadron
 
 Application for managing kubernetes microservice environments.
 
@@ -11,7 +15,7 @@ Use it, if a helm chart is not enough in order to organize multiple services int
 
 Another way to think of it would be `helm-compose`, because it makes k8s and helm way more approachable, not matter if it is development or production (where it just becomes another helm chart)
 
-## Quickstart
+## Configuration `squadron.yaml`
 
 Configure your squadron
 
@@ -68,28 +72,38 @@ squadron:
         image: docker.mycompany.com/mycomapny/backend:latest
 ```
 
-Install the squadron squadron and namespace:
+## Usage
 
-```text
-$ squadron up --build --push --namespace default
-```
-
-Uninstall the squadron again:
-
-```text
-$ squadron down
-```
-
-## Commands
-
-```text
-# See:
+```shell
 $ squadron help
+Usage:
+  squadron [command]
+
+Available Commands:
+  build         build or rebuild squadron units
+  completion    Generate completion script
+  config        generate and view the squadron config
+  diff          shows the diff between the installed and local chart
+  down          uninstalls the squadron or given units
+  help          Help about any command
+  list          list squadron units
+  push          pushes the squadron or given units
+  rollback      rolls back the squadron or given units
+  schema        generate squadron json schema
+  status        installs the squadron or given units
+  template      render chart templates locally and display the output
+  up            installs the squadron or given units
+  version       show version information
+
+Flags:
+  -d, --debug          show all output
+  -f, --file strings   specify alternative squadron files (default [squadron.yaml])
+  -h, --help           help for squadron
+  -s, --silent         only show errors
+  -v, --verbose        show more output
+
+Use "squadron [command] --help" for more information about a command.
 ```
-
-## See also
-
-Sometimes as a sailor or a pirate you might need to get a grapple : go get [github.com/foomo/gograpple/...](https//:github.com/foomo/gograpple)
 
 ## How to Contribute
 
@@ -98,3 +112,5 @@ Make a pull request...
 ## License
 
 Distributed under MIT License, please see license file within the code for more details.
+
+_Made with ♥ [foomo](https://www.foomo.org) by [bestbytes](https://www.bestbytes.com)_
