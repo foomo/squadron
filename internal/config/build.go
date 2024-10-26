@@ -142,9 +142,17 @@ func (b *Build) Build(ctx context.Context, squadron, unit string, args []string)
 		Args(cleanArgs...).Run(ctx)
 }
 
-func (b *Build) PushImage(ctx context.Context, args []string) (string, error) {
+func (b *Build) PushImage(ctx context.Context, squadron, unit string, args []string) (string, error) {
+	var cleanArgs []string
+	for _, arg := range args {
+		if value, err := util.RenderTemplateString(arg, map[string]any{"Squadron": squadron, "Unit": unit, "Build": b}); err != nil {
+			return "", err
+		} else {
+			cleanArgs = append(cleanArgs, strings.Split(value, " ")...)
+		}
+	}
 	pterm.Debug.Printfln("running docker push for %s:%s", b.Image, b.Tag)
-	return util.NewDockerCommand().Push(b.Image, b.Tag).Args(args...).Run(ctx)
+	return util.NewDockerCommand().Push(b.Image, b.Tag).Args(cleanArgs...).Run(ctx)
 }
 
 func (b *Build) UnmarshalYAML(value *yaml.Node) error {

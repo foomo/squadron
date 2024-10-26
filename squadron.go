@@ -239,7 +239,7 @@ func (sq *Squadron) Push(ctx context.Context, pushArgs []string, parallel int) e
 
 					start := time.Now()
 					pterm.Info.Printfln("Push | %s\n└ %s:%s", id, build.Image, build.Tag)
-					if out, err := build.PushImage(ctx, pushArgs); err != nil {
+					if out, err := build.PushImage(ctx, key, k, pushArgs); err != nil {
 						pterm.Error.Printfln("Push | %s ⏱ %s\n└ %s:%s", id, time.Since(start).Round(time.Millisecond), build.Image, build.Tag)
 						return errors.Wrap(err, out)
 					}
