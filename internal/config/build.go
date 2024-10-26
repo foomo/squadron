@@ -64,17 +64,31 @@ type Build struct {
 	Image string `json:"image,omitempty" yaml:"image,omitempty"`
 	// Target set the target build stage to build
 	Target string `json:"target,omitempty" yaml:"target,omitempty"`
-	// ULimit ulimit options (default []
+	// ULimit ulimit options (default [])
 	ULimit string `json:"ulimit,omitempty" yaml:"ulimit,omitempty"`
 	// Dependencies list of build names defined in the squadron configuration
 	Dependencies []string `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
+	// Suppress the build output and print image ID on succes
+	Quiet bool `json:"quiet,omitempty" yaml:"quiet,omitempty"`
+	// Always attempt to pull all referenced images
+	Pull bool `json:"pull,omitempty" yaml:"pull,omitempty"`
+	// Shorthand for "--output=type=registry"
+	Push bool `json:"push,omitempty" yaml:"push,omitempty"`
 }
 
 // ------------------------------------------------------------------------------------------------
 // ~ Public methods
 // ------------------------------------------------------------------------------------------------
 
-func (b *Build) Build(ctx context.Context, args []string) (string, error) {
+func (b *Build) Build(ctx context.Context, squadron, unit string, args []string) (string, error) {
+	var cleanArgs []string
+	for _, arg := range args {
+		if value, err := util.RenderTemplateString(arg, map[string]any{"Squadron": squadron, "Unit": unit, "Build": b}); err != nil {
+			return "", err
+		} else {
+			cleanArgs = append(cleanArgs, strings.Split(value, " ")...)
+		}
+	}
 	argOverride := func(name string, vs string, args []string) (string, string) {
 		if slices.ContainsFunc(args, func(s string) bool {
 			return strings.HasPrefix(s, name)
@@ -91,51 +105,44 @@ func (b *Build) Build(ctx context.Context, args []string) (string, error) {
 		}
 		return name, vs
 	}
-	listArgOverride := func(name string, vs, args []string) (string, []string) {
-		if slices.ContainsFunc(args, func(s string) bool {
-			return strings.HasPrefix(s, name)
-		}) {
-			return "", nil
-		}
-		return name, vs
-	}
 
 	pterm.Debug.Printfln("running docker build for %q", b.Context)
 	return util.NewDockerCommand().Build(b.Context).
 		TemplateData(map[string]string{"image": b.Image, "tag": b.Tag}).
-		ListArg(listArgOverride("--add-host", b.AddHost, args)).
-		ListArg(listArgOverride("--allow", b.Allow, args)).
-		ListArg(listArgOverride("--attest", b.Attest, args)).
-		ListArg(listArgOverride("--build-arg", b.BuildArg, args)).
-		ListArg(listArgOverride("--build-contet", b.BuildContext, args)).
+		ListArg("--add-host", b.AddHost).
+		ListArg("--add-host", b.AddHost).
+		ListArg("--allow", b.Allow).
+		ListArg("--attest", b.Attest).
+		ListArg("--build-arg", b.BuildArg).
+		ListArg("--build-contet", b.BuildContext).
 		Arg(argOverride("--builder", b.Builder, args)).
 		Arg(argOverride("--cache-from", b.CacheFrom, args)).
 		Arg(argOverride("--cache-to", b.CacheTo, args)).
 		Arg(argOverride("--file", b.File, args)).
 		Arg(argOverride("--iidfile", b.IIDFile, args)).
-		ListArg(listArgOverride("--label", b.Label, args)).
+		ListArg("--label", b.Label).
 		BoolArg(boolArgOverride("--load", b.Load, args)).
 		Arg(argOverride("--metadata-file", b.MetadataFile, args)).
 		Arg(argOverride("--network", b.Network, args)).
 		BoolArg(boolArgOverride("--no-cache", b.NoCache, args)).
-		ListArg(listArgOverride("--noe-cache-filter", b.NoCacheFilter, args)).
+		ListArg("--noe-cache-filter", b.NoCacheFilter).
 		Arg(argOverride("--output", b.Output, args)).
 		Arg(argOverride("--platform", b.Platform, args)).
 		// Arg("--progress", xxx).
 		// Arg("--provenance", xxx).
-		// Arg("--push", xxx).
-		// Arg("--pull", xxx).
-		// Arg("--quiet", xxx).
-		ListArg(listArgOverride("--secret", b.Secret, args)).
+		BoolArg(boolArgOverride("--push", b.Push, args)).
+		BoolArg(boolArgOverride("--pull", b.Pull, args)).
+		BoolArg(boolArgOverride("--quiet", b.Quiet, args)).
+		ListArg("--secret", b.Secret).
 		Arg(argOverride("--shm-size", b.ShmSize, args)).
 		Arg(argOverride("--ssh", b.SSH, args)).
 		Arg(argOverride("--tag", fmt.Sprintf("%s:%s", b.Image, b.Tag), args)).
 		Arg(argOverride("--target", b.Target, args)).
 		Arg(argOverride("--ulimit", b.ULimit, args)).
-		Args(args...).Run(ctx)
+		Args(cleanArgs...).Run(ctx)
 }
 
-func (b *Build) Push(ctx context.Context, args []string) (string, error) {
+func (b *Build) PushImage(ctx context.Context, args []string) (string, error) {
 	pterm.Debug.Printfln("running docker push for %s:%s", b.Image, b.Tag)
 	return util.NewDockerCommand().Push(b.Image, b.Tag).Args(args...).Run(ctx)
 }
