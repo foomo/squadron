@@ -3,7 +3,6 @@ package config
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"os"
 	"path"
 	"sort"
@@ -112,8 +111,8 @@ func (u *Unit) Template(ctx context.Context, name, squadron, unit, namespace str
 		Args("--dependency-update").
 		Args("--namespace", namespace).
 		Args("--debug").
-		Args("--set", fmt.Sprintf("squadron=%s", squadron)).
-		Args("--set", fmt.Sprintf("unit=%s", unit)).
+		Args("--set", "global.foomo.squadron.name="+squadron).
+		Args("--set", "global.foomo.squadron.unit="+unit).
 		Args(u.PostRendererArgs()...).
 		Args("--values", "-").
 		Args(helmArgs...)

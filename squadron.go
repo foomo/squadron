@@ -411,8 +411,8 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) e
 				cmd := exec.CommandContext(ctx, "helm", "upgrade", name,
 					"--install",
 					"--namespace", namespace,
-					"--set", fmt.Sprintf("squadron=%s", key),
-					"--set", fmt.Sprintf("unit=%s", k),
+					"--set", "global.foomo.squadron.name="+key,
+					"--set", "global.foomo.squadron.unit="+k,
 					"--hide-notes",
 					"--values", "-",
 					"--dry-run",
@@ -687,8 +687,8 @@ func (sq *Squadron) Up(ctx context.Context, helmArgs []string, username, version
 					Stdin(bytes.NewReader(valueBytes)).
 					Stdout(os.Stdout).
 					Args("upgrade", name, "--install").
-					Args("--set", fmt.Sprintf("squadron=%s", key)).
-					Args("--set", fmt.Sprintf("unit=%s", k)).
+					Args("--set", "global.foomo.squadron.name="+key).
+					Args("--set", "global.foomo.squadron.unit="+k).
 					Args("--description", string(description)).
 					Args("--namespace", namespace).
 					Args("--dependency-update").
