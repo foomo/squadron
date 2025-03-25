@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path"
 	"slices"
+	"sort"
 	"strings"
 	"sync"
 
@@ -789,7 +790,11 @@ func (sq *Squadron) Up(ctx context.Context, helmArgs []string, username, version
 
 	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
 		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
-			spinner := printer.NewSpinner(fmt.Sprintf("🚀 | %s/%s", key, k))
+			var priority string
+			if v.Priority != 0 {
+				priority = fmt.Sprintf(" ☝︎ %d", v.Priority)
+			}
+			spinner := printer.NewSpinner(fmt.Sprintf("🚀 | %s/%s", key, k) + priority)
 			all = append(all, one{
 				spinner:  spinner,
 				squadron: key,
@@ -800,6 +805,10 @@ func (sq *Squadron) Up(ctx context.Context, helmArgs []string, username, version
 
 			return nil
 		})
+	})
+
+	sort.Slice(all, func(i, j int) bool {
+		return all[i].item.Priority > all[j].item.Priority
 	})
 
 	for _, a := range all {
