@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/pterm/pterm"
 )
 
 // LoadMap fetches the JSON schema from a given URL
@@ -15,6 +17,7 @@ func LoadMap(ctx context.Context, url string) (map[string]any, error) {
 	var body []byte
 
 	if strings.HasPrefix(url, "http") {
+		pterm.Debug.Printfln("Loading map from %s", url)
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 		if err != nil {
 			return nil, err

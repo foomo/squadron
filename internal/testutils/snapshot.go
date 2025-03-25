@@ -16,7 +16,7 @@ func Snapshot(t *testing.T, name, yaml string) {
 	if *UpdateFlag || snapshot == "" {
 		writeSnapshot(t, name, yaml)
 	}
-	assert.Equal(t, snapshot, yaml)
+	assert.YAMLEq(t, snapshot, yaml)
 }
 
 // writeSnapshot updates the snapshot file for a given test t.

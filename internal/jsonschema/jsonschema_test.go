@@ -1,7 +1,6 @@
 package jsonschema_test
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -17,11 +16,11 @@ func TestJSONSchema(t *testing.T) {
 
 	// Create the JSONSchema object
 	js := jsonschema.New()
-	err := js.LoadBaseSchema(context.TODO(), baseURL)
+	err := js.LoadBaseSchema(t.Context(), baseURL)
 	require.NoError(t, err)
 
 	// Override the base schema
-	err = js.SetSquadronUnitSchema(context.TODO(), "site", "namespace", overrideURL)
+	err = js.SetSquadronUnitSchema(t.Context(), "site", "namespace", overrideURL)
 	require.NoError(t, err)
 
 	// Print the resulting schema

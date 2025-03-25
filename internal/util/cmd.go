@@ -7,8 +7,8 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
-	"github.com/sirupsen/logrus"
 )
 
 type Cmd struct {
@@ -126,19 +126,26 @@ func (c *Cmd) Run(ctx context.Context) (string, error) {
 	if c.cwd != "" {
 		cmd.Dir = c.cwd
 	}
-	pterm.Debug.Printfln("executing %s", cmd.String())
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	traceWriter := logrus.StandardLogger().WriterLevel(logrus.TraceLevel)
 
 	if c.stdin != nil {
 		cmd.Stdin = c.stdin
 	}
-	cmd.Stdout = io.MultiWriter(append(c.stdoutWriters, &stdout, traceWriter)...)
-	cmd.Stderr = io.MultiWriter(append(c.stderrWriters, &stderr, traceWriter)...)
+
+	if value := PTermSpinnerFromContext(ctx); value != nil {
+		c.stdoutWriters = append(c.stdoutWriters, value)
+		c.stderrWriters = append(c.stderrWriters, value)
+	}
+
+	cmd.Stdout = io.MultiWriter(append(c.stdoutWriters, &stdout)...)
+	cmd.Stderr = io.MultiWriter(append(c.stderrWriters, &stderr)...)
 
 	err := cmd.Run()
+	if err != nil {
+		err = errors.Wrap(err, "failed to execute: "+cmd.String())
+	}
 	return stdout.String() + stderr.String(), err
 }
 

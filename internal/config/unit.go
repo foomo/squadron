@@ -23,6 +23,8 @@ type Unit struct {
 	Kustomize string `json:"kustomize,omitempty" yaml:"kustomize,omitempty"`
 	// List of tags
 	Tags Tags `json:"tags,omitempty" yaml:"tags,omitempty"`
+	// Installation priority, higher comes first
+	Priority int `json:"priority,omitempty" yaml:"priority,omitempty"`
 	// Map of containers to build
 	Builds map[string]Build `json:"builds,omitempty" yaml:"builds,omitempty"`
 	// Chart values

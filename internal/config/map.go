@@ -27,7 +27,7 @@ func (m Map[T]) Trim() {
 			continue
 		}
 
-		switch val.Kind() {
+		switch val.Kind() { //nolint:exhaustive
 		case reflect.Map, reflect.Slice:
 			if val.Len() == 0 {
 				delete(m, key)

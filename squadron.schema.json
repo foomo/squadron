@@ -252,6 +252,10 @@
           "$ref": "#/$defs/Tags",
           "description": "List of tags"
         },
+        "priority": {
+          "type": "integer",
+          "description": "Installation priority, higher comes first"
+        },
         "builds": {
           "additionalProperties": {
             "$ref": "#/$defs/Build"
