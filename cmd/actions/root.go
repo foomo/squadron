@@ -1,75 +1,103 @@
 package actions
 
 import (
+	"fmt"
 	"os"
+	"runtime/debug"
 	"strings"
 
+	cowsay "github.com/Code-Hex/Neo-cowsay/v2"
+	"github.com/foomo/squadron/internal/cmd"
 	"github.com/foomo/squadron/internal/util"
+	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var (
-	rootCmd = &cobra.Command{
+	cwd  string
+	root *cobra.Command
+)
+
+func init() {
+	root = NewRoot()
+	root.AddCommand(
+		NewUp(NewViper(root)),
+		NewDiff(NewViper(root)),
+		NewDown(NewViper(root)),
+		NewBuild(NewViper(root)),
+		NewPush(NewViper(root)),
+		NewList(NewViper(root)),
+		NewRollback(NewViper(root)),
+		NewStatus(NewViper(root)),
+		NewConfig(NewViper(root)),
+		NewVersion(NewViper(root)),
+		NewCompletion(NewViper(root)),
+		NewTemplate(NewViper(root)),
+		NewPostRenderer(NewViper(root)),
+		NewSchema(NewViper(root)),
+	)
+}
+
+// NewRoot represents the base command when called without any subcommands
+func NewRoot() *cobra.Command {
+	root := &cobra.Command{
 		Use:           "squadron",
+		Short:         "Docker compose for kubernetes",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			if flagSilent {
-				logrus.SetLevel(logrus.ErrorLevel)
-			} else if flagDebug {
-				logrus.SetLevel(logrus.TraceLevel)
+			if viper.GetBool("debug") {
 				pterm.EnableDebugMessages()
-			} else if flagVerbose {
-				logrus.SetLevel(logrus.InfoLevel)
-			} else {
-				logrus.SetLevel(logrus.WarnLevel)
 			}
 			if cmd.Name() == "help" || cmd.Name() == "init" || cmd.Name() == "version" {
 				return nil
 			}
-			// cwd
 			return util.ValidatePath(".", &cwd)
 		},
 	}
 
-	cwd           string
-	flagSilent    bool
-	flagDebug     bool
-	flagVerbose   bool
-	flagNoRender  bool
-	flagNamespace string
-	flagRevision  string
-	flagBuild     bool
-	flagPush      bool
-	flagParallel  int
-	flagBuildArgs []string
-	flagPushArgs  []string
-	flagTags      []string
-	flagFiles     []string
-)
+	flags := root.PersistentFlags()
+	flags.BoolP("debug", "d", false, "show all output")
+	_ = viper.BindPFlag("debug", root.PersistentFlags().Lookup("debug"))
 
-func init() {
-	rootCmd.PersistentFlags().BoolVarP(&flagSilent, "silent", "s", false, "only show errors")
-	rootCmd.PersistentFlags().BoolVarP(&flagDebug, "debug", "d", false, "show all output")
-	rootCmd.PersistentFlags().BoolVarP(&flagVerbose, "verbose", "v", false, "show more output")
-	rootCmd.PersistentFlags().StringSliceVarP(&flagFiles, "file", "f", []string{"squadron.yaml"}, "specify alternative squadron files")
+	flags.StringSliceP("file", "f", []string{"squadron.yaml"}, "specify alternative squadron files")
 
-	rootCmd.AddCommand(upCmd, diffCmd, downCmd, buildCmd, pushCmd, listCmd, rollbackCmd, statusCmd, configCmd, versionCmd, completionCmd, templateCmd, postRendererCmd, schemaCmd)
+	return root
+}
 
-	pterm.Info = *pterm.Info.WithPrefix(pterm.Prefix{Text: "⎈", Style: pterm.Info.Prefix.Style})
-	pterm.Debug = *pterm.Debug.WithPrefix(pterm.Prefix{Text: "⚒︎", Style: pterm.Debug.Prefix.Style})
-	pterm.Fatal = *pterm.Fatal.WithPrefix(pterm.Prefix{Text: "💀", Style: pterm.Fatal.Prefix.Style})
-	pterm.Error = *pterm.Error.WithPrefix(pterm.Prefix{Text: "⛌", Style: pterm.Error.Prefix.Style})
-	pterm.Warning = *pterm.Info.WithPrefix(pterm.Prefix{Text: "⚠", Style: pterm.Warning.Prefix.Style})
-	pterm.Success = *pterm.Success.WithPrefix(pterm.Prefix{Text: "✓", Style: pterm.Success.Prefix.Style})
+func NewViper(root *cobra.Command) *viper.Viper {
+	c := viper.New()
+	_ = c.BindPFlag("file", root.PersistentFlags().Lookup("file"))
+	return c
 }
 
 func Execute() {
-	if err := rootCmd.Execute(); err != nil {
-		pterm.Error.Println(err.Error())
-		os.Exit(1)
+	l := cmd.NewLogger()
+
+	say := func(msg string) string {
+		if say, cerr := cowsay.Say(msg, cowsay.BallonWidth(80)); cerr == nil {
+			msg = say
+		}
+		return msg
+	}
+
+	code := 0
+	defer func() {
+		if r := recover(); r != nil {
+			l.Error(say("It's time to panic"))
+			l.Error(fmt.Sprintf("%v", r))
+			l.Error(string(debug.Stack()))
+			code = 1
+		}
+		os.Exit(code)
+	}()
+
+	if err := root.Execute(); err != nil {
+		l.Error(say(strings.Split(errors.Cause(err).Error(), ":")[0]))
+		l.Error(util.SprintError(err))
+		code = 1
 	}
 }
 

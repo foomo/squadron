@@ -5,13 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"os/exec"
 	"path"
 	"slices"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/foomo/squadron/internal/config"
 	"github.com/foomo/squadron/internal/jsonschema"
@@ -36,6 +34,13 @@ type Squadron struct {
 	files     []string
 	config    string
 	c         config.Config
+}
+
+type statusDescription struct {
+	ManagedBy  string `json:"managedBy,omitempty"`
+	DeployedBy string `json:"deployedBy,omitempty"`
+	GitCommit  string `json:"gitCommit,omitempty"`
+	GitBranch  string `json:"gitBranch,omitempty"`
 }
 
 func New(basePath, namespace string, files []string) *Squadron {
@@ -71,8 +76,7 @@ func (sq *Squadron) ConfigYAML() string {
 // ------------------------------------------------------------------------------------------------
 
 func (sq *Squadron) MergeConfigFiles(ctx context.Context) error {
-	pterm.Debug.Println("merging config files")
-	pterm.Debug.Println(strings.Join(append([]string{"using files"}, sq.files...), "\n└ "))
+	pterm.Debug.Println(strings.Join(append([]string{"merging config files"}, sq.files...), "\n└ "))
 
 	mergedFiles, err := conflate.FromFiles(sq.files...)
 	if err != nil {
@@ -83,10 +87,12 @@ func (sq *Squadron) MergeConfigFiles(ctx context.Context) error {
 		return errors.Wrap(err, "failed to marshal yaml")
 	}
 	if err := yaml.Unmarshal(fileBytes, &sq.c); err != nil {
+		pterm.Error.Println(string(fileBytes))
 		return err
 	}
 	if sq.c.Version != config.Version {
-		return errors.New("Please upgrade your YAML definition to: " + config.Version)
+		pterm.Debug.Println(string(fileBytes))
+		return errors.New("Please upgrade your YAML definition to from '" + sq.c.Version + "' to '" + config.Version + "'")
 	}
 
 	sq.c.Trim(ctx)
@@ -146,12 +152,10 @@ func (sq *Squadron) FilterConfig(ctx context.Context, squadron string, units, ta
 }
 
 func (sq *Squadron) RenderConfig(ctx context.Context) error {
-	pterm.Debug.Println("rendering config")
-
 	var tv templatex.Vars
 	var vars map[string]any
 	if err := yaml.Unmarshal([]byte(sq.config), &vars); err != nil {
-		return err
+		return errors.Wrap(err, "failed to render config")
 	}
 	// execute again with loaded template vars
 	tv = templatex.Vars{}
@@ -168,23 +172,18 @@ func (sq *Squadron) RenderConfig(ctx context.Context) error {
 		tv.Add("Squadron", value)
 	}
 
-	// execute without errors to get existing values
-	pterm.Debug.Println("executing file template")
-	// pterm.Debug.Println(sq.config)
 	out1, err := templatex.ExecuteFileTemplate(ctx, sq.config, tv, false)
 	if err != nil {
 		return errors.Wrapf(err, "failed to execute initial file template\n%s", util.Highlight(sq.config))
 	}
 
 	// re-execute for rendering copied values
-	pterm.Debug.Println("re-executing file template")
 	out2, err := templatex.ExecuteFileTemplate(ctx, string(out1), tv, false)
 	if err != nil {
 		fmt.Print(util.Highlight(string(out1)))
 		return errors.Wrap(err, "failed to re-execute initial file template")
 	}
 
-	pterm.Debug.Println("unmarshalling vars")
 	if err := yaml.Unmarshal(out2, &vars); err != nil {
 		fmt.Print(util.Highlight(string(out2)))
 		return errors.Wrap(err, "failed to unmarshal vars")
@@ -205,14 +204,12 @@ func (sq *Squadron) RenderConfig(ctx context.Context) error {
 		tv.Add("Squadron", value)
 	}
 
-	pterm.Debug.Println("executing file template")
 	out3, err := templatex.ExecuteFileTemplate(ctx, sq.config, tv, true)
 	if err != nil {
 		fmt.Print(util.Highlight(sq.config))
 		return errors.Wrap(err, "failed to execute second file template")
 	}
 
-	pterm.Debug.Println("unmarshalling vars")
 	if err := yaml.Unmarshal(out3, &sq.c); err != nil {
 		fmt.Print(util.Highlight(string(out3)))
 		return errors.Wrap(err, "failed to unmarshal vars")
@@ -227,29 +224,51 @@ func (sq *Squadron) Push(ctx context.Context, pushArgs []string, parallel int) e
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
+	printer := util.MustNewPTermMultiPrinter()
+	defer printer.Stop()
+
+	type one struct {
+		spinner  *util.PTermSpinner
+		squadron string
+		unit     string
+		item     config.Build
+	}
+	var all []one
+
 	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
 		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 			for _, name := range v.BuildNames() {
 				build := v.Builds[name]
-				id := fmt.Sprintf("%s/%s.%s", key, k, name)
-				wg.Go(func() error {
-					if err := ctx.Err(); err != nil {
-						return err
-					}
-
-					start := time.Now()
-					pterm.Info.Printfln("Push | %s\n└ %s:%s", id, build.Image, build.Tag)
-					if out, err := build.PushImage(ctx, key, k, pushArgs); err != nil {
-						pterm.Error.Printfln("Push | %s ⏱ %s\n└ %s:%s", id, time.Since(start).Round(time.Millisecond), build.Image, build.Tag)
-						return errors.Wrap(err, out)
-					}
-					pterm.Success.Printfln("Push | %s ⏱ %s\n└ %s:%s", id, time.Since(start).Round(time.Millisecond), build.Image, build.Tag)
-					return nil
+				spinner := printer.NewSpinner(fmt.Sprintf("🚚 | %s/%s.%s (%s:%s)", key, k, name, build.Image, build.Tag))
+				all = append(all, one{
+					spinner:  spinner,
+					squadron: key,
+					unit:     k,
+					item:     build,
 				})
+				spinner.Start()
 			}
 			return nil
 		})
 	})
+
+	for _, a := range all {
+		wg.Go(func() error {
+			ctx := a.spinner.Inject(ctx)
+			if err := ctx.Err(); err != nil {
+				a.spinner.Warning(err.Error())
+				return err
+			}
+
+			if out, err := a.item.PushImage(ctx, a.squadron, a.unit, pushArgs); err != nil {
+				a.spinner.Fail(out)
+				return err
+			}
+
+			a.spinner.Success()
+			return nil
+		})
+	}
 
 	return wg.Wait()
 }
@@ -258,20 +277,27 @@ func (sq *Squadron) BuildDependencies(ctx context.Context, buildArgs []string, p
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
+	printer := util.MustNewPTermMultiPrinter()
+	defer printer.Stop()
+
 	dependencies := sq.c.BuildDependencies(ctx)
 	for name, build := range dependencies {
 		wg.Go(func() error {
+			spinner := printer.NewSpinner(fmt.Sprintf("📦 | %s (%s:%s)", name, build.Image, build.Tag))
+			spinner.Start()
+
+			ctx := spinner.Inject(ctx)
 			if err := ctx.Err(); err != nil {
+				spinner.Warning(err.Error())
 				return err
 			}
 
-			start := time.Now()
-			pterm.Info.Printfln("Build | %s\n└ %s:%s", name, build.Image, build.Tag)
 			if out, err := build.Build(ctx, "", "", buildArgs); err != nil {
-				pterm.Error.Printfln("Build | %s ⏱ %s\n└ %s:%s", name, time.Since(start).Round(time.Millisecond), build.Image, build.Tag)
-				return errors.Wrap(err, out)
+				spinner.Fail(out)
+				return err
 			}
-			pterm.Success.Printfln("Build | %s ⏱ %s\n└ %s:%s", name, time.Since(start).Round(time.Millisecond), build.Image, build.Tag)
+
+			spinner.Success()
 			return nil
 		})
 	}
@@ -287,29 +313,51 @@ func (sq *Squadron) Build(ctx context.Context, buildArgs []string, parallel int)
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
+	printer := util.MustNewPTermMultiPrinter()
+	defer printer.Stop()
+
+	type one struct {
+		spinner  *util.PTermSpinner
+		squadron string
+		unit     string
+		item     config.Build
+	}
+	var all []one
+
 	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
 		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 			for _, name := range v.BuildNames() {
 				build := v.Builds[name]
-				id := fmt.Sprintf("%s/%s.%s", key, k, name)
-				wg.Go(func() error {
-					if err := ctx.Err(); err != nil {
-						return err
-					}
-
-					start := time.Now()
-					pterm.Info.Printfln("Build | %s\n└ %s:%s", id, build.Image, build.Tag)
-					if out, err := build.Build(ctx, key, k, buildArgs); err != nil {
-						pterm.Error.Printfln("Build | %s ⏱ %s\n└ %s:%s", id, time.Since(start).Round(time.Millisecond), build.Image, build.Tag)
-						return errors.Wrap(err, out)
-					}
-					pterm.Success.Printfln("Build | %s ⏱ %s\n└ %s:%s", id, time.Since(start).Round(time.Millisecond), build.Image, build.Tag)
-					return nil
+				spinner := printer.NewSpinner(fmt.Sprintf("📦 | %s/%s.%s (%s:%s)", key, k, name, build.Image, build.Tag))
+				all = append(all, one{
+					spinner:  spinner,
+					squadron: key,
+					unit:     k,
+					item:     build,
 				})
+				spinner.Start()
 			}
 			return nil
 		})
 	})
+
+	for _, a := range all {
+		wg.Go(func() error {
+			ctx := a.spinner.Inject(ctx)
+			if err := ctx.Err(); err != nil {
+				a.spinner.Warning(err.Error())
+				return err
+			}
+
+			if out, err := a.item.Build(ctx, a.squadron, a.unit, buildArgs); err != nil {
+				a.spinner.Fail(out)
+				return err
+			}
+
+			a.spinner.Success()
+			return nil
+		})
+	}
 
 	return wg.Wait()
 }
@@ -318,33 +366,37 @@ func (sq *Squadron) Down(ctx context.Context, helmArgs []string, parallel int) e
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
+	printer := util.MustNewPTermMultiPrinter()
+	defer printer.Stop()
+
 	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
 		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 			wg.Go(func() error {
+				spinner := printer.NewSpinner(fmt.Sprintf("🗑️ | %s/%s", key, k))
+				spinner.Start()
+
+				ctx := spinner.Inject(ctx)
 				if err := ctx.Err(); err != nil {
+					spinner.Warning(err.Error())
 					return err
 				}
 
-				start := time.Now()
 				name := fmt.Sprintf("%s-%s", key, k)
 				namespace, err := sq.Namespace(ctx, key, k)
 				if err != nil {
 					return err
 				}
 
-				stdErr := bytes.NewBuffer([]byte{})
-				pterm.Info.Printfln("Down | %s/%s", key, k)
 				if out, err := util.NewHelmCommand().Args("uninstall", name).
-					Stderr(stdErr).
-					Stdout(os.Stdout).
 					Args("--namespace", namespace).
 					Args(helmArgs...).
 					Run(ctx); err != nil &&
-					string(bytes.TrimSpace(stdErr.Bytes())) != fmt.Sprintf("Error: uninstall: Release not loaded: %s: release: not found", name) {
-					pterm.Error.Printfln("Down | %s/%s ⏱ %s", key, k, time.Since(start).Round(time.Millisecond))
-					return errors.Wrap(err, out)
+					strings.TrimSpace(out) != fmt.Sprintf("Error: uninstall: Release not loaded: %s: release: not found", name) {
+					spinner.Fail(out)
+					return err
 				}
-				pterm.Success.Printfln("Down | %s/%s ⏱ %s", key, k, time.Since(start).Round(time.Millisecond))
+
+				spinner.Success()
 				return nil
 			})
 			return nil
@@ -360,7 +412,6 @@ func (sq *Squadron) RenderSchema(ctx context.Context, baseSchema string) (string
 		return "", errors.Wrap(err, "failed to load base schema")
 	}
 
-	pterm.Debug.Println("rendering schema")
 	if err := sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
 		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 			if err := ctx.Err(); err != nil {
@@ -374,22 +425,37 @@ func (sq *Squadron) RenderSchema(ctx context.Context, baseSchema string) (string
 			return js.SetSquadronUnitSchema(ctx, key, k, v.Chart.Schema)
 		})
 	}); err != nil {
-		return "", errors.Wrap(err, "failed to render schema")
+		return "", err
 	}
 
 	return js.PrettyString()
 }
 
-func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) error {
+func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) (string, error) {
 	var m sync.Mutex
+	var ret bytes.Buffer
+	write := func(b []byte) error {
+		m.Lock()
+		defer m.Unlock()
+		_, err := ret.Write(b)
+		return err
+	}
 
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
+	printer := util.MustNewPTermMultiPrinter()
+	defer printer.Stop()
+
 	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
 		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 			wg.Go(func() error {
+				spinner := printer.NewSpinner(fmt.Sprintf("🔍 | %s/%s", key, k))
+				spinner.Start()
+
+				ctx := spinner.Inject(ctx)
 				if err := ctx.Err(); err != nil {
+					spinner.Warning(err.Error())
 					return err
 				}
 
@@ -403,10 +469,10 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) e
 					return err
 				}
 
-				pterm.Debug.Printfln("running helm diff for: %s", k)
 				manifest, err := exec.CommandContext(ctx, "helm", "get", "manifest", name, "--namespace", namespace).CombinedOutput()
 				if err != nil && string(bytes.TrimSpace(manifest)) != errHelmReleaseNotFound {
-					return errors.Wrap(err, string(manifest))
+					spinner.Fail(string(manifest))
+					return err
 				}
 				cmd := exec.CommandContext(ctx, "helm", "upgrade", name,
 					"--install",
@@ -434,19 +500,20 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) e
 				cmd.Args = append(cmd.Args, helmArgs...)
 				out, err := cmd.CombinedOutput()
 				if err != nil {
-					return errors.Wrap(err, string(out))
+					spinner.Fail(string(out))
+					return err
 				}
 
 				yamls1, err := yamldiff.Load(string(manifest))
 				if err != nil {
-					fmt.Print(util.Highlight(string(manifest)))
+					spinner.Fail(string(manifest))
 					return errors.Wrap(err, "failed to load yaml diff")
 				}
 
 				outStr := strings.Split(string(out), "\n")
 				yamls2, err := yamldiff.Load(strings.Join(outStr[10:], "\n"))
 				if err != nil {
-					fmt.Print(util.Highlight(string(out)))
+					spinner.Fail(string(out))
 					return errors.Wrap(err, "failed to load yaml diff")
 				}
 
@@ -455,25 +522,24 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) e
 					res += diff.Dump() + "  ---\n"
 				}
 
-				m.Lock()
-				defer m.Unlock()
-				pterm.Info.Printfln("Diff | %s/%s", key, k)
-				fmt.Print(util.Highlight(res))
+				if err := write([]byte(res)); err != nil {
+					spinner.Fail(res)
+					return err
+				}
 
+				spinner.Success()
 				return nil
 			})
+
 			return nil
 		})
 	})
 
-	return wg.Wait()
-}
+	if err := wg.Wait(); err != nil {
+		return "", err
+	}
 
-type statusDescription struct {
-	ManagedBy  string `json:"managedBy,omitempty"`
-	DeployedBy string `json:"deployedBy,omitempty"`
-	GitCommit  string `json:"gitCommit,omitempty"`
-	GitBranch  string `json:"gitBranch,omitempty"`
+	return ret.String(), nil
 }
 
 func (sq *Squadron) Status(ctx context.Context, helmArgs []string, parallel int) error {
@@ -506,27 +572,46 @@ func (sq *Squadron) Status(ctx context.Context, helmArgs []string, parallel int)
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
+	printer := util.MustNewPTermMultiPrinter()
+	defer printer.Stop()
+
 	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
 		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 			var status statusType
 			name := fmt.Sprintf("%s-%s", key, k)
 			namespace, err := sq.Namespace(ctx, key, k)
 			if err != nil {
-				return err
+				return errors.Errorf("failed to retrieve namsspace: %s/%s", key, k)
 			}
 
-			stdErr := bytes.NewBuffer([]byte{})
-			pterm.Debug.Printfln("running helm status for %s", name)
-			if out, err := util.NewHelmCommand().Args("status", name).
-				Stderr(stdErr).
-				Args("--namespace", namespace, "--output", "json", "--show-desc").
-				Args(helmArgs...).Run(ctx); err != nil && string(bytes.TrimSpace(stdErr.Bytes())) == errHelmReleaseNotFound {
-				tbd = append(tbd, []string{name, "0", "not installed", "", ""})
-			} else if err != nil {
-				return errors.Wrap(err, out)
-			} else if err := json.Unmarshal([]byte(out), &status); err != nil {
-				return errors.Wrap(err, out)
-			} else {
+			wg.Go(func() error {
+				spinner := printer.NewSpinner(fmt.Sprintf("📄 | %s/%s", key, k))
+				spinner.Start()
+
+				ctx := spinner.Inject(ctx)
+				if err := ctx.Err(); err != nil {
+					spinner.Warning(err.Error())
+					return err
+				}
+
+				stdErr := bytes.NewBuffer([]byte{})
+				out, err := util.NewHelmCommand().Args("status", name).
+					Stderr(stdErr).
+					Args("--namespace", namespace, "--output", "json", "--show-desc").
+					Args(helmArgs...).Run(ctx)
+
+				if err != nil && string(bytes.TrimSpace(stdErr.Bytes())) == errHelmReleaseNotFound {
+					tbd = append(tbd, []string{name, "0", "not installed", "", ""})
+				} else if err != nil {
+					spinner.Fail(stdErr.String())
+					return err
+				}
+
+				if err := json.Unmarshal([]byte(out), &status); err != nil {
+					spinner.Fail(out)
+					return errors.Errorf("failed to retrieve status: %s/%s", key, k)
+				}
+
 				var notes []string
 				lines := strings.Split(status.Info.Description, "\n")
 				var statusDescription statusDescription
@@ -565,7 +650,11 @@ func (sq *Squadron) Status(ctx context.Context, helmArgs []string, parallel int)
 					status.Info.LastDeployed,
 					strings.Join(notes, "\n"),
 				})
-			}
+
+				spinner.Success()
+				return nil
+			})
+
 			return nil
 		})
 	})
@@ -574,7 +663,13 @@ func (sq *Squadron) Status(ctx context.Context, helmArgs []string, parallel int)
 		return err
 	}
 
-	return pterm.DefaultTable.WithHasHeader().WithData(tbd).Render()
+	out, err := pterm.DefaultTable.WithHasHeader().WithData(tbd).Srender()
+	if err != nil {
+		return err
+	}
+	pterm.Println(out)
+
+	return nil
 }
 
 func (sq *Squadron) Rollback(ctx context.Context, revision string, helmArgs []string, parallel int) error {
@@ -585,6 +680,9 @@ func (sq *Squadron) Rollback(ctx context.Context, revision string, helmArgs []st
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
+	printer := util.MustNewPTermMultiPrinter()
+	defer printer.Stop()
+
 	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
 		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 			name := fmt.Sprintf("%s-%s", key, k)
@@ -593,17 +691,32 @@ func (sq *Squadron) Rollback(ctx context.Context, revision string, helmArgs []st
 				return err
 			}
 
-			stdErr := bytes.NewBuffer([]byte{})
-			pterm.Debug.Printfln("running helm uninstall for: `%s`", name)
-			if out, err := util.NewHelmCommand().Args("rollback", name).
-				Stderr(stdErr).
-				Stdout(os.Stdout).
-				Args(helmArgs...).
-				Args("--namespace", namespace).
-				Run(ctx); err != nil &&
-				string(bytes.TrimSpace(stdErr.Bytes())) != fmt.Sprintf("Error: uninstall: Release not loaded: %s: release: not found", name) {
-				return errors.Wrap(err, out)
-			}
+			wg.Go(func() error {
+				spinner := printer.NewSpinner(fmt.Sprintf("♻️ | %s/%s", key, k))
+				spinner.Start()
+
+				ctx := spinner.Inject(ctx)
+				if err := ctx.Err(); err != nil {
+					spinner.Warning(err.Error())
+					return err
+				}
+
+				stdErr := bytes.NewBuffer([]byte{})
+				out, err := util.NewHelmCommand().Args("rollback", name).
+					Stderr(stdErr).
+					// Stdout(os.Stdout).
+					Args(helmArgs...).
+					Args("--namespace", namespace).
+					Run(ctx)
+				if err != nil &&
+					string(bytes.TrimSpace(stdErr.Bytes())) != fmt.Sprintf("Error: uninstall: Release not loaded: %s: release: not found", name) {
+					spinner.Fail(stdErr.String())
+					return err
+				}
+
+				spinner.Success(out)
+				return nil
+			})
 
 			return nil
 		})
@@ -664,60 +777,88 @@ func (sq *Squadron) Up(ctx context.Context, helmArgs []string, username, version
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
+	printer := util.MustNewPTermMultiPrinter()
+	defer printer.Stop()
+	type one struct {
+		spinner  *util.PTermSpinner
+		squadron string
+		unit     string
+		item     *config.Unit
+	}
+	var all []one
+
 	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
 		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
-			wg.Go(func() error {
-				if err := ctx.Err(); err != nil {
-					return err
-				}
-
-				name := fmt.Sprintf("%s-%s", key, k)
-				namespace, err := sq.Namespace(ctx, key, k)
-				if err != nil {
-					return err
-				}
-				valueBytes, err := v.ValuesYAML(sq.c.Global)
-				if err != nil {
-					return err
-				}
-
-				// install chart
-				pterm.Debug.Printfln("running helm upgrade for %s", name)
-				cmd := util.NewHelmCommand().
-					Stdin(bytes.NewReader(valueBytes)).
-					Stdout(os.Stdout).
-					Args("upgrade", name, "--install").
-					Args("--set", "global.foomo.squadron.name="+key).
-					Args("--set", "global.foomo.squadron.unit="+k).
-					Args("--description", string(description)).
-					Args("--namespace", namespace).
-					Args("--dependency-update").
-					Args(v.PostRendererArgs()...).
-					Args("--install").
-					Args("--values", "-").
-					Args(helmArgs...)
-
-				if strings.HasPrefix(v.Chart.Repository, "file://") {
-					cmd.Args(path.Clean(strings.TrimPrefix(v.Chart.Repository, "file://")))
-				} else {
-					cmd.Args(v.Chart.Name)
-					if v.Chart.Repository != "" {
-						cmd.Args("--repo", v.Chart.Repository)
-					}
-					if v.Chart.Version != "" {
-						cmd.Args("--version", v.Chart.Version)
-					}
-				}
-
-				if out, err := cmd.Run(ctx); err != nil {
-					return errors.Wrap(err, out)
-				}
-
-				return nil
+			spinner := printer.NewSpinner(fmt.Sprintf("🚀 | %s/%s", key, k))
+			all = append(all, one{
+				spinner:  spinner,
+				squadron: key,
+				unit:     k,
+				item:     v,
 			})
+			spinner.Start()
+
 			return nil
 		})
 	})
+
+	for _, a := range all {
+		wg.Go(func() error {
+			ctx := a.spinner.Inject(ctx)
+			if err := ctx.Err(); err != nil {
+				a.spinner.Warning(err.Error())
+				return err
+			}
+
+			name := fmt.Sprintf("%s-%s", a.squadron, a.unit)
+			namespace, err := sq.Namespace(ctx, a.squadron, a.unit)
+			if err != nil {
+				a.spinner.Fail(err.Error())
+				return err
+			}
+			valueBytes, err := a.item.ValuesYAML(sq.c.Global)
+			if err != nil {
+				a.spinner.Fail(err.Error())
+				return err
+			}
+
+			// install chart
+			cmd := util.NewHelmCommand().
+				Stdin(bytes.NewReader(valueBytes)).
+				// Stdout(os.Stdout).
+				Args("upgrade", name, "--install").
+				Args("--set", "global.foomo.squadron.name="+a.squadron).
+				Args("--set", "global.foomo.squadron.unit="+a.unit).
+				Args("--description", string(description)).
+				Args("--namespace", namespace).
+				Args("--dependency-update").
+				Args(a.item.PostRendererArgs()...).
+				Args("--install").
+				Args("--values", "-").
+				Args(helmArgs...)
+
+			if strings.HasPrefix(a.item.Chart.Repository, "file://") {
+				cmd.Args(path.Clean(strings.TrimPrefix(a.item.Chart.Repository, "file://")))
+			} else {
+				cmd.Args(a.item.Chart.Name)
+				if a.item.Chart.Repository != "" {
+					cmd.Args("--repo", a.item.Chart.Repository)
+				}
+				if a.item.Chart.Version != "" {
+					cmd.Args("--version", a.item.Chart.Version)
+				}
+			}
+
+			out, err := cmd.Run(ctx)
+			if err != nil {
+				a.spinner.Fail(out)
+				return err
+			}
+
+			a.spinner.Success()
+			return nil
+		})
+	}
 
 	return wg.Wait()
 }
@@ -735,26 +876,41 @@ func (sq *Squadron) Template(ctx context.Context, helmArgs []string, parallel in
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
+	printer := util.MustNewPTermMultiPrinter()
+	defer printer.Stop()
+
 	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
 		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 			wg.Go(func() error {
+				spinner := printer.NewSpinner(fmt.Sprintf("🧾 | %s/%s", key, k))
+				spinner.Start()
+
+				ctx := spinner.Inject(ctx)
 				if err := ctx.Err(); err != nil {
+					spinner.Warning(err.Error())
 					return err
 				}
 
 				name := fmt.Sprintf("%s-%s", key, k)
 				namespace, err := sq.Namespace(ctx, key, k)
 				if err != nil {
-					return err
+					spinner.Fail(err.Error())
+					return errors.Errorf("failed to retrieve namsspace: %s/%s", key, k)
 				}
 
-				pterm.Debug.Printfln("running helm template for chart: %s", name)
 				out, err := v.Template(ctx, name, key, k, namespace, sq.c.Global, helmArgs)
 				if err != nil {
+					spinner.Fail(string(out))
 					return err
 				}
 
-				return write(out)
+				if err := write(out); err != nil {
+					spinner.Fail(string(out))
+					return err
+				}
+
+				spinner.Success()
+				return nil
 			})
 
 			return nil

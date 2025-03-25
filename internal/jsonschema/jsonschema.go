@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"path"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 // JSONSchema represents the structure of a JSON schema
@@ -50,7 +52,7 @@ func (js *JSONSchema) SetSquadronUnitSchema(ctx context.Context, squardon, unit,
 	if _, ok := defsMap[ref]; !ok {
 		valuesMap, err := LoadMap(ctx, url)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to load map: "+url)
 		}
 		delete(valuesMap, "$schema")
 		js.ensure(defsMap, ref, valuesMap)

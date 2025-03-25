@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/pkg/errors"
 	k8s "k8s.io/api/apps/v1"
 )
 
@@ -45,7 +46,7 @@ func (c KubeCmd) GetMostRecentPodBySelectors(ctx context.Context, selectors map[
 	if len(pods) > 0 {
 		return pods[len(pods)-1], nil
 	}
-	return "", fmt.Errorf("no pods found")
+	return "", errors.New("no pods found")
 }
 
 func (c KubeCmd) WaitForPodState(pod, condition, timeout string) *Cmd {
