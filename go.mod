@@ -1,7 +1,6 @@
 module github.com/foomo/squadron
 
 go 1.24.1
-
 replace github.com/miracl/conflate => github.com/runz0rd/conflate v1.2.2-0.20210920145208-fa48576ef06d
 
 require (
@@ -17,7 +16,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.80
 	github.com/spf13/cobra v1.9.1
-	github.com/spf13/viper v1.20.0
+	github.com/spf13/viper v1.20.1
 	github.com/sters/yaml-diff v1.4.1
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/sync v0.12.0
