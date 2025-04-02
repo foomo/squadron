@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 
+	ptermx "github.com/foomo/squadron/internal/pterm"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 )
@@ -134,7 +135,7 @@ func (c *Cmd) Run(ctx context.Context) (string, error) {
 		cmd.Stdin = c.stdin
 	}
 
-	if value := PTermSpinnerFromContext(ctx); value != nil {
+	if value, ok := ptermx.SpinnerFromContext(ctx); ok {
 		c.stdoutWriters = append(c.stdoutWriters, value)
 		c.stderrWriters = append(c.stderrWriters, value)
 	}

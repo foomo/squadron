@@ -6,95 +6,6 @@ run:
   modules-download-mode: readonly
 linters:
   default: none
-  settings:
-    exhaustive:
-      default-signifies-exhaustive: true
-    goconst:
-      ignore-strings: '!!.+'
-    gocritic:
-      disabled-checks:
-        - ifElseChain
-        - commentFormatting
-    gomoddirectives:
-      replace-allow-list:
-        - github.com/miracl/conflate
-    gosec:
-      excludes:
-        - G204
-      confidence: medium
-    importas:
-      no-unaliased: true
-    misspell:
-      mode: restricted
-    predeclared:
-      ignore:
-        - new
-        - error
-    revive:
-      enable-all-rules: true
-      rules:
-        - name: line-length-limit
-          disabled: true
-        - name: cognitive-complexity
-          disabled: true
-        - name: unused-parameter
-          disabled: true
-        - name: add-constant
-          disabled: true
-        - name: cyclomatic
-          disabled: true
-        - name: function-length
-          disabled: true
-        - name: function-result-limit
-          disabled: true
-        - name: flag-parameter
-          disabled: true
-        - name: unused-receiver
-          disabled: true
-        - name: argument-limit
-          disabled: true
-        - name: max-control-nesting
-          disabled: true
-        - name: comment-spacings
-          disabled: true
-        - name: struct-tag
-          arguments:
-            - json,inline
-            - yaml,squash
-        - name: unhandled-error
-          arguments:
-            - fmt.Printf
-            - fmt.Println
-        - name: deep-exit
-          disabled: true
-        - name: empty-block
-          disabled: true
-        - name: nested-structs
-          disabled: true
-        - name: unhandled-error
-          disabled: true
-        - name: indent-error-flow
-          disabled: true
-    testifylint:
-      disable:
-        - float-compare
-  exclusions:
-    generated: lax
-    presets:
-      - comments
-      - common-false-positives
-      - legacy
-      - std-error-handling
-    rules:
-      - linters:
-          - asasalint
-        path: (.+)_test\.go
-    paths:
-      - bin
-      - tmp
-      - third_party$
-      - builtin$
-      - examples$
   enable:
     ## Default linters
     - errcheck # errcheck is a program for checking for unchecked errors in Go code. These unchecked errors can be critical bugs in some cases [fast: false, auto-fix: false]
@@ -206,7 +117,95 @@ linters:
     #- wrapcheck # Checks that errors returned from external packages are wrapped [fast: false, auto-fix: false]
     #- wsl # add or remove empty lines [fast: true, auto-fix: false]
     #- zerologlint # Detects the wrong usage of `zerolog` that a user forgets to dispatch with `Send` or `Msg` [fast: false, auto-fix: false]
-
+  settings:
+    exhaustive:
+      default-signifies-exhaustive: true
+    goconst:
+      ignore-strings: '!!.+'
+    gocritic:
+      disabled-checks:
+        - ifElseChain
+        - commentFormatting
+    gomoddirectives:
+      replace-allow-list:
+        - github.com/miracl/conflate
+    gosec:
+      excludes:
+        - G204
+      confidence: medium
+    importas:
+      no-unaliased: true
+    misspell:
+      mode: restricted
+    predeclared:
+      ignore:
+        - new
+        - error
+    revive:
+      enable-all-rules: true
+      rules:
+        - name: line-length-limit
+          disabled: true
+        - name: cognitive-complexity
+          disabled: true
+        - name: unused-parameter
+          disabled: true
+        - name: add-constant
+          disabled: true
+        - name: cyclomatic
+          disabled: true
+        - name: function-length
+          disabled: true
+        - name: function-result-limit
+          disabled: true
+        - name: flag-parameter
+          disabled: true
+        - name: unused-receiver
+          disabled: true
+        - name: argument-limit
+          disabled: true
+        - name: max-control-nesting
+          disabled: true
+        - name: comment-spacings
+          disabled: true
+        - name: struct-tag
+          arguments:
+            - json,inline
+            - yaml,squash
+        - name: unhandled-error
+          arguments:
+            - fmt.Printf
+            - fmt.Println
+        - name: deep-exit
+          disabled: true
+        - name: empty-block
+          disabled: true
+        - name: nested-structs
+          disabled: true
+        - name: unhandled-error
+          disabled: true
+        - name: indent-error-flow
+          disabled: true
+    testifylint:
+      disable:
+        - float-compare
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - asasalint
+        path: (.+)_test\.go
+    paths:
+      - bin
+      - tmp
+      - third_party$
+      - builtin$
+      - examples$
 formatters:
   enable:
     - gofmt

@@ -1,7 +1,6 @@
-package util
+package pterm
 
 import (
-	"context"
 	"io"
 	"strings"
 	"time"
@@ -9,11 +8,7 @@ import (
 	"github.com/pterm/pterm"
 )
 
-type contextKey string
-
-const contextKeyPTermSpinner contextKey = "PtermSpinner"
-
-type PTermSpinner struct {
+type StandardSpinner struct {
 	printer *pterm.SpinnerPrinter
 	prefix  string
 	stopped bool
@@ -21,8 +16,8 @@ type PTermSpinner struct {
 	log     []string
 }
 
-func NewPTermSpinner(writer io.Writer, prefix string) *PTermSpinner {
-	return &PTermSpinner{
+func NewStandardSpinner(writer io.Writer, prefix string) *StandardSpinner {
+	return &StandardSpinner{
 		printer: pterm.DefaultSpinner.WithWriter(writer).
 			WithDelay(500*time.Millisecond).
 			WithSequence("▀  ", " ▀ ", " ▄ ", "▄  ").
@@ -31,18 +26,7 @@ func NewPTermSpinner(writer io.Writer, prefix string) *PTermSpinner {
 	}
 }
 
-func PTermSpinnerFromContext(ctx context.Context) *PTermSpinner {
-	if value, ok := ctx.Value(contextKeyPTermSpinner).(*PTermSpinner); ok {
-		return value
-	}
-	return nil
-}
-
-func (s *PTermSpinner) Inject(ctx context.Context) context.Context {
-	return context.WithValue(ctx, contextKeyPTermSpinner, s)
-}
-
-func (s *PTermSpinner) Start(message ...string) {
+func (s *StandardSpinner) Start(message ...string) {
 	var err error
 	if s.printer, err = s.printer.Start(s.message(message...)); err != nil {
 		pterm.Fatal.Println(err)
@@ -50,27 +34,27 @@ func (s *PTermSpinner) Start(message ...string) {
 	s.start = time.Now()
 }
 
-func (s *PTermSpinner) Info(message ...string) {
+func (s *StandardSpinner) Info(message ...string) {
 	s.stopped = true
 	s.printer.Info(s.message(message...))
 }
 
-func (s *PTermSpinner) Warning(message ...string) {
+func (s *StandardSpinner) Warning(message ...string) {
 	s.stopped = true
 	s.printer.Warning(s.message(message...))
 }
 
-func (s *PTermSpinner) Fail(message ...string) {
+func (s *StandardSpinner) Fail(message ...string) {
 	s.stopped = true
 	s.printer.Fail(s.message(message...))
 }
 
-func (s *PTermSpinner) Success(message ...string) {
+func (s *StandardSpinner) Success(message ...string) {
 	s.stopped = true
 	s.printer.Success(s.message(message...))
 }
 
-func (s *PTermSpinner) Write(p []byte) (int, error) {
+func (s *StandardSpinner) Write(p []byte) (int, error) {
 	var lines []string
 	for _, line := range strings.Split(string(p), "\n") {
 		if line := strings.TrimSpace(line); len(line) > 0 {
@@ -82,16 +66,22 @@ func (s *PTermSpinner) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-func (s *PTermSpinner) message(message ...string) string {
-	msg := s.prefix
+func (s *StandardSpinner) message(message ...string) string {
+	msg := []string{s.prefix}
 	if !s.start.IsZero() && s.stopped {
-		msg += " ⏱ " + time.Since(s.start).Round(0).String()
+		msg[0] += " ⏱ " + time.Since(s.start).Round(0).String()
 	}
 	if value := strings.Join(message, " "); len(value) > 0 {
-		msg += "\n" + value
+		msg = append(msg, value)
 	}
 	if pterm.PrintDebugMessages {
-		msg += "\n" + strings.Join(s.log, "\n")
+		msg = append(msg, s.log...)
 	}
-	return strings.TrimSpace(strings.ReplaceAll(msg, "\n", "\n "))
+	m := pterm.GetTerminalWidth() - 10
+	for i, line := range msg {
+		if len(line) > m {
+			msg[i] = line[:m] + "…"
+		}
+	}
+	return strings.Join(msg, "\n  ")
 }

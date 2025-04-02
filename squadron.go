@@ -14,6 +14,7 @@ import (
 
 	"github.com/foomo/squadron/internal/config"
 	"github.com/foomo/squadron/internal/jsonschema"
+	ptermx "github.com/foomo/squadron/internal/pterm"
 	templatex "github.com/foomo/squadron/internal/template"
 	"github.com/foomo/squadron/internal/util"
 	"github.com/miracl/conflate"
@@ -225,11 +226,11 @@ func (sq *Squadron) Push(ctx context.Context, pushArgs []string, parallel int) e
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
-	printer := util.MustNewPTermMultiPrinter()
+	printer := ptermx.MustNewMultiPrinter()
 	defer printer.Stop()
 
 	type one struct {
-		spinner  *util.PTermSpinner
+		spinner  ptermx.Spinner
 		squadron string
 		unit     string
 		item     config.Build
@@ -255,7 +256,7 @@ func (sq *Squadron) Push(ctx context.Context, pushArgs []string, parallel int) e
 
 	for _, a := range all {
 		wg.Go(func() error {
-			ctx := a.spinner.Inject(ctx)
+			ctx := ptermx.ContextWithSpinner(ctx, a.spinner)
 			if err := ctx.Err(); err != nil {
 				a.spinner.Warning(err.Error())
 				return err
@@ -278,7 +279,7 @@ func (sq *Squadron) BuildDependencies(ctx context.Context, buildArgs []string, p
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
-	printer := util.MustNewPTermMultiPrinter()
+	printer := ptermx.MustNewMultiPrinter()
 	defer printer.Stop()
 
 	dependencies := sq.c.BuildDependencies(ctx)
@@ -287,7 +288,7 @@ func (sq *Squadron) BuildDependencies(ctx context.Context, buildArgs []string, p
 			spinner := printer.NewSpinner(fmt.Sprintf("📦 | %s (%s:%s)", name, build.Image, build.Tag))
 			spinner.Start()
 
-			ctx := spinner.Inject(ctx)
+			ctx := ptermx.ContextWithSpinner(ctx, spinner)
 			if err := ctx.Err(); err != nil {
 				spinner.Warning(err.Error())
 				return err
@@ -314,11 +315,11 @@ func (sq *Squadron) Build(ctx context.Context, buildArgs []string, parallel int)
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
-	printer := util.MustNewPTermMultiPrinter()
+	printer := ptermx.MustNewMultiPrinter()
 	defer printer.Stop()
 
 	type one struct {
-		spinner  *util.PTermSpinner
+		spinner  ptermx.Spinner
 		squadron string
 		unit     string
 		item     config.Build
@@ -344,7 +345,7 @@ func (sq *Squadron) Build(ctx context.Context, buildArgs []string, parallel int)
 
 	for _, a := range all {
 		wg.Go(func() error {
-			ctx := a.spinner.Inject(ctx)
+			ctx := ptermx.ContextWithSpinner(ctx, a.spinner)
 			if err := ctx.Err(); err != nil {
 				a.spinner.Warning(err.Error())
 				return err
@@ -367,7 +368,7 @@ func (sq *Squadron) Down(ctx context.Context, helmArgs []string, parallel int) e
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
-	printer := util.MustNewPTermMultiPrinter()
+	printer := ptermx.MustNewMultiPrinter()
 	defer printer.Stop()
 
 	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
@@ -376,7 +377,7 @@ func (sq *Squadron) Down(ctx context.Context, helmArgs []string, parallel int) e
 				spinner := printer.NewSpinner(fmt.Sprintf("🗑️ | %s/%s", key, k))
 				spinner.Start()
 
-				ctx := spinner.Inject(ctx)
+				ctx := ptermx.ContextWithSpinner(ctx, spinner)
 				if err := ctx.Err(); err != nil {
 					spinner.Warning(err.Error())
 					return err
@@ -391,7 +392,10 @@ func (sq *Squadron) Down(ctx context.Context, helmArgs []string, parallel int) e
 				if out, err := util.NewHelmCommand().Args("uninstall", name).
 					Args("--namespace", namespace).
 					Args(helmArgs...).
-					Run(ctx); err != nil &&
+					Run(ctx); errors.Is(err, context.Canceled) {
+					spinner.Fail(err.Error())
+					return err
+				} else if err != nil &&
 					strings.TrimSpace(out) != fmt.Sprintf("Error: uninstall: Release not loaded: %s: release: not found", name) {
 					spinner.Fail(out)
 					return err
@@ -445,7 +449,7 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) (
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
-	printer := util.MustNewPTermMultiPrinter()
+	printer := ptermx.MustNewMultiPrinter()
 	defer printer.Stop()
 
 	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
@@ -454,7 +458,7 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) (
 				spinner := printer.NewSpinner(fmt.Sprintf("🔍 | %s/%s", key, k))
 				spinner.Start()
 
-				ctx := spinner.Inject(ctx)
+				ctx := ptermx.ContextWithSpinner(ctx, spinner)
 				if err := ctx.Err(); err != nil {
 					spinner.Warning(err.Error())
 					return err
@@ -573,7 +577,7 @@ func (sq *Squadron) Status(ctx context.Context, helmArgs []string, parallel int)
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
-	printer := util.MustNewPTermMultiPrinter()
+	printer := ptermx.MustNewMultiPrinter()
 	defer printer.Stop()
 
 	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
@@ -589,7 +593,7 @@ func (sq *Squadron) Status(ctx context.Context, helmArgs []string, parallel int)
 				spinner := printer.NewSpinner(fmt.Sprintf("📄 | %s/%s", key, k))
 				spinner.Start()
 
-				ctx := spinner.Inject(ctx)
+				ctx := ptermx.ContextWithSpinner(ctx, spinner)
 				if err := ctx.Err(); err != nil {
 					spinner.Warning(err.Error())
 					return err
@@ -601,7 +605,10 @@ func (sq *Squadron) Status(ctx context.Context, helmArgs []string, parallel int)
 					Args("--namespace", namespace, "--output", "json", "--show-desc").
 					Args(helmArgs...).Run(ctx)
 
-				if err != nil && string(bytes.TrimSpace(stdErr.Bytes())) == errHelmReleaseNotFound {
+				if errors.Is(err, context.Canceled) {
+					spinner.Fail(err.Error())
+					return err
+				} else if err != nil && string(bytes.TrimSpace(stdErr.Bytes())) == errHelmReleaseNotFound {
 					tbd = append(tbd, []string{name, "0", "not installed", "", ""})
 				} else if err != nil {
 					spinner.Fail(stdErr.String())
@@ -681,7 +688,7 @@ func (sq *Squadron) Rollback(ctx context.Context, revision string, helmArgs []st
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
-	printer := util.MustNewPTermMultiPrinter()
+	printer := ptermx.MustNewMultiPrinter()
 	defer printer.Stop()
 
 	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
@@ -696,7 +703,7 @@ func (sq *Squadron) Rollback(ctx context.Context, revision string, helmArgs []st
 				spinner := printer.NewSpinner(fmt.Sprintf("♻️ | %s/%s", key, k))
 				spinner.Start()
 
-				ctx := spinner.Inject(ctx)
+				ctx := ptermx.ContextWithSpinner(ctx, spinner)
 				if err := ctx.Err(); err != nil {
 					spinner.Warning(err.Error())
 					return err
@@ -709,7 +716,10 @@ func (sq *Squadron) Rollback(ctx context.Context, revision string, helmArgs []st
 					Args(helmArgs...).
 					Args("--namespace", namespace).
 					Run(ctx)
-				if err != nil &&
+				if errors.Is(err, context.Canceled) {
+					spinner.Fail(err.Error())
+					return err
+				} else if err != nil &&
 					string(bytes.TrimSpace(stdErr.Bytes())) != fmt.Sprintf("Error: uninstall: Release not loaded: %s: release: not found", name) {
 					spinner.Fail(stdErr.String())
 					return err
@@ -778,10 +788,10 @@ func (sq *Squadron) Up(ctx context.Context, helmArgs []string, username, version
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
-	printer := util.MustNewPTermMultiPrinter()
+	printer := ptermx.MustNewMultiPrinter()
 	defer printer.Stop()
 	type one struct {
-		spinner  *util.PTermSpinner
+		spinner  ptermx.Spinner
 		squadron string
 		unit     string
 		item     *config.Unit
@@ -813,7 +823,7 @@ func (sq *Squadron) Up(ctx context.Context, helmArgs []string, username, version
 
 	for _, a := range all {
 		wg.Go(func() error {
-			ctx := a.spinner.Inject(ctx)
+			ctx := ptermx.ContextWithSpinner(ctx, a.spinner)
 			if err := ctx.Err(); err != nil {
 				a.spinner.Warning(err.Error())
 				return err
@@ -859,7 +869,10 @@ func (sq *Squadron) Up(ctx context.Context, helmArgs []string, username, version
 			}
 
 			out, err := cmd.Run(ctx)
-			if err != nil {
+			if errors.Is(err, context.Canceled) {
+				a.spinner.Fail(err.Error())
+				return err
+			} else if err != nil {
 				a.spinner.Fail(out)
 				return err
 			}
@@ -885,7 +898,7 @@ func (sq *Squadron) Template(ctx context.Context, helmArgs []string, parallel in
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
-	printer := util.MustNewPTermMultiPrinter()
+	printer := ptermx.MustNewMultiPrinter()
 	defer printer.Stop()
 
 	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
@@ -894,7 +907,7 @@ func (sq *Squadron) Template(ctx context.Context, helmArgs []string, parallel in
 				spinner := printer.NewSpinner(fmt.Sprintf("🧾 | %s/%s", key, k))
 				spinner.Start()
 
-				ctx := spinner.Inject(ctx)
+				ctx := ptermx.ContextWithSpinner(ctx, spinner)
 				if err := ctx.Err(); err != nil {
 					spinner.Warning(err.Error())
 					return err
