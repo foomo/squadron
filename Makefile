@@ -22,20 +22,16 @@ export PATH := bin:$(PATH)
 
 ## === Tasks ===
 
-.PHONY: brew
-## Install project binaries
-brew:
-	@ownbrew install
-
 .PHONY: doc
 ## Run tests
 doc:
-	@open "http://localhost:6060/pkg/github.com/foomo/keel/"
+	@open "http://localhost:6060/pkg/github.com/foomo/squadron/"
 	@godoc -http=localhost:6060 -play
 
 .PHONY: test
 ## Run tests
 test:
+	# see https://github.com/pterm/pterm/issues/482
 	#GO_TEST_TAGS=-skip go test -coverprofile=coverage.out -race -json ./... | gotestfmt
 	@GO_TEST_TAGS=-skip go test -coverprofile=coverage.out -json ./... | gotestfmt
 
