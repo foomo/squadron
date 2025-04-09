@@ -712,7 +712,6 @@ func (sq *Squadron) Rollback(ctx context.Context, revision string, helmArgs []st
 				stdErr := bytes.NewBuffer([]byte{})
 				out, err := util.NewHelmCommand().Args("rollback", name).
 					Stderr(stdErr).
-					// Stdout(os.Stdout).
 					Args(helmArgs...).
 					Args("--namespace", namespace).
 					Run(ctx)
