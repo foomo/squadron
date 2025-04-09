@@ -19,8 +19,8 @@ type StandardSpinner struct {
 func NewStandardSpinner(writer io.Writer, prefix string) *StandardSpinner {
 	return &StandardSpinner{
 		printer: pterm.DefaultSpinner.WithWriter(writer).
-			WithDelay(500*time.Millisecond).
-			WithSequence("▀  ", " ▀ ", " ▄ ", "▄  ").
+			WithSequence(" ⠋ ", " ⠙ ", " ⠹ ", " ⠸ ", " ⠼ ", " ⠴ ", " ⠦ ", " ⠧ ", " ⠇ ", " ⠏ ").
+			WithDelay(500 * time.Millisecond).
 			WithShowTimer(false),
 		prefix: prefix,
 	}
