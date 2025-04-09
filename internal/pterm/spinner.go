@@ -6,6 +6,7 @@ import (
 
 type Spinner interface {
 	Start(message ...string)
+	Play()
 	Info(message ...string)
 	Warning(message ...string)
 	Fail(message ...string)
