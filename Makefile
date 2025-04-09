@@ -1,10 +1,6 @@
 .DEFAULT_GOAL:=help
 -include .makerc
 
-# --- Config -----------------------------------------------------------------
-
-export PATH := bin:$(PATH)
-
 # --- Targets -----------------------------------------------------------------
 
 # This allows us to accept extra arguments
