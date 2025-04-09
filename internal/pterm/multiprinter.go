@@ -14,7 +14,7 @@ type MultiPrinter interface {
 func MustNewMultiPrinter() MultiPrinter {
 	var err error
 	var value MultiPrinter
-	if os.Getenv("CI") == "true" {
+	if _, ok := os.LookupEnv("CI"); ok {
 		value, err = NewNoopMultiPrinter()
 	} else {
 		value, err = NewStandardMultiPrinter()
