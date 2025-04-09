@@ -19,8 +19,8 @@ type StandardSpinner struct {
 func NewStandardSpinner(writer io.Writer, prefix string) *StandardSpinner {
 	return &StandardSpinner{
 		printer: pterm.DefaultSpinner.WithWriter(writer).
-			WithSequence(" ⠋ ", " ⠙ ", " ⠹ ", " ⠸ ", " ⠼ ", " ⠴ ", " ⠦ ", " ⠧ ", " ⠇ ", " ⠏ ").
-			WithDelay(500 * time.Millisecond).
+			WithSequence(" ⏸︎ ").
+			WithDelay(300 * time.Millisecond).
 			WithShowTimer(false),
 		prefix: prefix,
 	}
@@ -32,6 +32,10 @@ func (s *StandardSpinner) Start(message ...string) {
 		pterm.Fatal.Println(err)
 	}
 	s.start = time.Now()
+}
+
+func (s *StandardSpinner) Play() {
+	s.printer.Sequence = []string{" ⠋ ", " ⠙ ", " ⠹ ", " ⠸ ", " ⠼ ", " ⠴ ", " ⠦ ", " ⠧ ", " ⠇ ", " ⠏ "}
 }
 
 func (s *StandardSpinner) Info(message ...string) {
@@ -62,26 +66,25 @@ func (s *StandardSpinner) Write(p []byte) (int, error) {
 		}
 	}
 	s.log = append(s.log, lines...)
-	// s.printer.UpdateText(s.message())
 	return len(p), nil
 }
 
 func (s *StandardSpinner) message(message ...string) string {
 	msg := []string{s.prefix}
 	if !s.start.IsZero() && s.stopped {
-		msg[0] += " ⏱ " + time.Since(s.start).Round(0).String()
+		msg[0] += " ⏱ " + time.Since(s.start).Round(time.Second).String()
+	}
+	width := pterm.GetTerminalWidth() - 10
+	for i, line := range msg {
+		if len(line) > width {
+			msg[i] = line[:width] + "…"
+		}
 	}
 	if value := strings.Join(message, " "); len(value) > 0 {
 		msg = append(msg, value)
 	}
 	if pterm.PrintDebugMessages {
 		msg = append(msg, s.log...)
-	}
-	m := pterm.GetTerminalWidth() - 10
-	for i, line := range msg {
-		if len(line) > m {
-			msg[i] = line[:m] + "…"
-		}
 	}
 	return strings.Join(msg, "\n  ")
 }

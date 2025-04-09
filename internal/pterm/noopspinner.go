@@ -22,6 +22,9 @@ func NewNoopSpinner(prefix string) *NoopSpinner {
 
 func (s *NoopSpinner) Start(message ...string) {
 	pterm.Info.Println(s.message(message...))
+}
+
+func (s *NoopSpinner) Play() {
 	s.start = time.Now()
 }
 
@@ -60,7 +63,7 @@ func (s *NoopSpinner) Write(p []byte) (int, error) {
 func (s *NoopSpinner) message(message ...string) string {
 	msg := []string{s.prefix}
 	if !s.start.IsZero() && s.stopped {
-		msg[0] += " ⏱ " + time.Since(s.start).Round(0).String()
+		msg[0] += " ⏱ " + time.Since(s.start).Round(2).String()
 	}
 	if value := strings.Join(message, " "); len(value) > 0 {
 		msg = append(msg, value)

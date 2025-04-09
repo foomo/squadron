@@ -256,6 +256,8 @@ func (sq *Squadron) Push(ctx context.Context, pushArgs []string, parallel int) e
 
 	for _, a := range all {
 		wg.Go(func() error {
+			a.spinner.Play()
+
 			ctx := ptermx.ContextWithSpinner(ctx, a.spinner)
 			if err := ctx.Err(); err != nil {
 				a.spinner.Warning(err.Error())
@@ -287,6 +289,7 @@ func (sq *Squadron) BuildDependencies(ctx context.Context, buildArgs []string, p
 		wg.Go(func() error {
 			spinner := printer.NewSpinner(fmt.Sprintf("📦 | %s (%s:%s)", name, build.Image, build.Tag))
 			spinner.Start()
+			spinner.Play()
 
 			ctx := ptermx.ContextWithSpinner(ctx, spinner)
 			if err := ctx.Err(); err != nil {
@@ -345,6 +348,8 @@ func (sq *Squadron) Build(ctx context.Context, buildArgs []string, parallel int)
 
 	for _, a := range all {
 		wg.Go(func() error {
+			a.spinner.Play()
+
 			ctx := ptermx.ContextWithSpinner(ctx, a.spinner)
 			if err := ctx.Err(); err != nil {
 				a.spinner.Warning(err.Error())
@@ -376,6 +381,7 @@ func (sq *Squadron) Down(ctx context.Context, helmArgs []string, parallel int) e
 			wg.Go(func() error {
 				spinner := printer.NewSpinner(fmt.Sprintf("🗑️ | %s/%s", key, k))
 				spinner.Start()
+				spinner.Play()
 
 				ctx := ptermx.ContextWithSpinner(ctx, spinner)
 				if err := ctx.Err(); err != nil {
@@ -457,6 +463,7 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) (
 			wg.Go(func() error {
 				spinner := printer.NewSpinner(fmt.Sprintf("🔍 | %s/%s", key, k))
 				spinner.Start()
+				spinner.Play()
 
 				ctx := ptermx.ContextWithSpinner(ctx, spinner)
 				if err := ctx.Err(); err != nil {
@@ -592,6 +599,7 @@ func (sq *Squadron) Status(ctx context.Context, helmArgs []string, parallel int)
 			wg.Go(func() error {
 				spinner := printer.NewSpinner(fmt.Sprintf("📄 | %s/%s", key, k))
 				spinner.Start()
+				spinner.Play()
 
 				ctx := ptermx.ContextWithSpinner(ctx, spinner)
 				if err := ctx.Err(); err != nil {
@@ -702,6 +710,7 @@ func (sq *Squadron) Rollback(ctx context.Context, revision string, helmArgs []st
 			wg.Go(func() error {
 				spinner := printer.NewSpinner(fmt.Sprintf("♻️ | %s/%s", key, k))
 				spinner.Start()
+				spinner.Play()
 
 				ctx := ptermx.ContextWithSpinner(ctx, spinner)
 				if err := ctx.Err(); err != nil {
@@ -822,6 +831,8 @@ func (sq *Squadron) Up(ctx context.Context, helmArgs []string, username, version
 
 	for _, a := range all {
 		wg.Go(func() error {
+			a.spinner.Play()
+
 			ctx := ptermx.ContextWithSpinner(ctx, a.spinner)
 			if err := ctx.Err(); err != nil {
 				a.spinner.Warning(err.Error())
@@ -905,6 +916,7 @@ func (sq *Squadron) Template(ctx context.Context, helmArgs []string, parallel in
 			wg.Go(func() error {
 				spinner := printer.NewSpinner(fmt.Sprintf("🧾 | %s/%s", key, k))
 				spinner.Start()
+				spinner.Play()
 
 				ctx := ptermx.ContextWithSpinner(ctx, spinner)
 				if err := ctx.Err(); err != nil {
