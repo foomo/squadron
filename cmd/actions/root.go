@@ -9,7 +9,6 @@ import (
 	cowsay "github.com/Code-Hex/Neo-cowsay/v2"
 	"github.com/foomo/squadron/internal/cmd"
 	"github.com/foomo/squadron/internal/util"
-	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -95,7 +94,6 @@ func Execute() {
 	}()
 
 	if err := root.Execute(); err != nil {
-		l.Error(say(strings.Split(errors.Cause(err).Error(), ":")[0]))
 		l.Error(util.SprintError(err))
 		code = 1
 	}
