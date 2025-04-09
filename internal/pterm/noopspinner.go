@@ -68,11 +68,5 @@ func (s *NoopSpinner) message(message ...string) string {
 	if pterm.PrintDebugMessages {
 		msg = append(msg, s.log...)
 	}
-	m := pterm.GetTerminalWidth() - 10
-	for i, line := range msg {
-		if len(line) > m {
-			msg[i] = line[:m] + "…"
-		}
-	}
 	return strings.Join(msg, "\n  ")
 }
