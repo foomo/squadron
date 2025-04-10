@@ -17,20 +17,22 @@ import (
 )
 
 type Unit struct {
+	// Optional release name
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 	// Chart settings
 	Chart Chart `json:"chart,omitempty" yaml:"chart,omitempty" jsonschema:"anyof_type=string,anyof_ref=#/$defs/Chart"`
-	// Kustomize files path
-	Kustomize string `json:"kustomize,omitempty" yaml:"kustomize,omitempty"`
 	// List of tags
 	Tags Tags `json:"tags,omitempty" yaml:"tags,omitempty"`
 	// Installation priority, higher comes first
 	Priority int `json:"priority,omitempty" yaml:"priority,omitempty"`
+	// Extend chart values
+	Extends string `json:"extends,omitempty" yaml:"extends,omitempty"`
+	// Kustomize files path
+	Kustomize string `json:"kustomize,omitempty" yaml:"kustomize,omitempty"`
 	// Map of containers to build
 	Builds map[string]Build `json:"builds,omitempty" yaml:"builds,omitempty"`
 	// Chart values
 	Values map[string]any `json:"values,omitempty" yaml:"values,omitempty"`
-	// Extend chart values
-	Extends string `json:"extends,omitempty" yaml:"extends,omitempty"`
 }
 
 // ------------------------------------------------------------------------------------------------
