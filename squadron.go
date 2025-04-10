@@ -389,7 +389,7 @@ func (sq *Squadron) Down(ctx context.Context, helmArgs []string, parallel int) e
 					return err
 				}
 
-				name := fmt.Sprintf("%s-%s", key, k)
+				name := sq.getReleaseName(key, k, v)
 				namespace, err := sq.Namespace(ctx, key, k)
 				if err != nil {
 					return err
@@ -471,7 +471,7 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) (
 					return err
 				}
 
-				name := fmt.Sprintf("%s-%s", key, k)
+				name := sq.getReleaseName(key, k, v)
 				namespace, err := sq.Namespace(ctx, key, k)
 				if err != nil {
 					return err
@@ -590,7 +590,7 @@ func (sq *Squadron) Status(ctx context.Context, helmArgs []string, parallel int)
 	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
 		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 			var status statusType
-			name := fmt.Sprintf("%s-%s", key, k)
+			name := sq.getReleaseName(key, k, v)
 			namespace, err := sq.Namespace(ctx, key, k)
 			if err != nil {
 				return errors.Errorf("failed to retrieve namsspace: %s/%s", key, k)
@@ -701,7 +701,7 @@ func (sq *Squadron) Rollback(ctx context.Context, revision string, helmArgs []st
 
 	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
 		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
-			name := fmt.Sprintf("%s-%s", key, k)
+			name := sq.getReleaseName(key, k, v)
 			namespace, err := sq.Namespace(ctx, key, k)
 			if err != nil {
 				return err
@@ -854,7 +854,6 @@ func (sq *Squadron) Up(ctx context.Context, helmArgs []string, username, version
 			// install chart
 			cmd := util.NewHelmCommand().
 				Stdin(bytes.NewReader(valueBytes)).
-				// Stdout(os.Stdout).
 				Args("upgrade", name, "--install").
 				Args("--set", "global.foomo.squadron.name="+a.squadron).
 				Args("--set", "global.foomo.squadron.unit="+a.unit).
@@ -924,7 +923,7 @@ func (sq *Squadron) Template(ctx context.Context, helmArgs []string, parallel in
 					return err
 				}
 
-				name := fmt.Sprintf("%s-%s", key, k)
+				name := sq.getReleaseName(key, k, v)
 				namespace, err := sq.Namespace(ctx, key, k)
 				if err != nil {
 					spinner.Fail(err.Error())
@@ -955,4 +954,11 @@ func (sq *Squadron) Template(ctx context.Context, helmArgs []string, parallel in
 	}
 
 	return ret.String(), nil
+}
+
+func (sq *Squadron) getReleaseName(squadron, unit string, u *config.Unit) string {
+	if u.Name != "" {
+		return u.Name
+	}
+	return squadron + "-" + unit
 }

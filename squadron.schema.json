@@ -233,6 +233,10 @@
     },
     "Unit": {
       "properties": {
+        "name": {
+          "type": "string",
+          "description": "Optional release name"
+        },
         "chart": {
           "anyOf": [
             {
@@ -244,10 +248,6 @@
           ],
           "description": "Chart settings"
         },
-        "kustomize": {
-          "type": "string",
-          "description": "Kustomize files path"
-        },
         "tags": {
           "$ref": "#/$defs/Tags",
           "description": "List of tags"
@@ -255,6 +255,14 @@
         "priority": {
           "type": "integer",
           "description": "Installation priority, higher comes first"
+        },
+        "extends": {
+          "type": "string",
+          "description": "Extend chart values"
+        },
+        "kustomize": {
+          "type": "string",
+          "description": "Kustomize files path"
         },
         "builds": {
           "additionalProperties": {
@@ -266,10 +274,6 @@
         "values": {
           "type": "object",
           "description": "Chart values"
-        },
-        "extends": {
-          "type": "string",
-          "description": "Extend chart values"
         }
       },
       "additionalProperties": false,
