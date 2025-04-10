@@ -32,7 +32,6 @@ const (
 
 type Squadron struct {
 	basePath  string
-	nameFn    func() string
 	namespace string
 	files     []string
 	config    string
