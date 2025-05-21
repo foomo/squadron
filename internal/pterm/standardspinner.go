@@ -31,10 +31,10 @@ func (s *StandardSpinner) Start(message ...string) {
 	if s.printer, err = s.printer.Start(s.message(message...)); err != nil {
 		pterm.Fatal.Println(err)
 	}
-	s.start = time.Now()
 }
 
 func (s *StandardSpinner) Play() {
+	s.start = time.Now()
 	s.printer.Sequence = []string{" ⠋ ", " ⠙ ", " ⠹ ", " ⠸ ", " ⠼ ", " ⠴ ", " ⠦ ", " ⠧ ", " ⠇ ", " ⠏ "}
 }
 
