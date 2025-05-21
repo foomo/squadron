@@ -28,8 +28,8 @@ doc:
 ## Run tests
 test:
 	# see https://github.com/pterm/pterm/issues/482
-	#GO_TEST_TAGS=-skip go test -coverprofile=coverage.out -race -json ./... | gotestfmt
-	@GO_TEST_TAGS=-skip go test -coverprofile=coverage.out -json ./... | gotestfmt
+	@GO_TEST_TAGS=-skip go test -tags=safe -coverprofile=coverage.out -json ./... | gotestfmt
+	#GO_TEST_TAGS=-skip go test -tags=safe -coverprofile=coverage.out -race -json ./... | gotestfmt
 
 .PHONY: lint
 ## Run linter
@@ -51,14 +51,16 @@ tidy:
 outdated:
 	@go list -u -m -json all | go-mod-outdated -update -direct
 
+.PHONY: install
 ## Install binary
 install:
-	@go build -o ${GOPATH}/bin/squadron cmd/main.go
+	@go build -tags=safe -o ${GOPATH}/bin/squadron cmd/main.go
 
+.PHONY: build
 ## Build binary
 build:
 	@mkdir -p bin
-	@go build -o bin/squadron cmd/main.go
+	@go build -tags=safe -o bin/squadron cmd/main.go
 
 ## === Utils ===
 
