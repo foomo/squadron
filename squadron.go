@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/foomo/squadron/internal/config"
 	"github.com/foomo/squadron/internal/jsonschema"
@@ -36,13 +37,6 @@ type Squadron struct {
 	files     []string
 	config    string
 	c         config.Config
-}
-
-type statusDescription struct {
-	ManagedBy  string `json:"managedBy,omitempty"`
-	DeployedBy string `json:"deployedBy,omitempty"`
-	GitCommit  string `json:"gitCommit,omitempty"`
-	GitBranch  string `json:"gitBranch,omitempty"`
 }
 
 func New(basePath, namespace string, files []string) *Squadron {
@@ -557,7 +551,7 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) (
 func (sq *Squadron) Status(ctx context.Context, helmArgs []string, parallel int) error {
 	var m sync.Mutex
 	tbd := pterm.TableData{
-		{"Name", "Revision", "Status", "Managed by", "Deployed by", "Commit", "Branch", "Last deployed", "Notes"},
+		{"Name", "Revision", "Status", "User", "Branch", "Commit", "Squadron", "Last deployed", "Notes"},
 	}
 	write := func(b []string) {
 		m.Lock()
@@ -575,10 +569,10 @@ func (sq *Squadron) Status(ctx context.Context, helmArgs []string, parallel int)
 			LastDeployed  string `json:"last_deployed"`
 			Description   string `json:"description"`
 		} `json:"info"`
-		managedBy  string `json:"-"` //nolint:revive
-		deployedBy string `json:"-"` //nolint:revive
-		gitCommit  string `json:"-"` //nolint:revive
-		gitBranch  string `json:"-"` //nolint:revive
+		user     string `json:"-"` //nolint:revive
+		branch   string `json:"-"` //nolint:revive
+		commit   string `json:"-"` //nolint:revive
+		squadron string `json:"-"` //nolint:revive
 	}
 
 	wg, ctx := errgroup.WithContext(ctx)
@@ -629,41 +623,31 @@ func (sq *Squadron) Status(ctx context.Context, helmArgs []string, parallel int)
 				}
 
 				var notes []string
-				lines := strings.Split(status.Info.Description, "\n")
-				var statusDescription statusDescription
+				var statusDescription Status
 
 				if err := json.Unmarshal([]byte(status.Info.Description), &statusDescription); err == nil {
-					status.managedBy = statusDescription.ManagedBy
-					status.deployedBy = statusDescription.DeployedBy
-					status.gitCommit = statusDescription.GitCommit
-					status.gitBranch = statusDescription.GitBranch
-				} else if len(lines) > 1 {
-					for _, line := range lines {
-						if strings.HasPrefix(line, "Managed-By: ") {
-							status.managedBy = strings.TrimPrefix(line, "Managed-By: ")
-						} else if strings.HasPrefix(line, "Deployed-By: ") {
-							status.deployedBy = strings.TrimPrefix(line, "Deployed-By: ")
-						} else if strings.HasPrefix(line, "Git-Commit: ") {
-							status.gitCommit = strings.TrimPrefix(line, "Git-Commit: ")
-						} else if strings.HasPrefix(line, "Git-Branch: ") {
-							status.gitBranch = strings.TrimPrefix(line, "Git-Branch: ")
-						} else {
-							notes = append(notes, line)
-						}
-					}
+					status.user = statusDescription.User
+					status.branch = statusDescription.Branch
+					status.commit = statusDescription.Commit
+					status.squadron = statusDescription.Squadron
 				} else {
 					notes = append(notes, status.Info.Description)
+				}
+
+				lastDeployed := status.Info.LastDeployed
+				if t, err := time.Parse(time.RFC3339, status.Info.LastDeployed); err == nil {
+					lastDeployed = t.Format(time.RFC822)
 				}
 
 				write([]string{
 					status.Name,
 					fmt.Sprintf("%d", status.Version),
 					status.Info.Status,
-					status.managedBy,
-					status.deployedBy,
-					status.gitCommit,
-					status.gitBranch,
-					status.Info.LastDeployed,
+					status.user,
+					status.branch,
+					status.commit,
+					status.squadron,
+					lastDeployed,
 					strings.Join(notes, "\n"),
 				})
 
@@ -678,6 +662,7 @@ func (sq *Squadron) Status(ctx context.Context, helmArgs []string, parallel int)
 	if err := wg.Wait(); err != nil {
 		return err
 	}
+	printer.Stop()
 
 	out, err := pterm.DefaultTable.WithHasHeader().WithData(tbd).Srender()
 	if err != nil {
@@ -782,13 +767,8 @@ func (sq *Squadron) UpdateLocalDependencies(ctx context.Context, parallel int) e
 	return wg.Wait()
 }
 
-func (sq *Squadron) Up(ctx context.Context, helmArgs []string, username, version, commit, branch string, parallel int) error {
-	description, err := json.Marshal(statusDescription{
-		ManagedBy:  version,
-		DeployedBy: username,
-		GitCommit:  commit,
-		GitBranch:  branch,
-	})
+func (sq *Squadron) Up(ctx context.Context, helmArgs []string, status Status, parallel int) error {
+	description, err := json.Marshal(status)
 	if err != nil {
 		return err
 	}

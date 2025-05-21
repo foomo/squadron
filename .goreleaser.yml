@@ -24,6 +24,7 @@ builds:
       - '7'
     flags:
       - -trimpath
+      - -tags=safe
     ldflags:
       - -s -w -X github.com/foomo/squadron/cmd/actions.version={{.Version}}
 
@@ -44,4 +45,4 @@ brews:
     homepage: "https://github.com/foomo/squadron"
     description: "CLI utility manage infrastructure as code with helm"
     test: |
-      system "#{bin}/squadron --version"
+      system "#{bin}/squadron version"

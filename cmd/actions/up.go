@@ -1,11 +1,11 @@
 package actions
 
 import (
-	"os/user"
-	"strings"
+	"os"
 
 	"github.com/foomo/squadron"
-	"github.com/foomo/squadron/internal/util"
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -50,23 +50,35 @@ func NewUp(c *viper.Viper) *cobra.Command {
 				return err
 			}
 
-			username := "unknown"
-			if value, err := util.NewCommand("git").Args("config", "user.name").Run(cmd.Context()); err == nil {
-				username = strings.TrimSpace(value)
-			} else if value, err := user.Current(); err == nil {
-				username = strings.TrimSpace(value.Name)
+			status := squadron.Status{
+				Squadron: version,
+				User:     "unknown",
+			}
+			if wd, err := os.Getwd(); err == nil {
+				if value := os.Getenv("GIT_DIR"); value != "" {
+					wd = value
+				}
+				if repo, err := git.PlainOpen(wd); err == nil {
+					if c, err := repo.Config(); err == nil {
+						status.User = c.User.Name
+					}
+					if ref, err := repo.Head(); err == nil {
+						status.Branch = ref.Name().Short()
+						status.Commit = ref.Hash().String()
+						if tags, err := repo.Tags(); err == nil {
+							_ = tags.ForEach(func(r *plumbing.Reference) error {
+								if r.Hash() == ref.Hash() {
+									status.Branch = r.Name().Short()
+									return errors.New("found tag")
+								}
+								return nil
+							})
+						}
+					}
+				}
 			}
 
-			branch := ""
-			if value, err := util.NewCommand("sh").Args("-c", "git describe --tags --exact-match 2> /dev/null || git symbolic-ref -q --short HEAD || git rev-parse --short HEAD").Run(cmd.Context()); err == nil {
-				branch = strings.TrimSpace(value)
-			}
-			commit := ""
-			if value, err := util.NewCommand("sh").Args("-c", "git rev-parse --short HEAD").Run(cmd.Context()); err == nil {
-				commit = strings.TrimSpace(value)
-			}
-
-			return sq.Up(cmd.Context(), helmArgs, username, version, commit, branch, c.GetInt("parallel"))
+			return sq.Up(cmd.Context(), helmArgs, status, c.GetInt("parallel"))
 		},
 	}
 	flags := cmd.Flags()

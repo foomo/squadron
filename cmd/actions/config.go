@@ -33,7 +33,11 @@ func NewConfig(c *viper.Viper) *cobra.Command {
 				}
 			}
 
-			pterm.Println(util.Highlight(sq.ConfigYAML()))
+			out := sq.ConfigYAML()
+			if !c.GetBool("raw") {
+				out = util.Highlight(out)
+			}
+			pterm.Println(out)
 
 			return nil
 		},
@@ -45,6 +49,9 @@ func NewConfig(c *viper.Viper) *cobra.Command {
 
 	flags.StringSlice("tags", nil, "list of tags to include or exclude (can specify multiple or separate values with commas: tag1,tag2,-tag3)")
 	_ = c.BindPFlag("tags", flags.Lookup("tags"))
+
+	flags.Bool("raw", false, "print raw output without highlighting")
+	_ = c.BindPFlag("raw", flags.Lookup("raw"))
 
 	return cmd
 }
