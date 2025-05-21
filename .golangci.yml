@@ -120,7 +120,7 @@ linters:
     exhaustive:
       default-signifies-exhaustive: true
     goconst:
-      ignore-strings: '!!.+'
+      ignore-string-values: '!!.+'
     gocritic:
       disabled-checks:
         - ifElseChain
