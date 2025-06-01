@@ -153,18 +153,16 @@ func (sq *Squadron) RenderConfig(ctx context.Context) error {
 	if err := yaml.Unmarshal([]byte(sq.config), &vars); err != nil {
 		return errors.Wrap(err, "failed to render config")
 	}
+
 	// execute again with loaded template vars
 	tv = templatex.Vars{}
 	if value, ok := vars["global"]; ok {
-		util.ToSnakeCaseKeys(value)
 		tv.Add("Global", value)
 	}
 	if value, ok := vars["vars"]; ok {
-		util.ToSnakeCaseKeys(value)
 		tv.Add("Vars", value)
 	}
 	if value, ok := vars["squadron"]; ok {
-		util.ToSnakeCaseKeys(value)
 		tv.Add("Squadron", value)
 	}
 
@@ -188,15 +186,12 @@ func (sq *Squadron) RenderConfig(ctx context.Context) error {
 	// execute again with loaded template vars
 	tv = templatex.Vars{}
 	if value, ok := vars["global"]; ok {
-		util.ToSnakeCaseKeys(value)
 		tv.Add("Global", value)
 	}
 	if value, ok := vars["vars"]; ok {
-		util.ToSnakeCaseKeys(value)
 		tv.Add("Vars", value)
 	}
 	if value, ok := vars["squadron"]; ok {
-		util.ToSnakeCaseKeys(value)
 		tv.Add("Squadron", value)
 	}
 

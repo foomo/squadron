@@ -9,8 +9,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/pkg/errors"
-	"sigs.k8s.io/yaml"
-	goyaml "sigs.k8s.io/yaml/goyaml.v3"
+	yaml "sigs.k8s.io/yaml/goyaml.v3"
 )
 
 func file(ctx context.Context, templateVars any, errorOnMissing bool) func(v string) (string, error) {
@@ -40,21 +39,19 @@ func file(ctx context.Context, templateVars any, errorOnMissing bool) func(v str
 func toYAML(v any) string {
 	data, err := yaml.Marshal(v)
 	if err != nil {
-		// Swallow errors inside of a template.
-		return ""
+		return err.Error()
 	}
 	return strings.TrimSuffix(string(data), "\n")
 }
 
 func toYAMLPretty(v any) string {
 	var data bytes.Buffer
-	encoder := goyaml.NewEncoder(&data)
+	encoder := yaml.NewEncoder(&data)
 	encoder.SetIndent(2)
 	err := encoder.Encode(v)
 
 	if err != nil {
-		// Swallow errors inside of a template.
-		return ""
+		return err.Error()
 	}
 	return strings.TrimSuffix(data.String(), "\n")
 }
@@ -81,8 +78,7 @@ func fromYAML(str string) map[string]any {
 // it tolerates errors. It will insert the returned error message string as
 // the first and only item in the returned array.
 func fromYAMLArray(str string) []any {
-	a := []any{}
-
+	var a []any
 	if err := yaml.Unmarshal([]byte(str), &a); err != nil {
 		a = []any{err.Error()}
 	}
@@ -125,8 +121,7 @@ func fromTOML(str string) map[string]any {
 func toJSON(v any) string {
 	data, err := json.Marshal(v)
 	if err != nil {
-		// Swallow errors inside of a template.
-		return ""
+		return err.Error()
 	}
 	return string(data)
 }
@@ -153,8 +148,7 @@ func fromJSON(str string) map[string]any {
 // it tolerates errors. It will insert the returned error message string as
 // the first and only item in the returned array.
 func fromJSONArray(str string) []any {
-	a := []any{}
-
+	var a []any
 	if err := json.Unmarshal([]byte(str), &a); err != nil {
 		a = []any{err.Error()}
 	}
