@@ -72,7 +72,7 @@ func (s *StandardSpinner) Write(p []byte) (int, error) {
 func (s *StandardSpinner) message(message ...string) string {
 	msg := []string{s.prefix}
 	if !s.start.IsZero() && s.stopped {
-		msg[0] += " ⏱ " + time.Since(s.start).Round(time.Second).String()
+		msg[0] += " ⏱ " + time.Since(s.start).Truncate(time.Second).String()
 	}
 	width := pterm.GetTerminalWidth() - 10
 	for i, line := range msg {

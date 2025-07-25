@@ -113,7 +113,7 @@ func (c *Cmd) Stderr(w io.Writer) *Cmd {
 }
 
 func (c *Cmd) String() string {
-	cmd := exec.Command(c.command[0], c.command[1:]...)
+	cmd := exec.Command(c.command[0], c.command[1:]...) //nolint:noctx
 	cmd.Env = append(os.Environ(), c.env...)
 	if c.cwd != "" {
 		cmd.Dir = c.cwd

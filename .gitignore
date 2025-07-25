@@ -20,9 +20,11 @@
 !.husky/
 !.husky.yaml
 
-## Ownbrew
-!.ownbrew.yaml
-
 ## Golang
+go.work
+go.work.sum
 !.golangci.yml
 !.goreleaser.yml
+
+## Ownbrew
+!.ownbrew.yaml

@@ -54,12 +54,14 @@ outdated:
 .PHONY: install
 ## Install binary
 install:
+	@echo "installing ${GOPATH}/bin/squadron"
 	@go build -tags=safe -o ${GOPATH}/bin/squadron cmd/main.go
 
 .PHONY: build
 ## Build binary
 build:
 	@mkdir -p bin
+	@echo "building bin/squadron"
 	@go build -tags=safe -o bin/squadron cmd/main.go
 
 ## === Utils ===
