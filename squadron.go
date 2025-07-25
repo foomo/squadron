@@ -148,6 +148,9 @@ func (sq *Squadron) FilterConfig(ctx context.Context, squadron string, units, ta
 }
 
 func (sq *Squadron) RenderConfig(ctx context.Context) error {
+	start := time.Now()
+	pterm.Info.Printfln("📚 | rendering config")
+
 	var tv templatex.Vars
 	var vars map[string]any
 	if err := yaml.Unmarshal([]byte(sq.config), &vars); err != nil {
@@ -207,6 +210,7 @@ func (sq *Squadron) RenderConfig(ctx context.Context) error {
 	}
 
 	sq.config = string(out3)
+	pterm.Info.Printfln("📗 | rendering config ⏱ " + time.Since(start).Truncate(time.Second).String())
 
 	return nil
 }
@@ -267,36 +271,69 @@ func (sq *Squadron) Push(ctx context.Context, pushArgs []string, parallel int) e
 }
 
 func (sq *Squadron) BuildDependencies(ctx context.Context, buildArgs []string, parallel int) error {
-	wg, ctx := errgroup.WithContext(ctx)
-	wg.SetLimit(parallel)
-
 	printer := ptermx.MustNewMultiPrinter()
 	defer printer.Stop()
 
 	dependencies := sq.c.BuildDependencies(ctx)
-	for name, build := range dependencies {
-		wg.Go(func() error {
-			spinner := printer.NewSpinner(fmt.Sprintf("📦 | %s (%s:%s)", name, build.Image, build.Tag))
-			spinner.Start()
-			spinner.Play()
 
-			ctx := ptermx.ContextWithSpinner(ctx, spinner)
-			if err := ctx.Err(); err != nil {
-				spinner.Warning(err.Error())
-				return err
-			}
+	run := func(ctx context.Context, name string, build config.Build) error {
+		spinner := printer.NewSpinner(fmt.Sprintf("💾 | %s (%s:%s)", name, build.Image, build.Tag))
+		spinner.Start()
+		spinner.Play()
 
-			if out, err := build.Build(ctx, "", "", buildArgs); err != nil {
-				spinner.Fail(out)
-				return err
-			}
+		ctx = ptermx.ContextWithSpinner(ctx, spinner)
+		if err := ctx.Err(); err != nil {
+			spinner.Warning(err.Error())
+			return err
+		}
 
-			spinner.Success()
-			return nil
-		})
+		if out, err := build.Build(ctx, "", "", buildArgs); err != nil {
+			spinner.Fail(out)
+			return err
+		}
+
+		spinner.Success()
+		return nil
 	}
 
-	return wg.Wait()
+	{ // build sub-depencies
+		wg, ctx := errgroup.WithContext(ctx)
+		wg.SetLimit(parallel)
+
+		for _, build := range dependencies {
+			if len(build.Dependencies) > 0 {
+				for _, name := range build.Dependencies {
+					if b, ok := dependencies[name]; ok {
+						delete(dependencies, name)
+						wg.Go(func() error {
+							return run(ctx, name, b)
+						})
+					}
+				}
+			}
+		}
+
+		if err := wg.Wait(); err != nil {
+			return err
+		}
+	}
+
+	{ // build dependencies
+		wg, ctx := errgroup.WithContext(ctx)
+		wg.SetLimit(parallel)
+
+		for name, build := range dependencies {
+			wg.Go(func() error {
+				return run(ctx, name, build)
+			})
+		}
+
+		if err := wg.Wait(); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (sq *Squadron) Build(ctx context.Context, buildArgs []string, parallel int) error {
