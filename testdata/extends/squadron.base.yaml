@@ -1,7 +1,9 @@
 image:
   tag: unknown
   repository: nginx
-env: <% toYaml .Vars.env | nindent 10 %>
+env:
+  ONE: unknown
+  THREE: baz
 tags:
   - ONE
   - TWO

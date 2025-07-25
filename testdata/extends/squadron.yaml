@@ -1,11 +1,5 @@
 version: "2.2"
 
-vars:
-  env:
-    ONE: unknown
-    THREE: baz
-
-
 squadron:
   storefinder:
     frontend:
