@@ -149,7 +149,7 @@ func (sq *Squadron) FilterConfig(ctx context.Context, squadron string, units, ta
 
 func (sq *Squadron) RenderConfig(ctx context.Context) error {
 	start := time.Now()
-	pterm.Info.Printfln("📚 | rendering config")
+	pterm.Info.Println("📚 | rendering config")
 
 	var tv templatex.Vars
 	var vars map[string]any
@@ -210,7 +210,7 @@ func (sq *Squadron) RenderConfig(ctx context.Context) error {
 	}
 
 	sq.config = string(out3)
-	pterm.Info.Printfln("📗 | rendering config ⏱ " + time.Since(start).Truncate(time.Second).String())
+	pterm.Info.Println("📗 | rendering config ⏱ " + time.Since(start).Truncate(time.Second).String())
 
 	return nil
 }
