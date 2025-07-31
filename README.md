@@ -40,6 +40,15 @@ squadron:
         name: mychart
         version: 0.1.0
         repository: http://helm.mycompany.com/repository
+      # container bakes
+      bakes:
+        service:
+          tags:
+            - docker.mycompany.com/mycomapny/frontend:latest
+          dockerfile: Dockerfile
+          args:
+            foo: foo
+            bar: bar
       # container builds
       builds:
         service:
@@ -58,6 +67,15 @@ squadron:
       chart: <% env "PROJECT_ROOT" %>/path/to/chart
       # kustomize path
       kustomize: <% env "PROJECT_ROOT" %>/path/to/kustomize
+      # container bakes
+      bakes:
+        service:
+          tags:
+            - docker.mycompany.com/mycomapny/backend:latest
+          dockerfile: Dockerfile
+          args:
+            foo: foo
+            bar: bar
       # container builds
       builds:
         service:
@@ -76,10 +94,13 @@ squadron:
 
 ```shell
 $ squadron help
+Docker compose for kubernetes
+
 Usage:
   squadron [command]
 
 Available Commands:
+  bake          bake or rebake squadron units
   build         build or rebuild squadron units
   completion    Generate completion script
   config        generate and view the squadron config
@@ -99,8 +120,6 @@ Flags:
   -d, --debug          show all output
   -f, --file strings   specify alternative squadron files (default [squadron.yaml])
   -h, --help           help for squadron
-  -s, --silent         only show errors
-  -v, --verbose        show more output
 
 Use "squadron [command] --help" for more information about a command.
 ```
