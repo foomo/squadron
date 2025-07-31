@@ -2,6 +2,7 @@ package util
 
 import (
 	"fmt"
+	"io"
 )
 
 type DockerCmd struct {
@@ -11,6 +12,10 @@ type DockerCmd struct {
 
 func NewDockerCommand() *DockerCmd {
 	return &DockerCmd{*NewCommand("docker"), []string{}}
+}
+
+func (c *DockerCmd) Bake(in io.Reader) *Cmd {
+	return c.Stdin(in).Args("buildx", "bake", "--allow", "fs.read=*", "all", "-f", "-")
 }
 
 func (c *DockerCmd) Build(workDir string) *Cmd {

@@ -143,6 +143,7 @@ func (c *Cmd) Run(ctx context.Context) (string, error) {
 	cmd.Stdout = io.MultiWriter(append(c.stdoutWriters, &stdout)...)
 	cmd.Stderr = io.MultiWriter(append(c.stderrWriters, &stderr)...)
 
+	pterm.Debug.Println("❯ " + cmd.String())
 	err := cmd.Run()
 	if err != nil {
 		err = errors.Wrap(err, "failed to execute: "+cmd.String())

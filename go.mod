@@ -11,6 +11,7 @@ require (
 	github.com/Code-Hex/Neo-cowsay/v2 v2.0.4
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/alecthomas/chroma v0.10.0
+	github.com/alecthomas/hcl v0.5.5
 	github.com/foomo/go v0.0.3
 	github.com/go-git/go-git/v5 v5.16.2
 	github.com/invopop/jsonschema v0.13.0
@@ -37,6 +38,8 @@ require (
 	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/ProtonMail/go-crypto v1.3.0 // indirect
+	github.com/alecthomas/participle/v2 v2.0.0-beta.5 // indirect
+	github.com/alecthomas/repr v0.4.0 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/cloudflare/circl v1.6.1 // indirect
@@ -97,6 +100,7 @@ require (
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	go.yaml.in/yaml/v3 v3.0.3 // indirect
 	golang.org/x/crypto v0.40.0 // indirect
+	golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0 // indirect
 	golang.org/x/net v0.42.0 // indirect
 	golang.org/x/sys v0.34.0 // indirect
 	golang.org/x/term v0.33.0 // indirect

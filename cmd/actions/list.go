@@ -47,6 +47,11 @@ func NewList(c *viper.Viper) *cobra.Command {
 					if c.GetBool("with-priority") && len(v.Chart.String()) > 0 {
 						list = append(list, pterm.LeveledListItem{Level: 2, Text: fmt.Sprintf("☝️: %d", v.Priority)})
 					}
+					if c.GetBool("with-bakes") && len(v.Bakes) > 0 {
+						for name := range v.Bakes {
+							list = append(list, pterm.LeveledListItem{Level: 2, Text: "📦: " + name})
+						}
+					}
 					if c.GetBool("with-builds") && len(v.Builds) > 0 {
 						for name, build := range v.Builds {
 							list = append(list, pterm.LeveledListItem{Level: 2, Text: "📦: " + name})
@@ -85,6 +90,9 @@ func NewList(c *viper.Viper) *cobra.Command {
 
 	flags.Bool("with-builds", false, "include builds")
 	_ = c.BindPFlag("with-builds", flags.Lookup("with-builds"))
+
+	flags.Bool("with-bakes", false, "include bakes")
+	_ = c.BindPFlag("with-bakes", flags.Lookup("with-bakes"))
 
 	return cmd
 }

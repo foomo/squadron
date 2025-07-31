@@ -1,6 +1,8 @@
 package actions
 
 import (
+	"strings"
+
 	"github.com/foomo/squadron"
 	"github.com/foomo/squadron/internal/util"
 	"github.com/pkg/errors"
@@ -16,11 +18,13 @@ func NewConfig(c *viper.Viper) *cobra.Command {
 		Example: "  squadron config storefinder frontend backend",
 		Args:    cobra.MinimumNArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			sq := squadron.New(cwd, "", c.GetStringSlice("file"))
+			files := c.GetStringSlice("file")
+			sq := squadron.New(cwd, "", files)
 
 			if err := sq.MergeConfigFiles(cmd.Context()); err != nil {
 				return errors.Wrap(err, "failed to merge config files")
 			}
+			pterm.Debug.Println(strings.Join(append([]string{"provided files"}, files...), "\n└ "))
 
 			squadronName, unitNames := parseSquadronAndUnitNames(args)
 			if err := sq.FilterConfig(cmd.Context(), squadronName, unitNames, c.GetStringSlice("tags")); err != nil {

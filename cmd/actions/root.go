@@ -25,6 +25,7 @@ func init() {
 		NewUp(NewViper(root)),
 		NewDiff(NewViper(root)),
 		NewDown(NewViper(root)),
+		NewBake(NewViper(root)),
 		NewBuild(NewViper(root)),
 		NewPush(NewViper(root)),
 		NewList(NewViper(root)),
