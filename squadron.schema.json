@@ -3,6 +3,145 @@
   "$id": "https://github.com/foomo/squadron/internal/config/config",
   "$ref": "#/$defs/Config",
   "$defs": {
+    "BakeTarget": {
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "inherits": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Inherits is the only field that cannot be overridden with --set"
+        },
+        "annotations": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "attest": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "context": {
+          "type": "string"
+        },
+        "contexts": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "dockerfile": {
+          "type": "string"
+        },
+        "dockerfile-inline": {
+          "type": "string"
+        },
+        "args": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "cache-from": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "cache-to": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "target": {
+          "type": "string"
+        },
+        "secret": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "ssh": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "platforms": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "output": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "pull": {
+          "type": "boolean"
+        },
+        "no-cache": {
+          "type": "boolean"
+        },
+        "network": {
+          "type": "string"
+        },
+        "no-cache-filter": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "shm-size": {
+          "type": "string"
+        },
+        "ulimits": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "call": {
+          "type": "string"
+        },
+        "entitlements": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "extra-hosts": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
     "Build": {
       "properties": {
         "context": {
@@ -270,6 +409,13 @@
           },
           "type": "object",
           "description": "Map of containers to build"
+        },
+        "bakes": {
+          "additionalProperties": {
+            "$ref": "#/$defs/BakeTarget"
+          },
+          "type": "object",
+          "description": "Map of containers to bakes"
         },
         "values": {
           "type": "object",

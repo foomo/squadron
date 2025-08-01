@@ -18,6 +18,7 @@ import (
 	ptermx "github.com/foomo/squadron/internal/pterm"
 	templatex "github.com/foomo/squadron/internal/template"
 	"github.com/foomo/squadron/internal/util"
+	"github.com/genelet/determined/dethcl"
 	"github.com/miracl/conflate"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
@@ -72,7 +73,8 @@ func (sq *Squadron) ConfigYAML() string {
 // ------------------------------------------------------------------------------------------------
 
 func (sq *Squadron) MergeConfigFiles(ctx context.Context) error {
-	pterm.Debug.Println(strings.Join(append([]string{"merging config files"}, sq.files...), "\n└ "))
+	start := time.Now()
+	pterm.Info.Println("📚 | merging configs")
 
 	mergedFiles, err := conflate.FromFiles(sq.files...)
 	if err != nil {
@@ -82,9 +84,10 @@ func (sq *Squadron) MergeConfigFiles(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal yaml")
 	}
+
 	if err := yaml.Unmarshal(fileBytes, &sq.c); err != nil {
 		pterm.Error.Println(string(fileBytes))
-		return err
+		return errors.Wrap(err, "failed to unmarshal yaml")
 	}
 	if sq.c.Version != config.Version {
 		pterm.Debug.Println(string(fileBytes))
@@ -95,11 +98,13 @@ func (sq *Squadron) MergeConfigFiles(ctx context.Context) error {
 
 	value, err := yamlv2.Marshal(sq.c)
 	if err != nil {
-		return err
+		pterm.Error.Println(string(fileBytes))
+		return errors.Wrap(err, "failed to marshal yaml")
 	}
 
 	sq.config = string(value)
 
+	pterm.Success.Println("📚 | merging configs ⏱ " + time.Since(start).Truncate(time.Second).String())
 	return nil
 }
 
@@ -149,7 +154,7 @@ func (sq *Squadron) FilterConfig(ctx context.Context, squadron string, units, ta
 
 func (sq *Squadron) RenderConfig(ctx context.Context) error {
 	start := time.Now()
-	pterm.Info.Println("📚 | rendering config")
+	pterm.Info.Println("📗 | rendering config")
 
 	var tv templatex.Vars
 	var vars map[string]any
@@ -210,7 +215,8 @@ func (sq *Squadron) RenderConfig(ctx context.Context) error {
 	}
 
 	sq.config = string(out3)
-	pterm.Info.Println("📗 | rendering config ⏱ " + time.Since(start).Truncate(time.Second).String())
+
+	pterm.Success.Println("📗 | rendering config ⏱ " + time.Since(start).Truncate(time.Second).String())
 
 	return nil
 }
@@ -226,7 +232,8 @@ func (sq *Squadron) Push(ctx context.Context, pushArgs []string, parallel int) e
 		spinner  ptermx.Spinner
 		squadron string
 		unit     string
-		item     config.Build
+		item     any
+		image    string
 	}
 	var all []one
 
@@ -239,9 +246,24 @@ func (sq *Squadron) Push(ctx context.Context, pushArgs []string, parallel int) e
 					spinner:  spinner,
 					squadron: key,
 					unit:     k,
-					item:     build,
+					item:     &build,
+					image:    build.Image + ":" + build.Tag,
 				})
 				spinner.Start()
+			}
+			for _, name := range v.BakeNames() {
+				bake := v.Bakes[name]
+				for _, tag := range bake.Tags {
+					spinner := printer.NewSpinner(fmt.Sprintf("🚚 | %s/%s.%s (%s)", key, k, name, tag))
+					all = append(all, one{
+						spinner:  spinner,
+						squadron: key,
+						unit:     k,
+						item:     &bake,
+						image:    tag,
+					})
+					spinner.Start()
+				}
 			}
 			return nil
 		})
@@ -257,7 +279,16 @@ func (sq *Squadron) Push(ctx context.Context, pushArgs []string, parallel int) e
 				return err
 			}
 
-			if out, err := a.item.PushImage(ctx, a.squadron, a.unit, pushArgs); err != nil {
+			var cleanArgs []string
+			for _, arg := range pushArgs {
+				if value, err := util.RenderTemplateString(arg, map[string]any{"Squadron": a.squadron, "Unit": a.unit, "Build": a.item}); err != nil {
+					return err
+				} else {
+					cleanArgs = append(cleanArgs, strings.Split(value, " ")...)
+				}
+			}
+			pterm.Debug.Printfln("running docker push for %s", a.image)
+			if out, err := util.NewDockerCommand().Push(a.image).Args(cleanArgs...).Run(ctx); err != nil {
 				a.spinner.Fail(out)
 				return err
 			}
@@ -336,6 +367,52 @@ func (sq *Squadron) BuildDependencies(ctx context.Context, buildArgs []string, p
 	return nil
 }
 
+func (sq *Squadron) Bake(ctx context.Context, buildArgs []string) error {
+	c := &config.Bake{
+		Groups:  nil,
+		Targets: nil,
+	}
+	g := &config.BakeGroup{
+		Name: "all",
+	}
+
+	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
+		_ = value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
+			for _, name := range v.BakeNames() {
+				item := v.Bakes[name]
+				item.Name = strings.Join([]string{key, k, name}, "-")
+				pterm.Info.Printfln("📦 | %s/%s.%s (%s)", key, k, name, strings.Join(item.Tags, ","))
+				g.Targets = append(g.Targets, item.Name)
+				c.Targets = append(c.Targets, &item)
+			}
+			return nil
+		})
+		return nil
+	})
+	c.Groups = append(c.Groups, g)
+
+	b, err := dethcl.Marshal(c)
+	// b, err := hcl.Marshal(c)
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal bake config")
+	}
+	pterm.Debug.Println("🔥 | bakefile:\n" + util.HighlightHCL(string(b)))
+
+	start := time.Now()
+	pterm.Success.Println("🔥 | baking containers")
+	out, err := util.NewDockerCommand().
+		Bake(bytes.NewReader(b)).
+		Stderr(ptermx.NewWriter(pterm.Debug)).
+		Run(ctx)
+	if err != nil {
+		pterm.Println(util.HighlightHCL(string(b)))
+		return errors.Wrap(err, out)
+	}
+	pterm.Success.Println("🔥 | baking containers ⏱︎ " + time.Since(start).Truncate(time.Second).String())
+
+	return nil
+}
+
 func (sq *Squadron) Build(ctx context.Context, buildArgs []string, parallel int) error {
 	if err := sq.BuildDependencies(ctx, buildArgs, parallel); err != nil {
 		return err
@@ -358,13 +435,13 @@ func (sq *Squadron) Build(ctx context.Context, buildArgs []string, parallel int)
 	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
 		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 			for _, name := range v.BuildNames() {
-				build := v.Builds[name]
-				spinner := printer.NewSpinner(fmt.Sprintf("📦 | %s/%s.%s (%s:%s)", key, k, name, build.Image, build.Tag))
+				item := v.Builds[name]
+				spinner := printer.NewSpinner(fmt.Sprintf("📦 | %s/%s.%s (%s:%s)", key, k, name, item.Image, item.Tag))
 				all = append(all, one{
 					spinner:  spinner,
 					squadron: key,
 					unit:     k,
-					item:     build,
+					item:     item,
 				})
 				spinner.Start()
 			}
@@ -383,7 +460,9 @@ func (sq *Squadron) Build(ctx context.Context, buildArgs []string, parallel int)
 			}
 
 			if out, err := a.item.Build(ctx, a.squadron, a.unit, buildArgs); err != nil {
-				a.spinner.Fail(out)
+				if !errors.Is(err, context.Canceled) {
+					a.spinner.Fail(out)
+				}
 				return err
 			}
 

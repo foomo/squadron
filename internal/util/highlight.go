@@ -50,6 +50,45 @@ func Highlight(source string) string {
 	return out.w.String()
 }
 
+func HighlightHCL(source string) string {
+	out := &numberWriter{
+		w:           bytes.NewBufferString(""),
+		currentLine: 1,
+	}
+	// Determine lexer.
+	l := lexers.Get("hcl")
+	if l == nil {
+		l = lexers.Analyse(source)
+	}
+	if l == nil {
+		l = lexers.Fallback
+	}
+	l = chroma.Coalesce(l)
+
+	// Determine formatter.
+	f := formatters.Get("terminal256")
+	if f == nil {
+		f = formatters.Fallback
+	}
+
+	// Determine style.
+	s := styles.Get("monokai")
+	if s == nil {
+		s = styles.Fallback
+	}
+
+	it, err := l.Tokenise(nil, source)
+	if err != nil {
+		pterm.Error.Println(err.Error())
+	}
+
+	if err = f.Format(out, s, it); err != nil {
+		pterm.Error.Println(err.Error())
+	}
+
+	return out.w.String()
+}
+
 type numberWriter struct {
 	w           *bytes.Buffer
 	currentLine uint64

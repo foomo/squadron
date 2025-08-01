@@ -12,12 +12,14 @@ import (
 )
 
 func NewUp(c *viper.Viper) *cobra.Command {
+	x := viper.New()
+
 	cmd := &cobra.Command{
 		Use:     "up [SQUADRON] [UNIT...]",
 		Short:   "installs the squadron or given units",
 		Example: "  squadron up storefinder frontend backend --namespace demo --build --push -- --dry-run",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			sq := squadron.New(cwd, c.GetString("namespace"), c.GetStringSlice("file"))
+			sq := squadron.New(cwd, x.GetString("namespace"), c.GetStringSlice("file"))
 
 			if err := sq.MergeConfigFiles(cmd.Context()); err != nil {
 				return errors.Wrap(err, "failed to merge config files")
@@ -26,7 +28,7 @@ func NewUp(c *viper.Viper) *cobra.Command {
 			args, helmArgs := parseExtraArgs(args)
 
 			squadronName, unitNames := parseSquadronAndUnitNames(args)
-			if err := sq.FilterConfig(cmd.Context(), squadronName, unitNames, c.GetStringSlice("tags")); err != nil {
+			if err := sq.FilterConfig(cmd.Context(), squadronName, unitNames, x.GetStringSlice("tags")); err != nil {
 				return errors.Wrap(err, "failed to filter config")
 			}
 
@@ -34,19 +36,25 @@ func NewUp(c *viper.Viper) *cobra.Command {
 				return errors.Wrap(err, "failed to render config")
 			}
 
-			if c.GetBool("build") {
-				if err := sq.Build(cmd.Context(), c.GetStringSlice("build-args"), c.GetInt("parallel")); err != nil {
+			if x.GetBool("bake") {
+				if err := sq.Bake(cmd.Context(), x.GetStringSlice("bake-args")); err != nil {
+					return errors.Wrap(err, "failed to bake units")
+				}
+			}
+
+			if x.GetBool("build") {
+				if err := sq.Build(cmd.Context(), x.GetStringSlice("build-args"), x.GetInt("parallel")); err != nil {
 					return errors.Wrap(err, "failed to build units")
 				}
 			}
 
-			if c.GetBool("push") {
-				if err := sq.Push(cmd.Context(), c.GetStringSlice("push-args"), c.GetInt("parallel")); err != nil {
+			if x.GetBool("push") {
+				if err := sq.Push(cmd.Context(), x.GetStringSlice("push-args"), x.GetInt("parallel")); err != nil {
 					return errors.Wrap(err, "failed to push units")
 				}
 			}
 
-			if err := sq.UpdateLocalDependencies(cmd.Context(), c.GetInt("parallel")); err != nil {
+			if err := sq.UpdateLocalDependencies(cmd.Context(), x.GetInt("parallel")); err != nil {
 				return err
 			}
 
@@ -78,31 +86,37 @@ func NewUp(c *viper.Viper) *cobra.Command {
 				}
 			}
 
-			return sq.Up(cmd.Context(), helmArgs, status, c.GetInt("parallel"))
+			return sq.Up(cmd.Context(), helmArgs, status, x.GetInt("parallel"))
 		},
 	}
 	flags := cmd.Flags()
 
 	flags.StringP("namespace", "n", "default", "set the namespace name or template (default, squadron-{{.Squadron}}-{{.Unit}})")
-	_ = c.BindPFlag("namespace", flags.Lookup("namespace"))
+	_ = x.BindPFlag("namespace", flags.Lookup("namespace"))
 
-	flags.BoolP("build", "b", false, "builds or rebuilds units")
-	_ = c.BindPFlag("build", flags.Lookup("build"))
+	flags.Bool("bake", false, "bakes or rebakes units")
+	_ = x.BindPFlag("bake", flags.Lookup("bake"))
 
-	flags.BoolP("push", "p", false, "pushes units to the registry")
-	_ = c.BindPFlag("push", flags.Lookup("push"))
+	flags.Bool("build", false, "builds or rebuilds units")
+	_ = x.BindPFlag("build", flags.Lookup("build"))
+
+	flags.Bool("push", false, "pushes units to the registry")
+	_ = x.BindPFlag("push", flags.Lookup("push"))
 
 	flags.Int("parallel", 1, "run command in parallel")
-	_ = c.BindPFlag("parallel", flags.Lookup("parallel"))
+	_ = x.BindPFlag("parallel", flags.Lookup("parallel"))
+
+	flags.StringArray("bake-args", nil, "additional docker buildx bake args")
+	_ = x.BindPFlag("bake-args", flags.Lookup("bake-args"))
 
 	flags.StringArray("build-args", nil, "additional docker buildx build args")
-	_ = c.BindPFlag("build-args", flags.Lookup("build-args"))
+	_ = x.BindPFlag("build-args", flags.Lookup("build-args"))
 
 	flags.StringArray("push-args", nil, "additional docker push args")
-	_ = c.BindPFlag("push-args", flags.Lookup("push-args"))
+	_ = x.BindPFlag("push-args", flags.Lookup("push-args"))
 
 	flags.StringSlice("tags", nil, "list of tags to include or exclude (can specify multiple or separate values with commas: tag1,tag2,-tag3)")
-	_ = c.BindPFlag("tags", flags.Lookup("tags"))
+	_ = x.BindPFlag("tags", flags.Lookup("tags"))
 
 	return cmd
 }

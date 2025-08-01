@@ -31,6 +31,8 @@ type Unit struct {
 	Kustomize string `json:"kustomize,omitempty" yaml:"kustomize,omitempty"`
 	// Map of containers to build
 	Builds map[string]Build `json:"builds,omitempty" yaml:"builds,omitempty"`
+	// Map of containers to bakes
+	Bakes map[string]BakeTarget `json:"bakes,omitempty" yaml:"bakes,omitempty"`
 	// Chart values
 	Values map[string]any `json:"values,omitempty" yaml:"values,omitempty"`
 }
@@ -91,6 +93,15 @@ func (u *Unit) ValuesYAML(global map[string]any) ([]byte, error) {
 		}
 	}
 	return yamlv2.Marshal(values)
+}
+
+func (u *Unit) BakeNames() []string {
+	ret := make([]string, 0, len(u.Bakes))
+	for name := range u.Bakes {
+		ret = append(ret, name)
+	}
+	sort.Strings(ret)
+	return ret
 }
 
 func (u *Unit) BuildNames() []string {

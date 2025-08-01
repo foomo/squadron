@@ -27,9 +27,9 @@ doc:
 .PHONY: test
 ## Run tests
 test:
-	# see https://github.com/pterm/pterm/issues/482
+	@# see https://github.com/pterm/pterm/issues/482
 	@GO_TEST_TAGS=-skip go test -tags=safe -coverprofile=coverage.out -json ./... | gotestfmt
-	#GO_TEST_TAGS=-skip go test -tags=safe -coverprofile=coverage.out -race -json ./... | gotestfmt
+	@#GO_TEST_TAGS=-skip go test -tags=safe -coverprofile=coverage.out -race -json ./... | gotestfmt
 
 .PHONY: lint
 ## Run linter
