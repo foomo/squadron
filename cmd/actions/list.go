@@ -14,6 +14,8 @@ import (
 )
 
 func NewList(c *viper.Viper) *cobra.Command {
+	x := viper.New()
+
 	cmd := &cobra.Command{
 		Use:     "list [SQUADRON]",
 		Short:   "list squadron units",
@@ -27,7 +29,7 @@ func NewList(c *viper.Viper) *cobra.Command {
 			}
 
 			squadronName, unitNames := parseSquadronAndUnitNames(args)
-			if err := sq.FilterConfig(cmd.Context(), squadronName, unitNames, c.GetStringSlice("tags")); err != nil {
+			if err := sq.FilterConfig(cmd.Context(), squadronName, unitNames, x.GetStringSlice("tags")); err != nil {
 				return errors.Wrap(err, "failed to filter config")
 			}
 
@@ -38,23 +40,27 @@ func NewList(c *viper.Viper) *cobra.Command {
 				list = append(list, pterm.LeveledListItem{Level: 0, Text: key})
 				return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 					list = append(list, pterm.LeveledListItem{Level: 1, Text: k})
-					if c.GetBool("with-tags") && len(v.Tags) > 0 {
+					if x.GetBool("with-tags") && len(v.Tags) > 0 {
 						list = append(list, pterm.LeveledListItem{Level: 2, Text: "🏷️: " + v.Tags.SortedString()})
 					}
-					if c.GetBool("with-charts") && len(v.Chart.String()) > 0 {
+					if x.GetBool("with-charts") && len(v.Chart.String()) > 0 {
 						list = append(list, pterm.LeveledListItem{Level: 2, Text: "📑: " + v.Chart.String()})
 					}
-					if c.GetBool("with-priority") && len(v.Chart.String()) > 0 {
+					if x.GetBool("with-priority") && len(v.Chart.String()) > 0 {
 						list = append(list, pterm.LeveledListItem{Level: 2, Text: fmt.Sprintf("☝️: %d", v.Priority)})
 					}
-					if c.GetBool("with-bakes") && len(v.Bakes) > 0 {
-						for name := range v.Bakes {
+					if x.GetBool("with-bakes") && len(v.Bakes) > 0 {
+						for name, build := range v.Bakes {
 							list = append(list, pterm.LeveledListItem{Level: 2, Text: "📦: " + name})
+							for _, tag := range build.Tags {
+								list = append(list, pterm.LeveledListItem{Level: 3, Text: tag})
+							}
 						}
 					}
-					if c.GetBool("with-builds") && len(v.Builds) > 0 {
+					if x.GetBool("with-builds") && len(v.Builds) > 0 {
 						for name, build := range v.Builds {
 							list = append(list, pterm.LeveledListItem{Level: 2, Text: "📦: " + name})
+							list = append(list, pterm.LeveledListItem{Level: 3, Text: build.Image + ":" + build.Tag})
 							for _, dependency := range build.Dependencies {
 								list = append(list, pterm.LeveledListItem{Level: 3, Text: "🗃️: " + dependency})
 							}
@@ -77,22 +83,22 @@ func NewList(c *viper.Viper) *cobra.Command {
 	flags := cmd.Flags()
 
 	flags.StringSlice("tags", nil, "list of tags to include or exclude (can specify multiple or separate values with commas: tag1,tag2,-tag3)")
-	_ = c.BindPFlag("tags", flags.Lookup("tags"))
+	_ = x.BindPFlag("tags", flags.Lookup("tags"))
 
 	flags.Bool("with-tags", false, "include tags")
-	_ = c.BindPFlag("with-tags", flags.Lookup("with-tags"))
+	_ = x.BindPFlag("with-tags", flags.Lookup("with-tags"))
 
 	flags.Bool("with-charts", false, "include charts")
-	_ = c.BindPFlag("with-charts", flags.Lookup("with-charts"))
+	_ = x.BindPFlag("with-charts", flags.Lookup("with-charts"))
 
 	flags.Bool("with-priority", false, "include priority")
-	_ = c.BindPFlag("with-priority", flags.Lookup("with-priority"))
+	_ = x.BindPFlag("with-priority", flags.Lookup("with-priority"))
 
 	flags.Bool("with-builds", false, "include builds")
-	_ = c.BindPFlag("with-builds", flags.Lookup("with-builds"))
+	_ = x.BindPFlag("with-builds", flags.Lookup("with-builds"))
 
 	flags.Bool("with-bakes", false, "include bakes")
-	_ = c.BindPFlag("with-bakes", flags.Lookup("with-bakes"))
+	_ = x.BindPFlag("with-bakes", flags.Lookup("with-bakes"))
 
 	return cmd
 }

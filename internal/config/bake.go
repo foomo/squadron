@@ -47,7 +47,7 @@ type BakeTarget struct {
 	// Attest           buildflags.Attests      `json:"attest,omitempty" yaml:"attest,omitempty" hcl:"attest,optional"`
 	// Secrets          buildflags.Secrets      `json:"secret,omitempty" yaml:"secret,omitempty" hcl:"secret,label,optional"`
 	// SSH              buildflags.SSHKeys      `json:"ssh,omitempty" yaml:"ssh,omitempty" hcl:"ssh,optional"`
-	// Outputs       buildflags.Exports `json:"output,omitempty" yaml:"output,omitempty" hcl:"output,optional"`
+	// Outputs          buildflags.Exports      `json:"output,omitempty" yaml:"output,omitempty" hcl:"output,optional"`
 	// CacheFrom        buildflags.CacheOptions `json:"cache-from,omitempty" yaml:"cache-from,omitempty" hcl:"cache-from,optional"`
 	// CacheTo          buildflags.CacheOptions `json:"cache-to,omitempty" yaml:"cache-to,omitempty" hcl:"cache-to,optional"`
 }

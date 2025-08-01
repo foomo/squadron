@@ -8,6 +8,8 @@ import (
 )
 
 func NewBuild(c *viper.Viper) *cobra.Command {
+	x := viper.New()
+
 	cmd := &cobra.Command{
 		Use:     "build [SQUADRON.UNIT...]",
 		Short:   "build or rebuild squadron units",
@@ -21,7 +23,7 @@ func NewBuild(c *viper.Viper) *cobra.Command {
 			}
 
 			squadronName, unitNames := parseSquadronAndUnitNames(args)
-			if err := sq.FilterConfig(cmd.Context(), squadronName, unitNames, c.GetStringSlice("tags")); err != nil {
+			if err := sq.FilterConfig(cmd.Context(), squadronName, unitNames, x.GetStringSlice("tags")); err != nil {
 				return errors.Wrap(err, "failed to filter config")
 			}
 
@@ -29,12 +31,12 @@ func NewBuild(c *viper.Viper) *cobra.Command {
 				return errors.Wrap(err, "failed to render config")
 			}
 
-			if err := sq.Build(cmd.Context(), c.GetStringSlice("build-args"), c.GetInt("parallel")); err != nil {
+			if err := sq.Build(cmd.Context(), x.GetStringSlice("build-args"), x.GetInt("parallel")); err != nil {
 				return errors.Wrap(err, "failed to build units")
 			}
 
-			if c.GetBool("push") {
-				if err := sq.Push(cmd.Context(), c.GetStringSlice("push-args"), c.GetInt("parallel")); err != nil {
+			if x.GetBool("push") {
+				if err := sq.Push(cmd.Context(), x.GetStringSlice("push-args"), x.GetInt("parallel")); err != nil {
 					return errors.Wrap(err, "failed to push units")
 				}
 			}
@@ -44,14 +46,14 @@ func NewBuild(c *viper.Viper) *cobra.Command {
 	}
 
 	flags := cmd.Flags()
-	flags.BoolP("push", "p", false, "pushes built squadron units to the registry")
-	_ = c.BindPFlag("push", flags.Lookup("push"))
+	flags.Bool("push", false, "pushes built squadron units to the registry")
+	_ = x.BindPFlag("push", flags.Lookup("push"))
 
 	cmd.Flags().Int("parallel", 1, "run command in parallel")
-	_ = c.BindPFlag("parallel", flags.Lookup("parallel"))
+	_ = x.BindPFlag("parallel", flags.Lookup("parallel"))
 
 	flags.StringArray("build-args", nil, "additional docker buildx build args")
-	_ = c.BindPFlag("build-args", flags.Lookup("build-args"))
+	_ = x.BindPFlag("build-args", flags.Lookup("build-args"))
 
 	flags.StringArray("push-args", nil, "additional docker push args")
 	_ = c.BindPFlag("push-args", flags.Lookup("push-args"))

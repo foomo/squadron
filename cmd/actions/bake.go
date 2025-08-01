@@ -8,6 +8,8 @@ import (
 )
 
 func NewBake(c *viper.Viper) *cobra.Command {
+	x := viper.New()
+
 	cmd := &cobra.Command{
 		Use:     "bake [SQUADRON.UNIT...]",
 		Short:   "bake or rebake squadron units",
@@ -21,7 +23,7 @@ func NewBake(c *viper.Viper) *cobra.Command {
 			}
 
 			squadronName, unitNames := parseSquadronAndUnitNames(args)
-			if err := sq.FilterConfig(cmd.Context(), squadronName, unitNames, c.GetStringSlice("tags")); err != nil {
+			if err := sq.FilterConfig(cmd.Context(), squadronName, unitNames, x.GetStringSlice("tags")); err != nil {
 				return errors.Wrap(err, "failed to filter config")
 			}
 
@@ -29,12 +31,12 @@ func NewBake(c *viper.Viper) *cobra.Command {
 				return errors.Wrap(err, "failed to render config")
 			}
 
-			if err := sq.Bake(cmd.Context(), c.GetStringSlice("bake-args")); err != nil {
+			if err := sq.Bake(cmd.Context(), x.GetStringSlice("bake-args")); err != nil {
 				return errors.Wrap(err, "failed to bake units")
 			}
 
-			if c.GetBool("push") {
-				if err := sq.Push(cmd.Context(), c.GetStringSlice("push-args"), c.GetInt("parallel")); err != nil {
+			if x.GetBool("push") {
+				if err := sq.Push(cmd.Context(), x.GetStringSlice("push-args"), x.GetInt("parallel")); err != nil {
 					return errors.Wrap(err, "failed to push units")
 				}
 			}
@@ -44,20 +46,20 @@ func NewBake(c *viper.Viper) *cobra.Command {
 	}
 
 	flags := cmd.Flags()
-	flags.BoolP("push", "p", false, "pushes built squadron units to the registry")
-	_ = c.BindPFlag("push", flags.Lookup("push"))
+	flags.Bool("push", false, "pushes built squadron units to the registry")
+	_ = x.BindPFlag("push", flags.Lookup("push"))
 
 	cmd.Flags().Int("parallel", 1, "run command in parallel")
-	_ = c.BindPFlag("parallel", flags.Lookup("parallel"))
+	_ = x.BindPFlag("parallel", flags.Lookup("parallel"))
 
 	flags.StringArray("bake-args", nil, "additional docker bake args")
-	_ = c.BindPFlag("bake-args", flags.Lookup("bake-args"))
+	_ = x.BindPFlag("bake-args", flags.Lookup("bake-args"))
 
 	flags.StringArray("push-args", nil, "additional docker push args")
-	_ = c.BindPFlag("push-args", flags.Lookup("push-args"))
+	_ = x.BindPFlag("push-args", flags.Lookup("push-args"))
 
 	flags.StringSlice("tags", nil, "list of tags to include or exclude (can specify multiple or separate values with commas: tag1,tag2,-tag3)")
-	_ = c.BindPFlag("tags", flags.Lookup("tags"))
+	_ = x.BindPFlag("tags", flags.Lookup("tags"))
 
 	return cmd
 }

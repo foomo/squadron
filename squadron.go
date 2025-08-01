@@ -13,12 +13,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/alecthomas/hcl"
 	"github.com/foomo/squadron/internal/config"
 	"github.com/foomo/squadron/internal/jsonschema"
 	ptermx "github.com/foomo/squadron/internal/pterm"
 	templatex "github.com/foomo/squadron/internal/template"
 	"github.com/foomo/squadron/internal/util"
+	"github.com/genelet/determined/dethcl"
 	"github.com/miracl/conflate"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
@@ -232,7 +232,8 @@ func (sq *Squadron) Push(ctx context.Context, pushArgs []string, parallel int) e
 		spinner  ptermx.Spinner
 		squadron string
 		unit     string
-		item     config.Build
+		item     any
+		image    string
 	}
 	var all []one
 
@@ -245,9 +246,24 @@ func (sq *Squadron) Push(ctx context.Context, pushArgs []string, parallel int) e
 					spinner:  spinner,
 					squadron: key,
 					unit:     k,
-					item:     build,
+					item:     &build,
+					image:    build.Image + ":" + build.Tag,
 				})
 				spinner.Start()
+			}
+			for _, name := range v.BakeNames() {
+				bake := v.Bakes[name]
+				for _, tag := range bake.Tags {
+					spinner := printer.NewSpinner(fmt.Sprintf("🚚 | %s/%s.%s (%s)", key, k, name, tag))
+					all = append(all, one{
+						spinner:  spinner,
+						squadron: key,
+						unit:     k,
+						item:     &bake,
+						image:    tag,
+					})
+					spinner.Start()
+				}
 			}
 			return nil
 		})
@@ -263,7 +279,16 @@ func (sq *Squadron) Push(ctx context.Context, pushArgs []string, parallel int) e
 				return err
 			}
 
-			if out, err := a.item.PushImage(ctx, a.squadron, a.unit, pushArgs); err != nil {
+			var cleanArgs []string
+			for _, arg := range pushArgs {
+				if value, err := util.RenderTemplateString(arg, map[string]any{"Squadron": a.squadron, "Unit": a.unit, "Build": a.item}); err != nil {
+					return err
+				} else {
+					cleanArgs = append(cleanArgs, strings.Split(value, " ")...)
+				}
+			}
+			pterm.Debug.Printfln("running docker push for %s", a.image)
+			if out, err := util.NewDockerCommand().Push(a.image).Args(cleanArgs...).Run(ctx); err != nil {
 				a.spinner.Fail(out)
 				return err
 			}
@@ -366,8 +391,8 @@ func (sq *Squadron) Bake(ctx context.Context, buildArgs []string) error {
 	})
 	c.Groups = append(c.Groups, g)
 
-	// b, err := dethcl.Marshal(c)
-	b, err := hcl.Marshal(c)
+	b, err := dethcl.Marshal(c)
+	// b, err := hcl.Marshal(c)
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal bake config")
 	}
