@@ -376,7 +376,7 @@
           "type": "string",
           "description": "Optional release name"
         },
-				"namespace": {
+        "namespace": {
           "type": "string",
           "description": "Optional release namespace"
         },
