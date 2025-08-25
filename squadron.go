@@ -53,7 +53,10 @@ func New(basePath, namespace string, files []string) *Squadron {
 // ~ Getter
 // ------------------------------------------------------------------------------------------------
 
-func (sq *Squadron) Namespace(ctx context.Context, squadron, unit string) (string, error) {
+func (sq *Squadron) Namespace(ctx context.Context, squadron, unit string, u *config.Unit) (string, error) {
+	if u.Namespace != "" {
+		return u.Namespace, nil
+	}
 	if sq.namespace == "" {
 		return "default", nil
 	}
@@ -495,7 +498,7 @@ func (sq *Squadron) Down(ctx context.Context, helmArgs []string, parallel int) e
 				}
 
 				name := sq.getReleaseName(key, k, v)
-				namespace, err := sq.Namespace(ctx, key, k)
+				namespace, err := sq.Namespace(ctx, key, k, v)
 				if err != nil {
 					return err
 				}
@@ -577,7 +580,7 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) (
 				}
 
 				name := sq.getReleaseName(key, k, v)
-				namespace, err := sq.Namespace(ctx, key, k)
+				namespace, err := sq.Namespace(ctx, key, k, v)
 				if err != nil {
 					return err
 				}
@@ -696,7 +699,7 @@ func (sq *Squadron) Status(ctx context.Context, helmArgs []string, parallel int)
 		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 			var status statusType
 			name := sq.getReleaseName(key, k, v)
-			namespace, err := sq.Namespace(ctx, key, k)
+			namespace, err := sq.Namespace(ctx, key, k, v)
 			if err != nil {
 				return errors.Errorf("failed to retrieve namsspace: %s/%s", key, k)
 			}
@@ -798,7 +801,7 @@ func (sq *Squadron) Rollback(ctx context.Context, revision string, helmArgs []st
 	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
 		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 			name := sq.getReleaseName(key, k, v)
-			namespace, err := sq.Namespace(ctx, key, k)
+			namespace, err := sq.Namespace(ctx, key, k, v)
 			if err != nil {
 				return err
 			}
@@ -930,8 +933,8 @@ func (sq *Squadron) Up(ctx context.Context, helmArgs []string, status Status, pa
 				return err
 			}
 
-			name := fmt.Sprintf("%s-%s", a.squadron, a.unit)
-			namespace, err := sq.Namespace(ctx, a.squadron, a.unit)
+			name := sq.getReleaseName(a.squadron, a.unit, a.item)
+			namespace, err := sq.Namespace(ctx, a.squadron, a.unit, a.item)
 			if err != nil {
 				a.spinner.Fail(err.Error())
 				return err
@@ -1015,7 +1018,7 @@ func (sq *Squadron) Template(ctx context.Context, helmArgs []string, parallel in
 				}
 
 				name := sq.getReleaseName(key, k, v)
-				namespace, err := sq.Namespace(ctx, key, k)
+				namespace, err := sq.Namespace(ctx, key, k, v)
 				if err != nil {
 					spinner.Fail(err.Error())
 					return errors.Errorf("failed to retrieve namsspace: %s/%s", key, k)

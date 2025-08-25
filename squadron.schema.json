@@ -376,6 +376,10 @@
           "type": "string",
           "description": "Optional release name"
         },
+				"namespace": {
+          "type": "string",
+          "description": "Optional release namespace"
+        },
         "chart": {
           "anyOf": [
             {
