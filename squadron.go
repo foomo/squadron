@@ -54,13 +54,16 @@ func New(basePath, namespace string, files []string) *Squadron {
 // ------------------------------------------------------------------------------------------------
 
 func (sq *Squadron) Namespace(ctx context.Context, squadron, unit string, u *config.Unit) (string, error) {
-	if u.Namespace != "" {
-		return u.Namespace, nil
-	}
-	if sq.namespace == "" {
+	var tpl string
+	switch {
+	case u.Namespace != "":
+		tpl = u.Namespace
+	case sq.namespace != "":
+		tpl = sq.namespace
+	default:
 		return "default", nil
 	}
-	return util.RenderTemplateString(sq.namespace, map[string]string{"Squadron": squadron, "Unit": unit})
+	return util.RenderTemplateString(tpl, map[string]string{"Squadron": squadron, "Unit": unit})
 }
 
 func (sq *Squadron) Config() config.Config {
