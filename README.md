@@ -35,6 +35,10 @@ squadron:
   site:
     # squadron unit
     frontend:
+      # optional release name override
+      name: my-frontend
+      # optional release namespace override
+      namespace: my-namespace
       # helm chart definition
       chart:
         name: mychart
