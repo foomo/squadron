@@ -19,6 +19,8 @@ import (
 type Unit struct {
 	// Optional release name
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+	// Optional release namespace
+	Namespace string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	// Chart settings
 	Chart Chart `json:"chart,omitempty" yaml:"chart,omitempty" jsonschema:"anyof_type=string,anyof_ref=#/$defs/Chart"`
 	// List of tags
