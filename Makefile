@@ -64,6 +64,13 @@ build:
 	@echo "building bin/squadron"
 	@go build -tags=safe -o bin/squadron cmd/main.go
 
+## === Docker ===
+
+.PHONY: docker
+## Build docker image
+docker:
+	@docker buildx build -t foomo/squadron:latest .
+
 ## === Utils ===
 
 ## Show help text
