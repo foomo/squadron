@@ -30,7 +30,7 @@ builds:
 
 archives:
   - formats: [ tar.gz ]
-  - format_overrides:
+    format_overrides:
       - goos: windows
         formats: [ zip ]
 
