@@ -14,9 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-
-      - name: Unshallow
-        run: git fetch --prune --unshallow
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-go@v5
         with:
@@ -25,7 +24,6 @@ jobs:
       - uses: docker/setup-qemu-action@v3
 
       - uses: docker/setup-buildx-action@v3
-
 
       - id: app_token
         uses: tibdex/github-app-token@v2
@@ -38,7 +36,7 @@ jobs:
 
       - uses: goreleaser/goreleaser-action@v6
         with:
-          version: latest
+          version: '~> v2'
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ steps.app_token.outputs.token }}
