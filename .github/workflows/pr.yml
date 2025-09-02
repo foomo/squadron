@@ -38,9 +38,6 @@ jobs:
         env:
           SHELL: "/bin/zsh"
 
-      - name: Run docker
-        run: make docker
-
       - uses: coverallsapp/github-action@v2
         with:
           file: coverage.out
