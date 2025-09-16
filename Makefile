@@ -4,17 +4,13 @@
 # --- Targets -----------------------------------------------------------------
 
 # This allows us to accept extra arguments
-%: .husky
+%: .mise
 	@:
 
-.PHONY: .husky
-# Configure git hooks for husky
-.husky:
-	@if ! command -v husky &> /dev/null; then \
-		echo "ERROR: missing executeable 'husky', please run:"; \
-		echo "\n$ go install github.com/go-courier/husky/cmd/husky@latest\n"; \
-	fi
-	@git config core.hooksPath .husky
+.PHONY: .mise
+# Install dependencies
+.mise:
+	@mise install
 
 ## === Tasks ===
 

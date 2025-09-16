@@ -29,5 +29,5 @@ go.work.sum
 !.golangci.yml
 !.goreleaser.yml
 
-## Ownbrew
-!.ownbrew.yaml
+## Mise
+!.mise.toml
