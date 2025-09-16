@@ -27,6 +27,7 @@ func ExecuteFileTemplate(ctx context.Context, text string, templateVars any, err
 	funcMap["git"] = git(ctx)
 	funcMap["opDoc"] = onePasswordDocument(ctx, templateVars, errorOnMissing)
 	funcMap["file"] = file(ctx, templateVars, errorOnMissing)
+	funcMap["kubeseal"] = kubeseal(ctx)
 
 	funcMap["toToml"] = toTOML
 	funcMap["fromToml"] = fromTOML
