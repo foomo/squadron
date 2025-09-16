@@ -9,7 +9,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/pkg/errors"
-	yaml "sigs.k8s.io/yaml/goyaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 func file(ctx context.Context, templateVars any, errorOnMissing bool) func(v string) (string, error) {

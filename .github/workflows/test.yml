@@ -1,4 +1,4 @@
-name: checks
+name: Test Branch
 
 on:
   push:
@@ -21,17 +21,19 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: 'go.mod'
+      - uses: jdx/mise-action@v2
 
-      - uses: gotesttools/gotestfmt-action@v2
+      - uses: actions/setup-go@v6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          check-latest: true
+          go-version-file: go.mod
 
       - uses: golangci/golangci-lint-action@v8
         with:
-          version: latest
+          install-mode: none
+
+      - name: Run lint
+        run: make lint
 
       - name: Run tests
         run: make test

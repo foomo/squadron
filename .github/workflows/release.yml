@@ -17,8 +17,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-go@v5
+      - uses: jdx/mise-action@v2
+
+      - uses: actions/setup-go@v6
         with:
+          check-latest: true
           go-version-file: go.mod
 
       - uses: docker/setup-qemu-action@v3
