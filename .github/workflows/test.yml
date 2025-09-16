@@ -19,9 +19,9 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: jdx/mise-action@v2
-
       - uses: actions/checkout@v5
+
+      - uses: jdx/mise-action@v2
 
       - uses: actions/setup-go@v6
         with:
