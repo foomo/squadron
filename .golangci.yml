@@ -1,8 +1,9 @@
 version: "2"
+
 run:
-  go: 1.25.0
   build-tags: [safe]
   modules-download-mode: readonly
+
 linters:
   default: none
   enable:

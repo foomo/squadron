@@ -14,6 +14,10 @@
 
 ### Tasks
 
+.PHONY: check
+## Run tests and linters
+check: tidy lint test
+
 .PHONY: doc
 ## Run tests
 doc:
