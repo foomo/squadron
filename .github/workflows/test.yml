@@ -39,7 +39,3 @@ jobs:
         run: make test
         env:
           SHELL: "/bin/zsh"
-
-      - uses: coverallsapp/github-action@v2
-        with:
-          file: coverage.out

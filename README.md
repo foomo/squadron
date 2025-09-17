@@ -1,6 +1,5 @@
 [![Build Status](https://github.com/foomo/squadron/actions/workflows/pr.yml/badge.svg?branch=main&event=push)](https://github.com/foomo/squadron/actions/workflows/pr.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/foomo/squadron)](https://goreportcard.com/report/github.com/foomo/squadron)
-[![Coverage Status](https://coveralls.io/repos/github/foomo/squadron/badge.svg?branch=main&)](https://coveralls.io/github/foomo/squadron?branch=main)
 [![GoDoc](https://godoc.org/github.com/foomo/squadron?status.svg)](https://godoc.org/github.com/foomo/squadron)
 
 <p align="center">
