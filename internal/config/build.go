@@ -114,7 +114,7 @@ func (b *Build) Build(ctx context.Context, squadron, unit string, args []string)
 		ListArg("--allow", b.Allow).
 		ListArg("--attest", b.Attest).
 		ListArg("--build-arg", b.BuildArg).
-		ListArg("--build-contet", b.BuildContext).
+		ListArg("--build-context", b.BuildContext).
 		Arg(argOverride("--builder", b.Builder, args)).
 		Arg(argOverride("--cache-from", b.CacheFrom, args)).
 		Arg(argOverride("--cache-to", b.CacheTo, args)).
