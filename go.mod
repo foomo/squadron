@@ -13,7 +13,7 @@ require (
 	github.com/alecthomas/chroma v0.10.0
 	github.com/foomo/go v0.0.3
 	github.com/genelet/determined v1.12.3
-	github.com/go-git/go-git/v5 v5.16.2
+	github.com/go-git/go-git/v5 v5.16.3
 	github.com/invopop/jsonschema v0.13.0
 	github.com/miracl/conflate v1.3.4
 	github.com/pkg/errors v0.9.1
@@ -44,9 +44,10 @@ require (
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/bmatcuk/doublestar v1.3.4 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
+	github.com/clipperhouse/uax29/v2 v2.2.0 // indirect
 	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/containerd/console v1.0.5 // indirect
-	github.com/cyphar/filepath-securejoin v0.4.1 // indirect
+	github.com/cyphar/filepath-securejoin v0.5.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dlclark/regexp2 v1.11.5 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
@@ -73,7 +74,7 @@ require (
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/lithammer/fuzzysearch v1.1.8 // indirect
 	github.com/mailru/easyjson v0.9.1 // indirect
-	github.com/mattn/go-runewidth v0.0.16 // indirect
+	github.com/mattn/go-runewidth v0.0.19 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
@@ -85,10 +86,10 @@ require (
 	github.com/pjbgf/sha1cd v0.5.0 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	github.com/sagikazarmark/locafero v0.11.0 // indirect
+	github.com/sagikazarmark/locafero v0.12.0 // indirect
 	github.com/sergi/go-diff v1.4.0 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
-	github.com/skeema/knownhosts v1.3.1 // indirect
+	github.com/skeema/knownhosts v1.3.2 // indirect
 	github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
@@ -110,7 +111,7 @@ require (
 	golang.org/x/crypto v0.42.0 // indirect
 	golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0 // indirect
 	golang.org/x/mod v0.27.0 // indirect
-	golang.org/x/net v0.44.0 // indirect
+	golang.org/x/net v0.45.0 // indirect
 	golang.org/x/sys v0.36.0 // indirect
 	golang.org/x/term v0.35.0 // indirect
 	golang.org/x/text v0.29.0 // indirect

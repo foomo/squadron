@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"path"
 	"slices"
@@ -19,10 +20,13 @@ import (
 	templatex "github.com/foomo/squadron/internal/template"
 	"github.com/foomo/squadron/internal/util"
 	"github.com/genelet/determined/dethcl"
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/miracl/conflate"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 	"github.com/sters/yaml-diff/yamldiff"
+	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
 	yamlv2 "gopkg.in/yaml.v2"
 	"gopkg.in/yaml.v3"
@@ -382,11 +386,19 @@ func (sq *Squadron) Bake(ctx context.Context, buildArgs []string) error {
 		Name: "all",
 	}
 
+	gitInfo, err := sq.getGitInfo(ctx)
+	if err != nil {
+		pterm.Debug.Println("failed to get git info:", err)
+	}
+
 	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
 		_ = value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 			for _, name := range v.BakeNames() {
 				item := v.Bakes[name]
 				item.Name = strings.Join([]string{key, k, name}, "-")
+				item.Args["SQUADRON_NAME"] = key
+				item.Args["SQUADRON_UNIT_NAME"] = k
+				maps.Copy(item.Args, gitInfo)
 				pterm.Info.Printfln("📦 | %s/%s.%s (%s)", key, k, name, strings.Join(item.Tags, ","))
 				g.Targets = append(g.Targets, item.Name)
 				c.Targets = append(c.Targets, &item)
@@ -438,10 +450,24 @@ func (sq *Squadron) Build(ctx context.Context, buildArgs []string, parallel int)
 	}
 	var all []one
 
+	gitInfo, err := sq.getGitInfo(ctx)
+	if err != nil {
+		pterm.Debug.Println("failed to get git info:", err)
+	}
+	var gitInfoArgs []string
+	for s, s2 := range gitInfo {
+		gitInfoArgs = append(gitInfoArgs, fmt.Sprintf("%s=%s", s, s2))
+	}
+
 	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
 		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 			for _, name := range v.BuildNames() {
 				item := v.Builds[name]
+				item.BuildArg = append(item.BuildArg,
+					"SQUADRON_NAME="+key,
+					"SQUADRON_UNIT_NAME="+k,
+				)
+				item.BuildArg = append(item.BuildArg, gitInfoArgs...)
 				spinner := printer.NewSpinner(fmt.Sprintf("📦 | %s/%s.%s (%s:%s)", key, k, name, item.Image, item.Tag))
 				all = append(all, one{
 					spinner:  spinner,
@@ -462,13 +488,14 @@ func (sq *Squadron) Build(ctx context.Context, buildArgs []string, parallel int)
 			ctx := ptermx.ContextWithSpinner(ctx, a.spinner)
 			if err := ctx.Err(); err != nil {
 				a.spinner.Warning(err.Error())
-				return err
+				return nil
 			}
 
-			if out, err := a.item.Build(ctx, a.squadron, a.unit, buildArgs); err != nil {
-				if !errors.Is(err, context.Canceled) {
-					a.spinner.Fail(out)
-				}
+			if out, err := a.item.Build(ctx, a.squadron, a.unit, buildArgs); errors.Is(ctx.Err(), context.Canceled) {
+				a.spinner.Warning(ctx.Err().Error())
+				return nil
+			} else if err != nil {
+				a.spinner.Fail(out)
 				return err
 			}
 
@@ -1058,4 +1085,67 @@ func (sq *Squadron) getReleaseName(squadron, unit string, u *config.Unit) string
 		return u.Name
 	}
 	return squadron + "-" + unit
+}
+
+func (sq *Squadron) getGitInfo(ctx context.Context) (map[string]string, error) {
+	ret := map[string]string{}
+
+	dir := "."
+	for _, s := range []string{"GIT_DIR", "PROJECT_ROOT"} {
+		if v := os.Getenv(s); v != "" {
+			dir = v
+			break
+		}
+	}
+
+	repo, err := git.PlainOpen(dir)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get remote "origin" URL
+	remote, err := repo.Remote("origin")
+	if err != nil {
+		return nil, err
+	}
+
+	remoteURLs := remote.Config().URLs
+	if len(remoteURLs) > 0 {
+		url := remoteURLs[0]
+		if strings.HasPrefix(url, "git@") {
+			// Example input: git@github.com:user/repo.git
+			parts := strings.SplitN(url, ":", 2)
+			if len(parts) == 2 {
+				// parts[1] = user/repo.git
+				hostParts := strings.Split(parts[0], "@")
+				if len(hostParts) == 2 {
+					host := hostParts[1]
+					url = "https://" + host + "/" + strings.TrimSuffix(parts[1], ".git")
+				}
+			}
+		}
+		ret["GIT_REPOSITORY_URL"] = url
+	}
+
+	// Get HEAD reference to find the current branch or commit
+	ref, err := repo.Head()
+	if err != nil {
+		return nil, err
+	}
+
+	ret["GIT_TYPE"] = "branch"
+	ret["GIT_BRANCH"] = ref.Name().Short()
+	ret["GIT_COMMIT_HASH"] = ref.Hash().String()
+
+	if t, err := repo.Tags(); err == nil {
+		_ = t.ForEach(func(reference *plumbing.Reference) error {
+			if ref.Hash() == reference.Hash() {
+				ret["GIT_TAG"] = reference.Name().Short()
+				ret["GIT_TYPE"] = "tag"
+				return errors.New("break")
+			}
+			return nil
+		})
+	}
+	return ret, nil
 }
