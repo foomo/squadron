@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
+	"os"
 	"os/exec"
 	"path"
 	"slices"
@@ -19,6 +21,8 @@ import (
 	templatex "github.com/foomo/squadron/internal/template"
 	"github.com/foomo/squadron/internal/util"
 	"github.com/genelet/determined/dethcl"
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/miracl/conflate"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
@@ -55,6 +59,7 @@ func New(basePath, namespace string, files []string) *Squadron {
 
 func (sq *Squadron) Namespace(ctx context.Context, squadron, unit string, u *config.Unit) (string, error) {
 	var tpl string
+
 	switch {
 	case u.Namespace != "":
 		tpl = u.Namespace
@@ -63,6 +68,7 @@ func (sq *Squadron) Namespace(ctx context.Context, squadron, unit string, u *con
 	default:
 		return "default", nil
 	}
+
 	return util.RenderTemplateString(tpl, map[string]string{"Squadron": squadron, "Unit": unit})
 }
 
@@ -80,12 +86,14 @@ func (sq *Squadron) ConfigYAML() string {
 
 func (sq *Squadron) MergeConfigFiles(ctx context.Context) error {
 	start := time.Now()
+
 	pterm.Info.Println("📚 | merging configs")
 
 	mergedFiles, err := conflate.FromFiles(sq.files...)
 	if err != nil {
 		return errors.Wrap(err, "failed to conflate files")
 	}
+
 	fileBytes, err := mergedFiles.MarshalYAML()
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal yaml")
@@ -95,6 +103,7 @@ func (sq *Squadron) MergeConfigFiles(ctx context.Context) error {
 		pterm.Error.Println(string(fileBytes))
 		return errors.Wrap(err, "failed to unmarshal yaml")
 	}
+
 	if sq.c.Version != config.Version {
 		pterm.Debug.Println(string(fileBytes))
 		return errors.New("Please upgrade your YAML definition to from '" + sq.c.Version + "' to '" + config.Version + "'")
@@ -111,6 +120,7 @@ func (sq *Squadron) MergeConfigFiles(ctx context.Context) error {
 	sq.config = string(value)
 
 	pterm.Success.Println("📚 | merging configs ⏱ " + time.Since(start).Truncate(time.Second).String())
+
 	return nil
 }
 
@@ -160,10 +170,14 @@ func (sq *Squadron) FilterConfig(ctx context.Context, squadron string, units, ta
 
 func (sq *Squadron) RenderConfig(ctx context.Context) error {
 	start := time.Now()
+
 	pterm.Info.Println("📗 | rendering config")
 
-	var tv templatex.Vars
-	var vars map[string]any
+	var (
+		tv   templatex.Vars
+		vars map[string]any
+	)
+
 	if err := yaml.Unmarshal([]byte(sq.config), &vars); err != nil {
 		return errors.Wrap(err, "failed to render config")
 	}
@@ -173,9 +187,11 @@ func (sq *Squadron) RenderConfig(ctx context.Context) error {
 	if value, ok := vars["global"]; ok {
 		tv.Add("Global", value)
 	}
+
 	if value, ok := vars["vars"]; ok {
 		tv.Add("Vars", value)
 	}
+
 	if value, ok := vars["squadron"]; ok {
 		tv.Add("Squadron", value)
 	}
@@ -202,9 +218,11 @@ func (sq *Squadron) RenderConfig(ctx context.Context) error {
 	if value, ok := vars["global"]; ok {
 		tv.Add("Global", value)
 	}
+
 	if value, ok := vars["vars"]; ok {
 		tv.Add("Vars", value)
 	}
+
 	if value, ok := vars["squadron"]; ok {
 		tv.Add("Squadron", value)
 	}
@@ -241,6 +259,7 @@ func (sq *Squadron) Push(ctx context.Context, pushArgs []string, parallel int) e
 		item     any
 		image    string
 	}
+
 	var all []one
 
 	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
@@ -257,6 +276,7 @@ func (sq *Squadron) Push(ctx context.Context, pushArgs []string, parallel int) e
 				})
 				spinner.Start()
 			}
+
 			for _, name := range v.BakeNames() {
 				bake := v.Bakes[name]
 				for _, tag := range bake.Tags {
@@ -271,6 +291,7 @@ func (sq *Squadron) Push(ctx context.Context, pushArgs []string, parallel int) e
 					spinner.Start()
 				}
 			}
+
 			return nil
 		})
 	})
@@ -293,13 +314,16 @@ func (sq *Squadron) Push(ctx context.Context, pushArgs []string, parallel int) e
 					cleanArgs = append(cleanArgs, strings.Split(value, " ")...)
 				}
 			}
+
 			pterm.Debug.Printfln("running docker push for %s", a.image)
+
 			if out, err := util.NewDockerCommand().Push(a.image).Args(cleanArgs...).Run(ctx); err != nil {
 				a.spinner.Fail(out)
 				return err
 			}
 
 			a.spinner.Success()
+
 			return nil
 		})
 	}
@@ -330,6 +354,7 @@ func (sq *Squadron) BuildDependencies(ctx context.Context, buildArgs []string, p
 		}
 
 		spinner.Success()
+
 		return nil
 	}
 
@@ -382,19 +407,30 @@ func (sq *Squadron) Bake(ctx context.Context, buildArgs []string) error {
 		Name: "all",
 	}
 
+	gitInfo, err := sq.getGitInfo(ctx)
+	if err != nil {
+		pterm.Debug.Println("failed to get git info:", err)
+	}
+
 	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
 		_ = value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 			for _, name := range v.BakeNames() {
 				item := v.Bakes[name]
 				item.Name = strings.Join([]string{key, k, name}, "-")
+				item.Args["SQUADRON_NAME"] = key
+				item.Args["SQUADRON_UNIT_NAME"] = k
+				maps.Copy(item.Args, gitInfo)
 				pterm.Info.Printfln("📦 | %s/%s.%s (%s)", key, k, name, strings.Join(item.Tags, ","))
 				g.Targets = append(g.Targets, item.Name)
 				c.Targets = append(c.Targets, &item)
 			}
+
 			return nil
 		})
+
 		return nil
 	})
+
 	c.Groups = append(c.Groups, g)
 
 	b, err := dethcl.Marshal(c)
@@ -402,10 +438,13 @@ func (sq *Squadron) Bake(ctx context.Context, buildArgs []string) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal bake config")
 	}
+
 	pterm.Debug.Println("🔥 | bakefile:\n" + util.HighlightHCL(string(b)))
 
 	start := time.Now()
+
 	pterm.Success.Println("🔥 | baking containers")
+
 	out, err := util.NewDockerCommand().
 		Bake(bytes.NewReader(b)).
 		Stderr(ptermx.NewWriter(pterm.Debug)).
@@ -414,6 +453,7 @@ func (sq *Squadron) Bake(ctx context.Context, buildArgs []string) error {
 		pterm.Println(util.HighlightHCL(string(b)))
 		return errors.Wrap(err, out)
 	}
+
 	pterm.Success.Println("🔥 | baking containers ⏱︎ " + time.Since(start).Truncate(time.Second).String())
 
 	return nil
@@ -436,12 +476,28 @@ func (sq *Squadron) Build(ctx context.Context, buildArgs []string, parallel int)
 		unit     string
 		item     config.Build
 	}
+
 	var all []one
+
+	gitInfo, err := sq.getGitInfo(ctx)
+	if err != nil {
+		pterm.Debug.Println("failed to get git info:", err)
+	}
+
+	var gitInfoArgs []string
+	for s, s2 := range gitInfo {
+		gitInfoArgs = append(gitInfoArgs, fmt.Sprintf("%s=%s", s, s2))
+	}
 
 	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
 		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 			for _, name := range v.BuildNames() {
 				item := v.Builds[name]
+				item.BuildArg = append(item.BuildArg,
+					"SQUADRON_NAME="+key,
+					"SQUADRON_UNIT_NAME="+k,
+				)
+				item.BuildArg = append(item.BuildArg, gitInfoArgs...)
 				spinner := printer.NewSpinner(fmt.Sprintf("📦 | %s/%s.%s (%s:%s)", key, k, name, item.Image, item.Tag))
 				all = append(all, one{
 					spinner:  spinner,
@@ -451,6 +507,7 @@ func (sq *Squadron) Build(ctx context.Context, buildArgs []string, parallel int)
 				})
 				spinner.Start()
 			}
+
 			return nil
 		})
 	})
@@ -462,17 +519,19 @@ func (sq *Squadron) Build(ctx context.Context, buildArgs []string, parallel int)
 			ctx := ptermx.ContextWithSpinner(ctx, a.spinner)
 			if err := ctx.Err(); err != nil {
 				a.spinner.Warning(err.Error())
-				return err
+				return nil
 			}
 
-			if out, err := a.item.Build(ctx, a.squadron, a.unit, buildArgs); err != nil {
-				if !errors.Is(err, context.Canceled) {
-					a.spinner.Fail(out)
-				}
+			if out, err := a.item.Build(ctx, a.squadron, a.unit, buildArgs); errors.Is(ctx.Err(), context.Canceled) {
+				a.spinner.Warning(ctx.Err().Error())
+				return nil
+			} else if err != nil {
+				a.spinner.Fail(out)
 				return err
 			}
 
 			a.spinner.Success()
+
 			return nil
 		})
 	}
@@ -501,6 +560,7 @@ func (sq *Squadron) Down(ctx context.Context, helmArgs []string, parallel int) e
 				}
 
 				name := sq.getReleaseName(key, k, v)
+
 				namespace, err := sq.Namespace(ctx, key, k, v)
 				if err != nil {
 					return err
@@ -519,8 +579,10 @@ func (sq *Squadron) Down(ctx context.Context, helmArgs []string, parallel int) e
 				}
 
 				spinner.Success()
+
 				return nil
 			})
+
 			return nil
 		})
 	})
@@ -554,12 +616,17 @@ func (sq *Squadron) RenderSchema(ctx context.Context, baseSchema string) (string
 }
 
 func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) (string, error) {
-	var m sync.Mutex
-	var ret bytes.Buffer
+	var (
+		m   sync.Mutex
+		ret bytes.Buffer
+	)
+
 	write := func(b []byte) error {
 		m.Lock()
 		defer m.Unlock()
+
 		_, err := ret.Write(b)
+
 		return err
 	}
 
@@ -583,10 +650,12 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) (
 				}
 
 				name := sq.getReleaseName(key, k, v)
+
 				namespace, err := sq.Namespace(ctx, key, k, v)
 				if err != nil {
 					return err
 				}
+
 				valueBytes, err := v.ValuesYAML(sq.c.Global)
 				if err != nil {
 					return err
@@ -597,6 +666,7 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) (
 					spinner.Fail(string(manifest))
 					return err
 				}
+
 				cmd := exec.CommandContext(ctx, "helm", "upgrade", name,
 					"--install",
 					"--namespace", namespace,
@@ -616,11 +686,14 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) (
 					if v.Chart.Repository != "" {
 						cmd.Args = append(cmd.Args, "--repo", v.Chart.Repository)
 					}
+
 					if v.Chart.Version != "" {
 						cmd.Args = append(cmd.Args, "--version", v.Chart.Version)
 					}
 				}
+
 				cmd.Args = append(cmd.Args, helmArgs...)
+
 				out, err := cmd.CombinedOutput()
 				if err != nil {
 					spinner.Fail(string(out))
@@ -634,6 +707,7 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) (
 				}
 
 				outStr := strings.Split(string(out), "\n")
+
 				yamls2, err := yamldiff.Load(strings.Join(outStr[10:], "\n"))
 				if err != nil {
 					spinner.Fail(string(out))
@@ -651,6 +725,7 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) (
 				}
 
 				spinner.Success()
+
 				return nil
 			})
 
@@ -667,14 +742,17 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) (
 
 func (sq *Squadron) Status(ctx context.Context, helmArgs []string, parallel int) error {
 	var m sync.Mutex
+
 	tbd := pterm.TableData{
 		{"Name", "Revision", "Status", "User", "Branch", "Commit", "Squadron", "Last deployed", "Notes"},
 	}
 	write := func(b []string) {
 		m.Lock()
 		defer m.Unlock()
+
 		tbd = append(tbd, b)
 	}
+
 	type statusType struct {
 		Name      string `json:"name"`
 		Version   int    `json:"version"`
@@ -686,10 +764,10 @@ func (sq *Squadron) Status(ctx context.Context, helmArgs []string, parallel int)
 			LastDeployed  string `json:"last_deployed"`
 			Description   string `json:"description"`
 		} `json:"info"`
-		user     string `json:"-"` //nolint:revive
-		branch   string `json:"-"` //nolint:revive
-		commit   string `json:"-"` //nolint:revive
-		squadron string `json:"-"` //nolint:revive
+		user     string `json:"-"`
+		branch   string `json:"-"`
+		commit   string `json:"-"`
+		squadron string `json:"-"`
 	}
 
 	wg, ctx := errgroup.WithContext(ctx)
@@ -701,7 +779,9 @@ func (sq *Squadron) Status(ctx context.Context, helmArgs []string, parallel int)
 	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
 		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 			var status statusType
+
 			name := sq.getReleaseName(key, k, v)
+
 			namespace, err := sq.Namespace(ctx, key, k, v)
 			if err != nil {
 				return errors.Errorf("failed to retrieve namsspace: %s/%s", key, k)
@@ -739,8 +819,10 @@ func (sq *Squadron) Status(ctx context.Context, helmArgs []string, parallel int)
 					return errors.Errorf("failed to retrieve status: %s/%s", key, k)
 				}
 
-				var notes []string
-				var statusDescription Status
+				var (
+					notes             []string
+					statusDescription Status
+				)
 
 				if err := json.Unmarshal([]byte(status.Info.Description), &statusDescription); err == nil {
 					status.user = statusDescription.User
@@ -769,6 +851,7 @@ func (sq *Squadron) Status(ctx context.Context, helmArgs []string, parallel int)
 				})
 
 				spinner.Success()
+
 				return nil
 			})
 
@@ -779,12 +862,14 @@ func (sq *Squadron) Status(ctx context.Context, helmArgs []string, parallel int)
 	if err := wg.Wait(); err != nil {
 		return err
 	}
+
 	printer.Stop()
 
 	out, err := pterm.DefaultTable.WithHasHeader().WithData(tbd).Srender()
 	if err != nil {
 		return err
 	}
+
 	pterm.Println(out)
 
 	return nil
@@ -804,6 +889,7 @@ func (sq *Squadron) Rollback(ctx context.Context, revision string, helmArgs []st
 	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
 		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 			name := sq.getReleaseName(key, k, v)
+
 			namespace, err := sq.Namespace(ctx, key, k, v)
 			if err != nil {
 				return err
@@ -821,6 +907,7 @@ func (sq *Squadron) Rollback(ctx context.Context, revision string, helmArgs []st
 				}
 
 				stdErr := bytes.NewBuffer([]byte{})
+
 				out, err := util.NewHelmCommand().Args("rollback", name).
 					Stderr(stdErr).
 					Args(helmArgs...).
@@ -836,6 +923,7 @@ func (sq *Squadron) Rollback(ctx context.Context, revision string, helmArgs []st
 				}
 
 				spinner.Success(out)
+
 				return nil
 			})
 
@@ -851,11 +939,13 @@ func (sq *Squadron) Rollback(ctx context.Context, revision string, helmArgs []st
 func (sq *Squadron) UpdateLocalDependencies(ctx context.Context, parallel int) error {
 	// collect unique entrie
 	repositories := map[string]struct{}{}
+
 	err := sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
 		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 			if strings.HasPrefix(v.Chart.Repository, "file:///") {
 				repositories[v.Chart.Repository] = struct{}{}
 			}
+
 			return nil
 		})
 	})
@@ -869,6 +959,7 @@ func (sq *Squadron) UpdateLocalDependencies(ctx context.Context, parallel int) e
 	for repository := range repositories {
 		wg.Go(func() error {
 			pterm.Debug.Printfln("running helm dependency update for %s", repository)
+
 			if out, err := util.NewHelmCommand().
 				Cwd(path.Clean(strings.TrimPrefix(repository, "file://"))).
 				Args("dependency", "update", "--skip-refresh", "--debug").
@@ -877,6 +968,7 @@ func (sq *Squadron) UpdateLocalDependencies(ctx context.Context, parallel int) e
 			} else {
 				pterm.Debug.Println(out)
 			}
+
 			return nil
 		})
 	}
@@ -895,12 +987,14 @@ func (sq *Squadron) Up(ctx context.Context, helmArgs []string, status Status, pa
 
 	printer := ptermx.MustNewMultiPrinter()
 	defer printer.Stop()
+
 	type one struct {
 		spinner  ptermx.Spinner
 		squadron string
 		unit     string
 		item     *config.Unit
 	}
+
 	var all []one
 
 	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
@@ -909,6 +1003,7 @@ func (sq *Squadron) Up(ctx context.Context, helmArgs []string, status Status, pa
 			if v.Priority != 0 {
 				priority = fmt.Sprintf(" ☝︎ %d", v.Priority)
 			}
+
 			spinner := printer.NewSpinner(fmt.Sprintf("🚀 | %s/%s", key, k) + priority)
 			all = append(all, one{
 				spinner:  spinner,
@@ -937,11 +1032,13 @@ func (sq *Squadron) Up(ctx context.Context, helmArgs []string, status Status, pa
 			}
 
 			name := sq.getReleaseName(a.squadron, a.unit, a.item)
+
 			namespace, err := sq.Namespace(ctx, a.squadron, a.unit, a.item)
 			if err != nil {
 				a.spinner.Fail(err.Error())
 				return err
 			}
+
 			valueBytes, err := a.item.ValuesYAML(sq.c.Global)
 			if err != nil {
 				a.spinner.Fail(err.Error())
@@ -966,9 +1063,11 @@ func (sq *Squadron) Up(ctx context.Context, helmArgs []string, status Status, pa
 				cmd.Args(path.Clean(strings.TrimPrefix(a.item.Chart.Repository, "file://")))
 			} else {
 				cmd.Args(a.item.Chart.Name)
+
 				if a.item.Chart.Repository != "" {
 					cmd.Args("--repo", a.item.Chart.Repository)
 				}
+
 				if a.item.Chart.Version != "" {
 					cmd.Args("--version", a.item.Chart.Version)
 				}
@@ -984,6 +1083,7 @@ func (sq *Squadron) Up(ctx context.Context, helmArgs []string, status Status, pa
 			}
 
 			a.spinner.Success()
+
 			return nil
 		})
 	}
@@ -992,12 +1092,17 @@ func (sq *Squadron) Up(ctx context.Context, helmArgs []string, status Status, pa
 }
 
 func (sq *Squadron) Template(ctx context.Context, helmArgs []string, parallel int) (string, error) {
-	var m sync.Mutex
-	var ret bytes.Buffer
+	var (
+		m   sync.Mutex
+		ret bytes.Buffer
+	)
+
 	write := func(b []byte) error {
 		m.Lock()
 		defer m.Unlock()
+
 		_, err := ret.Write(b)
+
 		return err
 	}
 
@@ -1021,6 +1126,7 @@ func (sq *Squadron) Template(ctx context.Context, helmArgs []string, parallel in
 				}
 
 				name := sq.getReleaseName(key, k, v)
+
 				namespace, err := sq.Namespace(ctx, key, k, v)
 				if err != nil {
 					spinner.Fail(err.Error())
@@ -1039,6 +1145,7 @@ func (sq *Squadron) Template(ctx context.Context, helmArgs []string, parallel in
 				}
 
 				spinner.Success()
+
 				return nil
 			})
 
@@ -1057,5 +1164,74 @@ func (sq *Squadron) getReleaseName(squadron, unit string, u *config.Unit) string
 	if u.Name != "" {
 		return u.Name
 	}
+
 	return squadron + "-" + unit
+}
+
+func (sq *Squadron) getGitInfo(ctx context.Context) (map[string]string, error) {
+	ret := map[string]string{}
+
+	dir := "."
+
+	for _, s := range []string{"GIT_DIR", "PROJECT_ROOT"} {
+		if v := os.Getenv(s); v != "" {
+			dir = v
+			break
+		}
+	}
+
+	repo, err := git.PlainOpen(dir)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get remote "origin" URL
+	remote, err := repo.Remote("origin")
+	if err != nil {
+		return nil, err
+	}
+
+	remoteURLs := remote.Config().URLs
+	if len(remoteURLs) > 0 {
+		url := remoteURLs[0]
+		if strings.HasPrefix(url, "git@") {
+			// Example input: git@github.com:user/repo.git
+			parts := strings.SplitN(url, ":", 2)
+			if len(parts) == 2 {
+				// parts[1] = user/repo.git
+				hostParts := strings.Split(parts[0], "@")
+				if len(hostParts) == 2 {
+					host := hostParts[1]
+					url = "https://" + host + "/" + strings.TrimSuffix(parts[1], ".git")
+				}
+			}
+		}
+
+		ret["GIT_REPOSITORY_URL"] = url
+	}
+
+	// Get HEAD reference to find the current branch or commit
+	ref, err := repo.Head()
+	if err != nil {
+		return nil, err
+	}
+
+	ret["GIT_TYPE"] = "branch"
+	ret["GIT_BRANCH"] = ref.Name().Short()
+	ret["GIT_COMMIT_HASH"] = ref.Hash().String()
+
+	if t, err := repo.Tags(); err == nil {
+		_ = t.ForEach(func(reference *plumbing.Reference) error {
+			if ref.Hash() == reference.Hash() {
+				ret["GIT_TAG"] = reference.Name().Short()
+				ret["GIT_TYPE"] = "tag"
+
+				return errors.New("break")
+			}
+
+			return nil
+		})
+	}
+
+	return ret, nil
 }

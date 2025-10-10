@@ -41,18 +41,21 @@ func toYAML(v any) string {
 	if err != nil {
 		return err.Error()
 	}
+
 	return strings.TrimSuffix(string(data), "\n")
 }
 
 func toYAMLPretty(v any) string {
 	var data bytes.Buffer
+
 	encoder := yaml.NewEncoder(&data)
 	encoder.SetIndent(2)
-	err := encoder.Encode(v)
 
+	err := encoder.Encode(v)
 	if err != nil {
 		return err.Error()
 	}
+
 	return strings.TrimSuffix(data.String(), "\n")
 }
 
@@ -68,6 +71,7 @@ func fromYAML(str string) map[string]any {
 	if err := yaml.Unmarshal([]byte(str), &m); err != nil {
 		m["Error"] = err.Error()
 	}
+
 	return m
 }
 
@@ -82,6 +86,7 @@ func fromYAMLArray(str string) []any {
 	if err := yaml.Unmarshal([]byte(str), &a); err != nil {
 		a = []any{err.Error()}
 	}
+
 	return a
 }
 
@@ -92,10 +97,12 @@ func fromYAMLArray(str string) []any {
 func toTOML(v any) string {
 	b := bytes.NewBuffer(nil)
 	e := toml.NewEncoder(b)
+
 	err := e.Encode(v)
 	if err != nil {
 		return err.Error()
 	}
+
 	return b.String()
 }
 
@@ -111,6 +118,7 @@ func fromTOML(str string) map[string]any {
 	if err := toml.Unmarshal([]byte(str), &m); err != nil {
 		m["Error"] = err.Error()
 	}
+
 	return m
 }
 
@@ -123,6 +131,7 @@ func toJSON(v any) string {
 	if err != nil {
 		return err.Error()
 	}
+
 	return string(data)
 }
 
@@ -138,6 +147,7 @@ func fromJSON(str string) map[string]any {
 	if err := json.Unmarshal([]byte(str), &m); err != nil {
 		m["Error"] = err.Error()
 	}
+
 	return m
 }
 
@@ -152,5 +162,6 @@ func fromJSONArray(str string) []any {
 	if err := json.Unmarshal([]byte(str), &a); err != nil {
 		a = []any{err.Error()}
 	}
+
 	return a
 }

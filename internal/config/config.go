@@ -26,6 +26,7 @@ func (Config) JSONSchemaProperty(prop string) any {
 	if prop == "squadron" {
 		return map[string]map[string]*Unit{}
 	}
+
 	return nil
 }
 
@@ -40,15 +41,19 @@ func (c *Config) BuildDependencies(ctx context.Context) map[string]Build {
 					if !ok {
 						return errors.Errorf("missing build dependency `%s`", dependency)
 					}
+
 					ret[dependency] = b
 				}
 			}
+
 			return nil
 		})
 	})
+
 	if len(ret) > 0 {
 		return ret
 	}
+
 	return nil
 }
 

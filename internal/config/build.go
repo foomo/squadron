@@ -89,12 +89,14 @@ func (b *Build) Build(ctx context.Context, squadron, unit string, args []string)
 			cleanArgs = append(cleanArgs, strings.Split(value, " ")...)
 		}
 	}
+
 	argOverride := func(name string, vs string, args []string) (string, string) {
 		if slices.ContainsFunc(args, func(s string) bool {
 			return strings.HasPrefix(s, name)
 		}) {
 			return "", ""
 		}
+
 		return name, vs
 	}
 	boolArgOverride := func(name string, vs bool, args []string) (string, bool) {
@@ -103,10 +105,12 @@ func (b *Build) Build(ctx context.Context, squadron, unit string, args []string)
 		}) {
 			return "", false
 		}
+
 		return name, vs
 	}
 
 	pterm.Debug.Printfln("running docker build for %q", b.Context)
+
 	return util.NewDockerCommand().Build(b.Context).
 		TemplateData(map[string]string{"image": b.Image, "tag": b.Tag}).
 		ListArg("--add-host", b.AddHost).
@@ -114,7 +118,7 @@ func (b *Build) Build(ctx context.Context, squadron, unit string, args []string)
 		ListArg("--allow", b.Allow).
 		ListArg("--attest", b.Attest).
 		ListArg("--build-arg", b.BuildArg).
-		ListArg("--build-contet", b.BuildContext).
+		ListArg("--build-context", b.BuildContext).
 		Arg(argOverride("--builder", b.Builder, args)).
 		Arg(argOverride("--cache-from", b.CacheFrom, args)).
 		Arg(argOverride("--cache-to", b.CacheTo, args)).
@@ -152,7 +156,9 @@ func (b *Build) UnmarshalYAML(value *yaml.Node) error {
 		if err := value.Decode(&vString); err != nil {
 			return err
 		}
+
 		b.Context = vString
+
 		return nil
 	default:
 		return fmt.Errorf("unsupported node tag type for %T: %q", b, value.Tag)

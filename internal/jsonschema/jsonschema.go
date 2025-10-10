@@ -24,12 +24,14 @@ func (js *JSONSchema) LoadBaseSchema(ctx context.Context, url string) error {
 	if err != nil {
 		return err
 	}
+
 	js.baseSchema = baseSchema
+
 	return nil
 }
 
 // SetSquadronUnitSchema overrides the base schema at the given path with another JSON schema from a URL
-func (js *JSONSchema) SetSquadronUnitSchema(ctx context.Context, squardon, unit, url string) error {
+func (js *JSONSchema) SetSquadronUnitSchema(ctx context.Context, squadron, unit, url string) error {
 	var ref string
 	if strings.HasPrefix(url, "http") {
 		ref = strings.TrimPrefix(url, "https:")
@@ -41,6 +43,7 @@ func (js *JSONSchema) SetSquadronUnitSchema(ctx context.Context, squardon, unit,
 		ref = strings.TrimPrefix(ref, ".")
 		ref = strings.TrimPrefix(ref, "/")
 	}
+
 	ref = strings.TrimSuffix(ref, "/")
 	ref = strings.ReplaceAll(ref, "/", "-")
 	ref = strings.ToLower(ref)
@@ -54,6 +57,7 @@ func (js *JSONSchema) SetSquadronUnitSchema(ctx context.Context, squardon, unit,
 		if err != nil {
 			return errors.Wrap(err, "failed to load map: "+url)
 		}
+
 		delete(valuesMap, "$schema")
 		js.ensure(defsMap, ref, valuesMap)
 	}
@@ -63,7 +67,7 @@ func (js *JSONSchema) SetSquadronUnitSchema(ctx context.Context, squardon, unit,
 	configPropertiesMap := js.ensure(configMap, "properties", map[string]any{})
 	squadronsMap := js.ensure(configPropertiesMap, "squadron", map[string]any{})
 	squadronsPropertiesMap := js.ensure(squadronsMap, "properties", map[string]any{})
-	squadronMap := js.ensure(squadronsPropertiesMap, squardon, map[string]any{
+	squadronMap := js.ensure(squadronsPropertiesMap, squadron, map[string]any{
 		"additionalProperties": map[string]any{
 			"$ref": "#/$defs/Unit",
 		},
@@ -95,6 +99,7 @@ func (js *JSONSchema) String() (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	return string(output), nil
 }
 
@@ -104,6 +109,7 @@ func (js *JSONSchema) PrettyString() (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	return string(output), nil
 }
 
@@ -113,5 +119,6 @@ func (js *JSONSchema) ensure(source map[string]any, name string, initial map[str
 		ret = initial
 		source[name] = ret
 	}
+
 	return ret
 }

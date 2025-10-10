@@ -70,13 +70,16 @@ func TestConfigSimpleSnapshot(t *testing.T) {
 
 func runTestConfig(t *testing.T, name string, files []string, squadronName string, unitNames, tags []string) {
 	t.Helper()
+
 	var cwd string
+
 	ctx := t.Context()
 	require.NoError(t, util.ValidatePath(".", &cwd))
 
 	for i, file := range files {
 		files[i] = path.Join("testdata", name, file)
 	}
+
 	sq := squadron.New(cwd, "default", files)
 
 	{

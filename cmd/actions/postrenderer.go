@@ -29,9 +29,10 @@ func NewPostRenderer(c *viper.Viper) *cobra.Command {
 				return err
 			}
 
-			c := exec.CommandContext(cmd.Context(), "kustomize", "build", args[0])
+			c := exec.CommandContext(cmd.Context(), "kustomize", "build", args[0]) //nolint:gosec
 			c.Stdout = os.Stdout
 			c.Stderr = os.Stderr
+
 			return c.Run()
 		},
 	}

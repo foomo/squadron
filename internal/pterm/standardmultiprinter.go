@@ -15,6 +15,7 @@ func NewStandardMultiPrinter() (*StandardMultiPrinter, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &StandardMultiPrinter{printer: printer}, nil
 }
 

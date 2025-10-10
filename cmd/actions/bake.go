@@ -50,6 +50,7 @@ func NewBake(c *viper.Viper) *cobra.Command {
 	_ = x.BindPFlag("push", flags.Lookup("push"))
 
 	cmd.Flags().Int("parallel", 1, "run command in parallel")
+
 	_ = x.BindPFlag("parallel", flags.Lookup("parallel"))
 
 	flags.StringArray("bake-args", nil, "additional docker bake args")

@@ -12,6 +12,7 @@ func quote(str ...any) string {
 			out = append(out, fmt.Sprintf("%v", s))
 		}
 	}
+
 	return "'" + strings.Join(out, " ") + "'"
 }
 
@@ -22,6 +23,7 @@ func quoteAll(str ...any) string {
 			out = append(out, fmt.Sprintf("'%v'", s))
 		}
 	}
+
 	return strings.Join(out, " ")
 }
 

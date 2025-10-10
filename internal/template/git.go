@@ -18,6 +18,7 @@ func git(ctx context.Context) func(action string) (string, error) {
 		default:
 			cmd.Args = append(cmd.Args, "describe", "--tags", "--always")
 		}
+
 		res, err := cmd.Output()
 		if err != nil {
 			return "", err
