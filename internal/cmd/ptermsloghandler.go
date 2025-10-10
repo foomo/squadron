@@ -12,6 +12,11 @@ type PTermSlogHandler struct {
 	attrs []slog.Attr
 }
 
+// NewPTermSlogHandler returns a new logging handler that can be intrgrated with log/slog.
+func NewPTermSlogHandler() *PTermSlogHandler {
+	return &PTermSlogHandler{}
+}
+
 // Enabled returns true if the given level is enabled.
 func (s *PTermSlogHandler) Enabled(ctx context.Context, level slog.Level) bool {
 	switch level {
@@ -70,6 +75,7 @@ func (s *PTermSlogHandler) Handle(ctx context.Context, record slog.Record) error
 func (s *PTermSlogHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	newS := *s
 	newS.attrs = attrs
+
 	return &newS
 }
 
@@ -77,9 +83,4 @@ func (s *PTermSlogHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 func (s *PTermSlogHandler) WithGroup(name string) slog.Handler {
 	// Grouping is not yet supported by pterm.
 	return s
-}
-
-// NewPTermSlogHandler returns a new logging handler that can be intrgrated with log/slog.
-func NewPTermSlogHandler() *PTermSlogHandler {
-	return &PTermSlogHandler{}
 }

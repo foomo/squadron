@@ -48,6 +48,7 @@ func (u *Unit) UnmarshalYAML(value *yaml.Node) error {
 	if err := value.Decode((*wrapper)(u)); err != nil {
 		return err
 	}
+
 	if u.Extends != "" {
 		// render filename
 		filename, err := template.ExecuteFileTemplate(context.Background(), u.Extends, nil, true)
@@ -65,6 +66,7 @@ func (u *Unit) UnmarshalYAML(value *yaml.Node) error {
 		if err := yaml.Unmarshal(defaults, &m); err != nil {
 			return errors.Wrap(err, "failed to unmarshal defaults")
 		}
+
 		if err := mergo.Merge(&m, u.Values, mergo.WithAppendSlice, mergo.WithOverride, mergo.WithSliceDeepCopy); err != nil {
 			return err
 		}
@@ -72,6 +74,7 @@ func (u *Unit) UnmarshalYAML(value *yaml.Node) error {
 		u.Extends = ""
 		u.Values = m
 	}
+
 	return nil
 }
 
@@ -81,6 +84,7 @@ func (Unit) JSONSchemaProperty(prop string) any {
 	if prop == "chart" {
 		return x
 	}
+
 	return nil
 }
 
@@ -89,11 +93,13 @@ func (u *Unit) ValuesYAML(global map[string]any) ([]byte, error) {
 	if values == nil {
 		values = map[string]any{}
 	}
+
 	if global != nil {
 		if _, ok := values["global"]; !ok {
 			values["global"] = global
 		}
 	}
+
 	return yamlv2.Marshal(values)
 }
 
@@ -102,7 +108,9 @@ func (u *Unit) BakeNames() []string {
 	for name := range u.Bakes {
 		ret = append(ret, name)
 	}
+
 	sort.Strings(ret)
+
 	return ret
 }
 
@@ -111,12 +119,15 @@ func (u *Unit) BuildNames() []string {
 	for name := range u.Builds {
 		ret = append(ret, name)
 	}
+
 	sort.Strings(ret)
+
 	return ret
 }
 
 func (u *Unit) Template(ctx context.Context, name, squadron, unit, namespace string, global map[string]any, helmArgs []string) ([]byte, error) {
 	var ret bytes.Buffer
+
 	valueBytes, err := u.ValuesYAML(global)
 	if err != nil {
 		return nil, err
@@ -138,13 +149,16 @@ func (u *Unit) Template(ctx context.Context, name, squadron, unit, namespace str
 		cmd.Args(path.Clean(strings.TrimPrefix(u.Chart.Repository, "file://")))
 	} else {
 		cmd.Args(u.Chart.Name)
+
 		if u.Chart.Repository != "" {
 			cmd.Args("--repo", u.Chart.Repository)
 		}
+
 		if u.Chart.Version != "" {
 			cmd.Args("--version", u.Chart.Version)
 		}
 	}
+
 	if out, err := cmd.Run(ctx); err != nil {
 		return nil, errors.Wrap(err, out)
 	}
@@ -161,5 +175,6 @@ func (u *Unit) PostRendererArgs() []string {
 			"--post-renderer-args", u.Kustomize,
 		)
 	}
+
 	return ret
 }

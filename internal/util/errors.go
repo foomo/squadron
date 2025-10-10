@@ -10,7 +10,9 @@ import (
 
 func SprintError(err error) string {
 	var ret string
+
 	prefix := "Error: "
+
 	if pterm.PrintDebugMessages {
 		return fmt.Sprintf("%+v", err) + "\n"
 	}
@@ -21,10 +23,12 @@ func SprintError(err error) string {
 			ret += prefix + err.Error() + "\n"
 			break
 		}
+
 		if err.Error() != w.Error() {
 			ret += prefix + strings.TrimSuffix(err.Error(), ": "+w.Error()) + "\n"
 			prefix = "↪ "
 		}
+
 		err = w
 	}
 

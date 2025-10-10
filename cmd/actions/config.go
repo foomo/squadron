@@ -26,6 +26,7 @@ func NewConfig(c *viper.Viper) *cobra.Command {
 			if err := sq.MergeConfigFiles(cmd.Context()); err != nil {
 				return errors.Wrap(err, "failed to merge config files")
 			}
+
 			pterm.Debug.Println(strings.Join(append([]string{"provided files"}, files...), "\n└ "))
 
 			squadronName, unitNames := parseSquadronAndUnitNames(args)
@@ -43,6 +44,7 @@ func NewConfig(c *viper.Viper) *cobra.Command {
 			if !x.GetBool("raw") {
 				out = util.Highlight(out)
 			}
+
 			pterm.Println(out)
 
 			return nil

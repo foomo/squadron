@@ -20,11 +20,13 @@ func (t Tags) Strings() []string {
 	for i, tag := range t {
 		ret[i] = tag.String()
 	}
+
 	return ret
 }
 
 func (t Tags) SortedStrings() []string {
 	ret := t.Strings()
 	slices.Sort(ret)
+
 	return ret
 }

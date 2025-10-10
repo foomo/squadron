@@ -16,5 +16,6 @@ func NewVersion(c *viper.Viper) *cobra.Command {
 			pterm.Println(version)
 		},
 	}
+
 	return cmd
 }

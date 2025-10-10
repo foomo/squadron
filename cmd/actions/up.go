@@ -62,23 +62,28 @@ func NewUp(c *viper.Viper) *cobra.Command {
 				Squadron: version,
 				User:     "unknown",
 			}
+
 			if wd, err := os.Getwd(); err == nil {
 				if value := os.Getenv("GIT_DIR"); value != "" {
 					wd = value
 				}
+
 				if repo, err := git.PlainOpen(wd); err == nil {
 					if c, err := repo.Config(); err == nil {
 						status.User = c.User.Name
 					}
+
 					if ref, err := repo.Head(); err == nil {
 						status.Branch = ref.Name().Short()
 						status.Commit = ref.Hash().String()
+
 						if tags, err := repo.Tags(); err == nil {
 							_ = tags.ForEach(func(r *plumbing.Reference) error {
 								if r.Hash() == ref.Hash() {
 									status.Branch = r.Name().Short()
 									return errors.New("found tag")
 								}
+
 								return nil
 							})
 						}

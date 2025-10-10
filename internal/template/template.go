@@ -43,12 +43,16 @@ func ExecuteFileTemplate(ctx context.Context, text string, templateVars any, err
 	if err != nil {
 		return nil, err
 	}
+
 	out := bytes.NewBuffer([]byte{})
+
 	if errorOnMissing {
 		tpl = tpl.Option("missingkey=error")
 	}
+
 	if err := tpl.Funcs(funcMap).Execute(out, templateVars); err != nil {
 		return nil, err
 	}
+
 	return out.Bytes(), nil
 }

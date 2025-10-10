@@ -21,9 +21,11 @@ func Highlight(source string) string {
 	if l == nil {
 		l = lexers.Analyse(source)
 	}
+
 	if l == nil {
 		l = lexers.Fallback
 	}
+
 	l = chroma.Coalesce(l)
 
 	// Determine formatter.
@@ -60,9 +62,11 @@ func HighlightHCL(source string) string {
 	if l == nil {
 		l = lexers.Analyse(source)
 	}
+
 	if l == nil {
 		l = lexers.Fallback
 	}
+
 	l = chroma.Coalesce(l)
 
 	// Determine formatter.
@@ -109,6 +113,7 @@ func (w *numberWriter) Write(p []byte) (int, error) {
 	)
 	for i, c := range original {
 		tokenLen++
+
 		if c != '\n' {
 			continue
 		}
@@ -121,11 +126,13 @@ func (w *numberWriter) Write(p []byte) (int, error) {
 		if w.currentLine > 9999 {
 			format = "%d |\t%s%s"
 		}
+
 		format = "\033[34m" + format + "\033[0m"
 
 		if _, err := fmt.Fprintf(w.w, format, w.currentLine, string(w.buf), string(token)); err != nil {
 			return i + 1, err
 		}
+
 		w.buf = w.buf[:0]
 		w.currentLine++
 	}
@@ -133,5 +140,6 @@ func (w *numberWriter) Write(p []byte) (int, error) {
 	if len(p) > 0 {
 		w.buf = append(w.buf, p...)
 	}
+
 	return len(original), nil
 }

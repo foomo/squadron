@@ -18,10 +18,12 @@ func (m Map[T]) Trim() {
 		if val.Kind() == reflect.Ptr {
 			val = val.Elem()
 		}
+
 		if !val.IsValid() {
 			delete(m, key)
 			continue
 		}
+
 		if val.IsZero() {
 			delete(m, key)
 			continue
@@ -42,11 +44,14 @@ func (m Map[T]) Keys() []string {
 	if reflect.ValueOf(m).IsZero() {
 		return nil
 	}
+
 	ret := make([]string, 0, len(m))
 	for key := range m {
 		ret = append(ret, key)
 	}
+
 	sort.Strings(ret)
+
 	return ret
 }
 
@@ -55,11 +60,14 @@ func (m Map[T]) Values() []T {
 	if len(m) == 0 {
 		return nil
 	}
+
 	keys := m.Keys()
+
 	ret := make([]T, 0, len(keys))
 	for i, key := range keys {
 		ret[i] = m[key]
 	}
+
 	return ret
 }
 
@@ -67,17 +75,20 @@ func (m Map[T]) Filter(keys ...string) error {
 	if len(keys) == 0 {
 		return nil
 	}
+
 	validKeys := m.Keys()
 	for _, key := range keys {
 		if !slices.Contains(validKeys, key) {
 			return errors.Errorf("key not found: `%s`", key)
 		}
 	}
+
 	for key := range m {
 		if !slices.Contains(keys, key) {
 			delete(m, key)
 		}
 	}
+
 	return nil
 }
 
@@ -87,6 +98,7 @@ func (m Map[T]) FilterFn(handler func(key string, value T) bool) error {
 			delete(m, key)
 		}
 	}
+
 	return nil
 }
 
@@ -94,13 +106,16 @@ func (m Map[T]) Iterate(ctx context.Context, handler func(ctx context.Context, k
 	if len(m) == 0 {
 		return nil
 	}
+
 	for _, key := range m.Keys() {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
+
 		if err := handler(ctx, key, m[key]); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }

@@ -33,6 +33,7 @@ func (c KubeCmd) GetMostRecentPodBySelectors(ctx context.Context, selectors map[
 	for k, v := range selectors {
 		selector = append(selector, fmt.Sprintf("%v=%v", k, v))
 	}
+
 	out, err := c.Args("--selector", strings.Join(selector, ","),
 		"get", "pods", "--sort-by=.status.startTime", "-o", "name").Run(ctx)
 	if err != nil {
@@ -43,9 +44,11 @@ func (c KubeCmd) GetMostRecentPodBySelectors(ctx context.Context, selectors map[
 	if err != nil {
 		return "", err
 	}
+
 	if len(pods) > 0 {
 		return pods[len(pods)-1], nil
 	}
+
 	return "", errors.New("no pods found")
 }
 
@@ -78,6 +81,7 @@ func (c KubeCmd) ExposePod(pod string, host string, port int) *Cmd {
 	if host == "127.0.0.1" {
 		host = ""
 	}
+
 	return c.Args("expose", "pod", pod, "--type=LoadBalancer",
 		fmt.Sprintf("--port=%v", port), fmt.Sprintf("--external-ip=%v", host))
 }
@@ -91,10 +95,12 @@ func (c KubeCmd) GetDeployment(ctx context.Context, deployment string) (*k8s.Dep
 	if err != nil {
 		return nil, err
 	}
+
 	var d k8s.Deployment
 	if err := json.Unmarshal([]byte(out), &d); err != nil {
 		return nil, err
 	}
+
 	return &d, nil
 }
 
@@ -103,6 +109,7 @@ func (c KubeCmd) GetNamespaces(ctx context.Context) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return parseResources(out, "namespace/")
 }
 
@@ -111,6 +118,7 @@ func (c KubeCmd) GetDeployments(ctx context.Context) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return parseResources(out, "deployment.apps/")
 }
 
@@ -119,12 +127,14 @@ func (c KubeCmd) GetPods(ctx context.Context, selectors map[string]string) ([]st
 	for k, v := range selectors {
 		selector = append(selector, fmt.Sprintf("%v=%v", k, v))
 	}
+
 	out, err := c.Args("--selector", strings.Join(selector, ","),
 		"get", "pods", "--sort-by=.status.startTime",
 		"-o", "name").Run(ctx)
 	if err != nil {
 		return nil, err
 	}
+
 	return parseResources(out, "pod/")
 }
 
@@ -133,6 +143,7 @@ func (c KubeCmd) GetContainers(deployment k8s.Deployment) []string {
 	for i, c := range deployment.Spec.Template.Spec.Containers {
 		containers[i] = c.Name
 	}
+
 	return containers
 }
 
@@ -141,6 +152,7 @@ func (c KubeCmd) GetPodsByLabels(ctx context.Context, labels []string) ([]string
 	if err != nil {
 		return nil, err
 	}
+
 	return parseResources(out, "pod/")
 }
 
@@ -154,9 +166,11 @@ func (c KubeCmd) CreateConfigMapFromFile(ctx context.Context, name, path string)
 
 func (c KubeCmd) CreateConfigMap(ctx context.Context, name string, keyMap map[string]string) (string, error) {
 	c.Args("create", "configmap", name)
+
 	for key, value := range keyMap {
 		c.Args(fmt.Sprintf("--from-literal=%v=%v", key, value))
 	}
+
 	return c.Run(ctx)
 }
 
@@ -172,9 +186,11 @@ func (c KubeCmd) GetConfigMapKey(ctx context.Context, name, key string) (string,
 	if err != nil {
 		return out, err
 	}
+
 	if out == "" {
 		return out, fmt.Errorf("no key %q found in ConfigMap %q", key, name)
 	}
+
 	return out, nil
 }
 
@@ -183,19 +199,24 @@ func parseResources(out, prefix string) ([]string, error) {
 	if out == "" {
 		return res, nil
 	}
+
 	lines := strings.Split(out, "\n")
 	if len(lines) == 1 && lines[0] == "" {
 		return nil, fmt.Errorf("delimiter %q not found in %q", "\n", out)
 	}
+
 	for _, line := range lines {
 		if line == "" {
 			continue
 		}
+
 		unprefixed := strings.TrimPrefix(line, prefix)
 		if unprefixed == line {
 			return nil, fmt.Errorf("prefix %q not found in %q", prefix, line)
 		}
+
 		res = append(res, strings.TrimPrefix(line, prefix))
 	}
+
 	return res, nil
 }

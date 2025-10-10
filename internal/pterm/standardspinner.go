@@ -65,7 +65,9 @@ func (s *StandardSpinner) Write(p []byte) (int, error) {
 			lines = append(lines, line)
 		}
 	}
+
 	s.log = append(s.log, lines...)
+
 	return len(p), nil
 }
 
@@ -74,17 +76,21 @@ func (s *StandardSpinner) message(message ...string) string {
 	if !s.start.IsZero() && s.stopped {
 		msg[0] += " ⏱ " + time.Since(s.start).Truncate(time.Second).String()
 	}
+
 	width := pterm.GetTerminalWidth() - 10
 	for i, line := range msg {
 		if len(line) > width {
 			msg[i] = line[:width] + "…"
 		}
 	}
+
 	if value := strings.Join(message, " "); len(value) > 0 {
 		msg = append(msg, value)
 	}
+
 	if pterm.PrintDebugMessages {
 		msg = append(msg, s.log...)
 	}
+
 	return strings.Join(msg, "\n  ")
 }

@@ -42,8 +42,10 @@ func (c *Cmd) Args(args ...string) *Cmd {
 		if arg == "" {
 			continue
 		}
+
 		c.append(arg)
 	}
+
 	return c
 }
 
@@ -56,7 +58,9 @@ func (c *Cmd) Arg(name, v string) *Cmd {
 	if name == "" || v == "" {
 		return c
 	}
+
 	c.append(name, v)
+
 	return c
 }
 
@@ -64,7 +68,9 @@ func (c *Cmd) BoolArg(name string, v bool) *Cmd {
 	if name == "" || !v {
 		return c
 	}
+
 	c.append(name)
+
 	return c
 }
 
@@ -72,12 +78,15 @@ func (c *Cmd) ListArg(name string, vs []string) *Cmd {
 	if name == "" {
 		return c
 	}
+
 	for _, v := range vs {
 		if v == "" {
 			continue
 		}
+
 		c.append(name, v)
 	}
+
 	return c
 }
 
@@ -100,7 +109,9 @@ func (c *Cmd) Stdout(w io.Writer) *Cmd {
 	if w == nil {
 		w, _ = os.Open(os.DevNull)
 	}
+
 	c.stdoutWriters = append(c.stdoutWriters, w)
+
 	return c
 }
 
@@ -108,28 +119,35 @@ func (c *Cmd) Stderr(w io.Writer) *Cmd {
 	if w == nil {
 		w, _ = os.Open(os.DevNull)
 	}
+
 	c.stderrWriters = append(c.stderrWriters, w)
+
 	return c
 }
 
 func (c *Cmd) String() string {
-	cmd := exec.Command(c.command[0], c.command[1:]...) //nolint:noctx
+	cmd := exec.Command(c.command[0], c.command[1:]...) //nolint:noctx,gosec
+
 	cmd.Env = append(os.Environ(), c.env...)
 	if c.cwd != "" {
 		cmd.Dir = c.cwd
 	}
+
 	return cmd.String()
 }
 
 func (c *Cmd) Run(ctx context.Context) (string, error) {
-	cmd := exec.CommandContext(ctx, c.command[0], c.command[1:]...)
+	cmd := exec.CommandContext(ctx, c.command[0], c.command[1:]...) //nolint:gosec
+
 	cmd.Env = append(os.Environ(), c.env...)
 	if c.cwd != "" {
 		cmd.Dir = c.cwd
 	}
 
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
+	var (
+		stdout bytes.Buffer
+		stderr bytes.Buffer
+	)
 
 	if c.stdin != nil {
 		cmd.Stdin = c.stdin
@@ -144,10 +162,12 @@ func (c *Cmd) Run(ctx context.Context) (string, error) {
 	cmd.Stderr = io.MultiWriter(append(c.stderrWriters, &stderr)...)
 
 	pterm.Debug.Println("❯ " + cmd.String())
+
 	err := cmd.Run()
 	if err != nil {
 		err = errors.Wrap(err, "failed to execute: "+cmd.String())
 	}
+
 	return stdout.String() + stderr.String(), err
 }
 
@@ -165,5 +185,6 @@ func (c *Cmd) append(v ...string) {
 			}
 		}
 	}
+
 	c.command = append(c.command, v...)
 }

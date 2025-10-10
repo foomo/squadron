@@ -55,6 +55,7 @@ func (s *NoopSpinner) Write(p []byte) (int, error) {
 			lines = append(lines, line)
 		}
 	}
+
 	s.log = append(s.log, lines...)
 	// pterm.UpdateText.Println(s.message())
 	return len(p), nil
@@ -65,11 +66,14 @@ func (s *NoopSpinner) message(message ...string) string {
 	if !s.start.IsZero() && s.stopped {
 		msg[0] += " ⏱ " + time.Since(s.start).Truncate(time.Second).String()
 	}
+
 	if value := strings.Join(message, " "); len(value) > 0 {
 		msg = append(msg, value)
 	}
+
 	if pterm.PrintDebugMessages {
 		msg = append(msg, s.log...)
 	}
+
 	return strings.Join(msg, "\n  ")
 }

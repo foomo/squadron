@@ -46,6 +46,7 @@ func NewDiff(c *viper.Viper) *cobra.Command {
 			if !x.GetBool("raw") {
 				out = util.Highlight(out)
 			}
+
 			pterm.Println(out)
 
 			return nil

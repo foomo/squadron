@@ -51,15 +51,18 @@ func NewRoot() *cobra.Command {
 			if viper.GetBool("debug") {
 				pterm.EnableDebugMessages()
 			}
+
 			if cmd.Name() == "help" || cmd.Name() == "init" || cmd.Name() == "version" {
 				return nil
 			}
+
 			return util.ValidatePath(".", &cwd)
 		},
 	}
 
 	flags := root.PersistentFlags()
 	flags.BoolP("debug", "d", false, "show all output")
+
 	_ = viper.BindPFlag("debug", root.PersistentFlags().Lookup("debug"))
 
 	flags.StringSliceP("file", "f", []string{"squadron.yaml"}, "specify alternative squadron files")
@@ -70,6 +73,7 @@ func NewRoot() *cobra.Command {
 func NewViper(root *cobra.Command) *viper.Viper {
 	c := viper.New()
 	_ = c.BindPFlag("file", root.PersistentFlags().Lookup("file"))
+
 	return c
 }
 
@@ -80,22 +84,27 @@ func Execute() {
 		if say, cerr := cowsay.Say(msg, cowsay.BallonWidth(80)); cerr == nil {
 			msg = say
 		}
+
 		return msg
 	}
 
 	code := 0
+
 	defer func() {
 		if r := recover(); r != nil {
 			l.Error(say("It's time to panic"))
 			l.Error(fmt.Sprintf("%v", r))
 			l.Error(string(debug.Stack()))
+
 			code = 1
 		}
+
 		os.Exit(code)
 	}()
 
 	if err := root.Execute(); err != nil {
 		l.Error(util.SprintError(err))
+
 		code = 1
 	}
 }
@@ -109,6 +118,7 @@ func parseExtraArgs(args []string) (out []string, extraArgs []string) { //nolint
 			return nil, args
 		}
 	}
+
 	return args, nil
 }
 
@@ -116,11 +126,14 @@ func parseSquadronAndUnitNames(args []string) (squadron string, units []string) 
 	if len(args) == 0 {
 		return "", nil
 	}
+
 	if len(args) > 0 {
 		squadron = args[0]
 	}
+
 	if len(args) > 1 {
 		units = args[1:]
 	}
+
 	return squadron, units
 }

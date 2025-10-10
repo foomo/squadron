@@ -63,6 +63,7 @@ func (d *Chart) UnmarshalYAML(value *yaml.Node) error {
 		if _, err := os.Stat(path.Join(schemaPath, "values.schema.json")); err == nil {
 			d.Schema = path.Join(schemaPath, "values.schema.json")
 		}
+
 		return nil
 	default:
 		return fmt.Errorf("unsupported node tag type for %T: %q", d, value.Tag)
@@ -75,12 +76,15 @@ func (d *Chart) String() string {
 
 func loadChart(name string) (*Chart, error) {
 	c := Chart{}
+
 	file, err := os.ReadFile(name)
 	if err != nil {
 		return nil, errors.Wrap(err, "error while opening file")
 	}
+
 	if err := yaml.Unmarshal(file, &c); err != nil {
 		return nil, errors.Wrap(err, "error while unmarshalling template file")
 	}
+
 	return &c, nil
 }

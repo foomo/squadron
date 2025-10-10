@@ -27,17 +27,21 @@ func (d *Dependency) UnmarshalYAML(value *yaml.Node) error {
 		if err := value.Decode(&vString); err != nil {
 			return err
 		}
+
 		vBytes, err := template.ExecuteFileTemplate(context.Background(), vString, nil, true)
 		if err != nil {
 			return errors.Wrap(err, "failed to render chart string")
 		}
+
 		localChart, err := loadChart(path.Join(string(vBytes), chartFile))
 		if err != nil {
 			return errors.New("failed to load local chart: " + vString)
 		}
+
 		d.Name = localChart.Name
 		d.Repository = fmt.Sprintf("file://%v", vString)
 		d.Version = localChart.Version
+
 		return nil
 	default:
 		return fmt.Errorf("unsupported node tag type for %T: %q", d, value.Tag)

@@ -28,6 +28,7 @@ var ErrOnePasswordNotSignedIn = errors.New("not signed in")
 
 func onePasswordConnectGet(client connect.Client, vaultUUID, itemUUID string) (map[string]string, error) {
 	var item *onepassword.Item
+
 	if onePasswordUUID.MatchString(itemUUID) {
 		if v, err := client.GetItem(itemUUID, vaultUUID); err != nil {
 			return nil, err
@@ -52,6 +53,7 @@ func onePasswordConnectGet(client connect.Client, vaultUUID, itemUUID string) (m
 
 func onePasswordConnectGetDocument(client connect.Client, vaultUUID, itemUUID string) (string, error) {
 	var item *onepassword.Item
+
 	if onePasswordUUID.MatchString(itemUUID) {
 		if v, err := client.GetItem(itemUUID, vaultUUID); err != nil {
 			return "", err
@@ -85,6 +87,7 @@ var onePasswordGetLock sync.Mutex
 func onePasswordGet(ctx context.Context, account, vaultUUID, itemUUID string) (map[string]string, error) {
 	onePasswordGetLock.Lock()
 	defer onePasswordGetLock.Unlock()
+
 	var v struct {
 		Vault struct {
 			ID string `json:"id"`
@@ -106,6 +109,7 @@ func onePasswordGet(ctx context.Context, account, vaultUUID, itemUUID string) (m
 		return nil, errors.Errorf("wrong vault UUID %s for item %s", vaultUUID, itemUUID)
 	} else {
 		ret := map[string]string{}
+
 		aliases := map[string]string{
 			"notesPlain": "notes",
 		}
@@ -116,6 +120,7 @@ func onePasswordGet(ctx context.Context, account, vaultUUID, itemUUID string) (m
 				ret[field.Label] = fmt.Sprintf("%v", field.Value)
 			}
 		}
+
 		return ret, nil
 	}
 }
@@ -125,12 +130,14 @@ var onePasswordGetDocumentLock sync.Mutex
 func onePasswordGetDocument(ctx context.Context, account, vaultUUID, itemUUID string) (string, error) {
 	onePasswordGetDocumentLock.Lock()
 	defer onePasswordGetDocumentLock.Unlock()
+
 	res, err := exec.CommandContext(ctx, "op", "document", "get", itemUUID, "--vault", vaultUUID, "--account", account).CombinedOutput()
 	if err != nil && strings.Contains(string(res), "You are not currently signed in") {
 		return "", ErrOnePasswordNotSignedIn
 	} else if err != nil {
 		return "", errors.Wrap(err, string(res))
 	}
+
 	return strings.Trim(string(res), "\n"), nil
 }
 
@@ -142,6 +149,7 @@ func onePasswordSignIn(ctx context.Context, account string) error {
 
 	// use multi writer to handle password prompt
 	var stdoutBuf bytes.Buffer
+
 	cmd.Stdout = io.MultiWriter(os.Stdout, &stdoutBuf)
 	cmd.Stdin = os.Stdin
 
@@ -155,6 +163,7 @@ func onePasswordSignIn(ctx context.Context, account string) error {
 	if token := strings.TrimSuffix(stdoutBuf.String(), "\n"); token == "" {
 		fmt.Printf("Failed to login into your '%s' account! Please refer to the manual:\n", account)
 		fmt.Println("https://support.1password.com/command-line-getting-started/#set-up-the-command-line-tool")
+
 		return errors.New("failed to retrieve 1password session token")
 	} else if err := os.Setenv(fmt.Sprintf("OP_SESSION_%s", account), token); err != nil {
 		return err
@@ -162,6 +171,7 @@ func onePasswordSignIn(ctx context.Context, account string) error {
 		fmt.Println("NOTE: If you want to skip this step, run:")
 		fmt.Printf("export OP_SESSION_%s=%s\n", account, token)
 	}
+
 	return nil
 }
 
@@ -195,6 +205,7 @@ func onePasswordInit(ctx context.Context, account string) error {
 	if _, err := exec.LookPath("op"); err != nil {
 		pterm.Warning.Println("Your templates includes a call to 1Password, please install it:")
 		pterm.Warning.Println("https://support.1password.com/command-line-getting-started/#set-up-the-command-line-tool")
+
 		return errors.Wrap(err, "failed to lookup op")
 	}
 
@@ -225,6 +236,7 @@ func onePassword(ctx context.Context, templateVars any, errorOnMissing bool) fun
 		} else {
 			itemUUID = value
 		}
+
 		if value, err := onePasswordRender("op", field, templateVars, errorOnMissing); err != nil {
 			return "", err
 		} else {
@@ -240,6 +252,7 @@ func onePassword(ctx context.Context, templateVars any, errorOnMissing bool) fun
 				if err != nil {
 					return "", err
 				}
+
 				if res, err := onePasswordConnectGet(client, vaultUUID, itemUUID); err != nil {
 					return "", err
 				} else {
@@ -310,11 +323,13 @@ func onePasswordRender(name, text string, data any, errorOnMissing bool) (string
 	if !errorOnMissing {
 		opts = append(opts, "missingkey=error")
 	}
+
 	out := bytes.NewBuffer([]byte{})
 	if uuidTpl, err := template.New(name).Option(opts...).Parse(text); err != nil {
 		return "", err
 	} else if err := uuidTpl.Execute(out, data); err != nil {
 		return "", err
 	}
+
 	return out.String(), nil
 }
