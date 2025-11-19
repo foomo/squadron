@@ -1,0 +1,39 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/evilmartians/lefthook/refs/heads/master/schema.json
+# https://lefthook.dev/configuration/
+output: [ summary ]
+
+pre-commit:
+  skip: [ merge, rebase ]
+  commands:
+    branch-name:
+      run: |
+        branch_name=$(git rev-parse --abbrev-ref HEAD)
+        if ! [[ "$branch_name" =~ ^(feature|fix)/ ]]; then
+          echo "Error: Branch name must start with 'feature/' or 'fix/'. Your branch: $branch_name"
+          exit 1
+        fi
+    biome:
+      run: biome check --write --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
+      glob: "*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx,json,jsonc}"
+      stage_fixed: true
+
+commit-msg:
+  skip: [ merge, rebase ]
+  commands:
+    conventional-commit:
+      run: |
+        commit_msg_file={1}
+        commit_msg=$(cat "$commit_msg_file")
+        # Regex for conventional commits (type(scope?): subject)
+        regex="^(build|chore|ci|docs|feat|fix|perf|refactor|style|test|sec|wip)(\([a-z0-9\-]+\))?(!)?: .{1,50}"
+        if ! echo "$commit_msg" | grep -qE "$regex"; then
+          echo "Error: Commit message does not follow Conventional Commits format."
+          echo "Format: type(scope?): subject"
+          echo "Example: feat(login): add remember me option"
+          exit 1
+        fi
+
+post-checkout:
+  commands:
+    mise:
+      run: mise -q install
