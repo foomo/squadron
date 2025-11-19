@@ -64,7 +64,7 @@ func (s *NoopSpinner) Write(p []byte) (int, error) {
 func (s *NoopSpinner) message(message ...string) string {
 	msg := []string{s.prefix}
 	if !s.start.IsZero() && s.stopped {
-		msg[0] += " ⏱ " + time.Since(s.start).Truncate(time.Second).String()
+		msg[0] += " ⏱ " + time.Since(s.start).Truncate(time.Millisecond).String()
 	}
 
 	if value := strings.Join(message, " "); len(value) > 0 {

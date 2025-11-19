@@ -119,7 +119,7 @@ func (sq *Squadron) MergeConfigFiles(ctx context.Context) error {
 
 	sq.config = string(value)
 
-	pterm.Success.Println("📚 | merging configs ⏱ " + time.Since(start).Truncate(time.Second).String())
+	pterm.Success.Println("📚 | merging configs ⏱ " + time.Since(start).Truncate(time.Millisecond).String())
 
 	return nil
 }
@@ -240,7 +240,7 @@ func (sq *Squadron) RenderConfig(ctx context.Context) error {
 
 	sq.config = string(out3)
 
-	pterm.Success.Println("📗 | rendering config ⏱ " + time.Since(start).Truncate(time.Second).String())
+	pterm.Success.Println("📗 | rendering config ⏱ " + time.Since(start).Truncate(time.Millisecond).String())
 
 	return nil
 }
@@ -457,7 +457,7 @@ func (sq *Squadron) Bake(ctx context.Context, buildArgs []string) error {
 		return errors.Wrap(err, out)
 	}
 
-	pterm.Success.Println("🔥 | baking containers ⏱︎ " + time.Since(start).Truncate(time.Second).String())
+	pterm.Success.Println("🔥 | baking containers ⏱︎ " + time.Since(start).Truncate(time.Millisecond).String())
 
 	return nil
 }
