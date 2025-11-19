@@ -82,6 +82,7 @@ type Build struct {
 
 func (b *Build) Build(ctx context.Context, squadron, unit string, args []string) (string, error) {
 	var cleanArgs []string
+
 	for _, arg := range args {
 		if value, err := util.RenderTemplateString(arg, map[string]any{"Squadron": squadron, "Unit": unit, "Build": b}); err != nil {
 			return "", err

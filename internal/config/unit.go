@@ -45,6 +45,7 @@ type Unit struct {
 
 func (u *Unit) UnmarshalYAML(value *yaml.Node) error {
 	type wrapper Unit
+
 	if err := value.Decode((*wrapper)(u)); err != nil {
 		return err
 	}

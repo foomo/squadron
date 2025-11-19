@@ -119,7 +119,7 @@ func (sq *Squadron) MergeConfigFiles(ctx context.Context) error {
 
 	sq.config = string(value)
 
-	pterm.Success.Println("📚 | merging configs ⏱ " + time.Since(start).Truncate(time.Second).String())
+	pterm.Success.Println("📚 | merging configs ⏱ " + time.Since(start).Truncate(time.Millisecond).String())
 
 	return nil
 }
@@ -240,7 +240,7 @@ func (sq *Squadron) RenderConfig(ctx context.Context) error {
 
 	sq.config = string(out3)
 
-	pterm.Success.Println("📗 | rendering config ⏱ " + time.Since(start).Truncate(time.Second).String())
+	pterm.Success.Println("📗 | rendering config ⏱ " + time.Since(start).Truncate(time.Millisecond).String())
 
 	return nil
 }
@@ -307,6 +307,7 @@ func (sq *Squadron) Push(ctx context.Context, pushArgs []string, parallel int) e
 			}
 
 			var cleanArgs []string
+
 			for _, arg := range pushArgs {
 				if value, err := util.RenderTemplateString(arg, map[string]any{"Squadron": a.squadron, "Unit": a.unit, "Build": a.item}); err != nil {
 					return err
@@ -416,7 +417,12 @@ func (sq *Squadron) Bake(ctx context.Context, buildArgs []string) error {
 		_ = value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 			for _, name := range v.BakeNames() {
 				item := v.Bakes[name]
+
 				item.Name = strings.Join([]string{key, k, name}, "-")
+				if item.Args == nil {
+					item.Args = make(map[string]string)
+				}
+
 				item.Args["SQUADRON_NAME"] = key
 				item.Args["SQUADRON_UNIT_NAME"] = k
 				maps.Copy(item.Args, gitInfo)
@@ -454,7 +460,7 @@ func (sq *Squadron) Bake(ctx context.Context, buildArgs []string) error {
 		return errors.Wrap(err, out)
 	}
 
-	pterm.Success.Println("🔥 | baking containers ⏱︎ " + time.Since(start).Truncate(time.Second).String())
+	pterm.Success.Println("🔥 | baking containers ⏱︎ " + time.Since(start).Truncate(time.Millisecond).String())
 
 	return nil
 }
