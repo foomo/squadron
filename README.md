@@ -1,9 +1,12 @@
-[![Build Status](https://github.com/foomo/squadron/actions/workflows/pr.yml/badge.svg?branch=main&event=push)](https://github.com/foomo/squadron/actions/workflows/pr.yml)
+[![GitHub Release](https://img.shields.io/github/release/foomo/squadron.svg?style=flat-square)](https://github.com/foomo/squadron/releases)
+[![Github All Releases](https://img.shields.io/github/downloads/foomo/squadron/total.svg?style=flat-square)](https://github.com/foomo/squadron/releases)
+[![Docker Pulls](https://img.shields.io/docker/pulls/foomo/squadron?style=flat-square)](https://hub.docker.com/r/foomo/squadron)
+[![GitHub stars](https://img.shields.io/github/stars/foomo/squadron.svg?style=flat-square)](https://github.com/foomo/squadron)
 [![Go Report Card](https://goreportcard.com/badge/github.com/foomo/squadron)](https://goreportcard.com/report/github.com/foomo/squadron)
 [![GoDoc](https://godoc.org/github.com/foomo/squadron?status.svg)](https://godoc.org/github.com/foomo/squadron)
 
 <p align="center">
-  <img alt="squadron" src=".github/assets/squadron.png"/>
+  <img alt="foomo/squadron" src="docs/public/squadron.png" width="400" height="400"/>
 </p>
 
 # Squadron
@@ -129,7 +132,9 @@ Use "squadron [command] --help" for more information about a command.
 
 ## How to Contribute
 
-Please refer to the [CONTRIBUTING](.github/CONTRIBUTING.md) details and follow the [CODE_OF_CONDUCT](.github/CODE_OF_CONDUCT.md) and [SECURITY](.github/SECURITY.md) guidelines.
+Contributions are welcome! Please read the [contributing guide](docs/CONTRIBUTING.md).
+
+![Contributors](https://contributors-table.vercel.app/image?repo=foomo/squadron&width=50&columns=15)
 
 ## License
 
