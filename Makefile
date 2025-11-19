@@ -13,7 +13,7 @@ endef
 # --- Targets -----------------------------------------------------------------
 
 # This allows us to accept extra arguments
-%: .mise
+%: .mise .lefthook
 	@:
 
 .PHONY: .mise
@@ -25,10 +25,9 @@ ifeq (, $(shell command -v mise))
 endif
 	@mise install
 
-.PHONY: .husky
-# Configure git hooks for husky
-.husky:
-	@git config core.hooksPath .husky
+# Configure git hooks for lefthook
+.lefthook:
+	@lefthook install
 
 ### Tasks
 
@@ -81,13 +80,15 @@ build:
 	@echo "〉building bin/squadron"
 	@go build -tags=safe -o bin/squadron cmd/main.go
 
-### Utils
+### Documentation
 
-.PHONY: docs
+.PHONY: godocs
 ## Open go docs
-docs:
+godocs:
 	@echo "〉starting go docs"
 	@go doc -http
+
+### Utils
 
 .PHONY: help
 ## Show help text

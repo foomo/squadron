@@ -1,13 +1,5 @@
 version: 2
 
-project_name: squadron
-
-release:
-  github:
-    owner: foomo
-    name: squadron
-  prerelease: auto
-
 builds:
   - binary: squadron
     main: ./cmd/main.go
@@ -28,11 +20,15 @@ builds:
     ldflags:
       - -s -w -X github.com/foomo/squadron/cmd/actions.version={{.Version}}
 
+release:
+  prerelease: auto
+
 archives:
   - formats: [ tar.gz ]
     format_overrides:
       - goos: windows
         formats: [ zip ]
+    files: [ LICENSE ]
 
 changelog:
   use: github-native
