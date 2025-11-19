@@ -60,6 +60,7 @@ func (s *StandardSpinner) Success(message ...string) {
 
 func (s *StandardSpinner) Write(p []byte) (int, error) {
 	var lines []string
+
 	for _, line := range strings.Split(string(p), "\n") {
 		if line := strings.TrimSpace(line); len(line) > 0 {
 			lines = append(lines, line)

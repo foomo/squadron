@@ -50,6 +50,7 @@ func (s *NoopSpinner) Success(message ...string) {
 
 func (s *NoopSpinner) Write(p []byte) (int, error) {
 	var lines []string
+
 	for _, line := range strings.Split(string(p), "\n") {
 		if line := strings.TrimSpace(line); len(line) > 0 {
 			lines = append(lines, line)
