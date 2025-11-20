@@ -45,12 +45,14 @@ tidy:
 ## Run linter
 lint:
 	@echo "〉golangci-lint run"
+	@biome check
 	@golangci-lint run
 
 .PHONY: lint.fix
 ## Fix lint violations
 lint.fix:
 	@echo "〉golangci-lint run fix"
+	@biome check --write
 	@golangci-lint run --fix
 
 .PHONY: test
