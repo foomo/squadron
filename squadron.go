@@ -105,7 +105,7 @@ func (sq *Squadron) MergeConfigFiles(ctx context.Context) error {
 	}
 
 	if sq.c.Version != config.Version {
-		pterm.Debug.Println(string(fileBytes))
+		pterm.Error.Println(string(fileBytes))
 		return errors.New("Please upgrade your YAML definition to from '" + sq.c.Version + "' to '" + config.Version + "'")
 	}
 
@@ -399,7 +399,7 @@ func (sq *Squadron) BuildDependencies(ctx context.Context, buildArgs []string, p
 	return nil
 }
 
-func (sq *Squadron) Bake(ctx context.Context, buildArgs []string) error {
+func (sq *Squadron) Bake(ctx context.Context, bakeArgs []string) error {
 	c := &config.Bake{
 		Groups:  nil,
 		Targets: nil,
@@ -453,6 +453,7 @@ func (sq *Squadron) Bake(ctx context.Context, buildArgs []string) error {
 
 	out, err := util.NewDockerCommand().
 		Bake(bytes.NewReader(b)).
+		Args(bakeArgs...).
 		Stderr(ptermx.NewWriter(pterm.Debug)).
 		Run(ctx)
 	if err != nil {
