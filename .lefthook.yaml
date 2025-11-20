@@ -4,6 +4,7 @@ output: [ summary ]
 
 pre-commit:
   skip: [ merge, rebase ]
+  parallel: true
   commands:
     branch-name:
       run: |
