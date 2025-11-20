@@ -4,6 +4,7 @@ output: [ summary ]
 
 pre-commit:
   skip: [ merge, rebase ]
+  parallel: true
   commands:
     branch-name:
       run: |
@@ -13,8 +14,12 @@ pre-commit:
           exit 1
         fi
     biome:
-      run: biome check --write --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
-      glob: "*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx,json,jsonc}"
+      glob: "*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx,json,jsonc,html,css}"
+      run: biome format --write {staged_files}
+      stage_fixed: true
+    golangci:
+      glob: "*.go"
+      run: golangci-lint fmt {staged_files}
       stage_fixed: true
 
 commit-msg:

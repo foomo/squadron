@@ -130,7 +130,7 @@ func (b *Build) Build(ctx context.Context, squadron, unit string, args []string)
 		Arg(argOverride("--metadata-file", b.MetadataFile, args)).
 		Arg(argOverride("--network", b.Network, args)).
 		BoolArg(boolArgOverride("--no-cache", b.NoCache, args)).
-		ListArg("--noe-cache-filter", b.NoCacheFilter).
+		ListArg("--no-cache-filter", b.NoCacheFilter).
 		Arg(argOverride("--output", b.Output, args)).
 		Arg(argOverride("--platform", b.Platform, args)).
 		// Arg("--progress", xxx).

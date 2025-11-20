@@ -61,16 +61,22 @@
           "type": "array"
         },
         "cache-from": {
-          "additionalProperties": {
-            "type": "string"
+          "items": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
           },
-          "type": "object"
+          "type": "array"
         },
         "cache-to": {
-          "additionalProperties": {
-            "type": "string"
+          "items": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
           },
-          "type": "object"
+          "type": "array"
         },
         "target": {
           "type": "string"
