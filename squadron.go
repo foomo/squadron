@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"dario.cat/mergo"
 	"github.com/foomo/squadron/internal/config"
 	"github.com/foomo/squadron/internal/jsonschema"
 	ptermx "github.com/foomo/squadron/internal/pterm"
@@ -413,6 +414,18 @@ func (sq *Squadron) Bake(ctx context.Context, bakeArgs []string) error {
 		pterm.Debug.Println("failed to get git info:", err)
 	}
 
+	var (
+		mergeArgs []string
+		cleanArgs []string
+	)
+	for _, arg := range bakeArgs {
+		if strings.HasPrefix(arg, "--merge=") {
+			mergeArgs = append(mergeArgs, strings.Split(strings.TrimPrefix(arg, "--merge="), " ")...)
+		} else {
+			cleanArgs = append(cleanArgs, arg)
+		}
+	}
+
 	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
 		_ = value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 			for _, name := range v.BakeNames() {
@@ -422,10 +435,55 @@ func (sq *Squadron) Bake(ctx context.Context, bakeArgs []string) error {
 				if item.Args == nil {
 					item.Args = make(map[string]string)
 				}
-
 				item.Args["SQUADRON_NAME"] = key
 				item.Args["SQUADRON_UNIT_NAME"] = k
 				maps.Copy(item.Args, gitInfo)
+
+				if len(mergeArgs) > 0 {
+					argMap := map[string]any{}
+					for _, arg := range mergeArgs {
+						var err error
+						argKeyVal := strings.SplitN(arg, "=", 2)
+						argKey, argVal := argKeyVal[0], argKeyVal[1]
+						argVal, err = util.RenderTemplateString(argVal, map[string]any{"Name": name, "Squadron": key, "Unit": k, "Bake": item})
+						if err != nil {
+							pterm.Fatal.Println("failed to render template:", err, argVal)
+							return err
+						}
+
+						switch {
+						case strings.HasPrefix(argVal, "[]") && strings.Contains(argVal, "="):
+							result := make(map[string]string)
+							pairs := strings.Split(strings.TrimPrefix(argVal, "[]"), ",")
+							for _, p := range pairs {
+								kv := strings.SplitN(strings.TrimSpace(p), "=", 2)
+								if len(kv) == 2 {
+									result[strings.TrimSpace(kv[0])] = strings.TrimSpace(kv[1])
+								}
+							}
+							argMap[argKey] = []map[string]string{result}
+						case strings.Contains(argVal, "="):
+							result := make(map[string]string)
+							pairs := strings.Split(argVal, ",")
+							for _, p := range pairs {
+								kv := strings.SplitN(strings.TrimSpace(p), "=", 2)
+								if len(kv) == 2 {
+									result[strings.TrimSpace(kv[0])] = strings.TrimSpace(kv[1])
+								}
+							}
+							argMap[argKey] = result
+						case strings.Contains(argVal, ","):
+							argMap[argKey] = strings.Split(argVal, ",")
+						default:
+							argMap[argKey] = argVal
+						}
+					}
+					if err := mergo.Map(&item, argMap, mergo.WithAppendSlice); err != nil {
+						pterm.Fatal.Println("failed merge args:", err)
+						return err
+					}
+				}
+
 				pterm.Info.Printfln("📦 | %s/%s.%s (%s)", key, k, name, strings.Join(item.Tags, ","))
 				g.Targets = append(g.Targets, item.Name)
 				c.Targets = append(c.Targets, &item)
@@ -453,7 +511,7 @@ func (sq *Squadron) Bake(ctx context.Context, bakeArgs []string) error {
 
 	out, err := util.NewDockerCommand().
 		Bake(bytes.NewReader(b)).
-		Args(bakeArgs...).
+		Args(cleanArgs...).
 		Stderr(ptermx.NewWriter(pterm.Debug)).
 		Run(ctx)
 	if err != nil {
