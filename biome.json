@@ -25,5 +25,9 @@
 		"parser": {
 			"allowComments": true
 		}
+	},
+	"files": {
+		"ignoreUnknown": true,
+		"includes": ["**", "!squadron.schema.json"]
 	}
 }
