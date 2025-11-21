@@ -1201,7 +1201,12 @@ func (sq *Squadron) getGitInfo(ctx context.Context) (map[string]string, error) {
 
 	if _, ok := os.LookupEnv("GITHUB_ACTIONS"); ok {
 		ret["GIT_TYPE"] = os.Getenv("GITHUB_REF_TYPE")
-		ret["GIT_NAME"] = os.Getenv("GITHUB_REF_NAME")
+
+		ret["GIT_NAME"] = os.Getenv("GITHUB_HEAD_REF")
+		if ret["GIT_NAME"] == "" {
+			ret["GIT_NAME"] = strings.TrimPrefix(os.Getenv("GITHUB_REF"), "refs/heads/")
+		}
+
 		ret["GIT_HASH"] = os.Getenv("GITHUB_SHA")
 		ret["GIT_URL"] = os.Getenv("GITHUB_SERVER_URL") + "/" + os.Getenv("GITHUB_REPOSITORY")
 
