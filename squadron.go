@@ -434,6 +434,7 @@ func (sq *Squadron) Bake(ctx context.Context, bakeArgs []string) error {
 						"src":  src + "/" + item.Name,
 					})
 				}
+
 				if dest := os.Getenv("SQUADRON_BAKE_CACHE_TO_LOCAL"); dest != "" {
 					item.CacheTo = append(item.CacheTo, map[string]string{
 						"type": "local",
