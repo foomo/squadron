@@ -426,6 +426,23 @@ func (sq *Squadron) Bake(ctx context.Context, bakeArgs []string) error {
 				item.Args["SQUADRON_NAME"] = key
 				item.Args["SQUADRON_UNIT_NAME"] = k
 				maps.Copy(item.Args, gitInfo)
+
+				// Workaround
+				if src := os.Getenv("SQUADRON_BAKE_CACHE_FROM_LOCAL"); src != "" {
+					item.CacheFrom = append(item.CacheFrom, map[string]string{
+						"type": "local",
+						"src":  src + "/" + item.Name,
+					})
+				}
+
+				if dest := os.Getenv("SQUADRON_BAKE_CACHE_TO_LOCAL"); dest != "" {
+					item.CacheTo = append(item.CacheTo, map[string]string{
+						"type": "local",
+						"src":  dest + "/" + item.Name,
+						"mode": "max",
+					})
+				}
+
 				pterm.Info.Printfln("📦 | %s/%s.%s (%s)", key, k, name, strings.Join(item.Tags, ","))
 				g.Targets = append(g.Targets, item.Name)
 				c.Targets = append(c.Targets, &item)
