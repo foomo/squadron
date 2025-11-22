@@ -430,6 +430,7 @@ func (sq *Squadron) Bake(ctx context.Context, args []string) error {
 				if item.Labels == nil {
 					item.Labels = make(map[string]string)
 				}
+
 				item.Labels["org.opencontainers.image.source"] = gitInfo.URL
 				item.Labels["org.opencontainers.image.version"] = gitInfo.Ref
 				item.Labels["org.opencontainers.image.created"] = now.Format(time.RFC3339)
@@ -455,6 +456,7 @@ func (sq *Squadron) Bake(ctx context.Context, args []string) error {
 								"src":  src + "/" + item.Name,
 							})
 						}
+
 						if dest := os.Getenv("SQUADRON_BAKE_CACHE_TO"); dest != "" {
 							item.CacheTo = append(item.CacheTo, map[string]string{
 								"type": typ,
@@ -527,6 +529,7 @@ func (sq *Squadron) Build(ctx context.Context, buildArgs []string, parallel int)
 	}
 
 	var all []one
+
 	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
 		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 			for _, name := range v.BuildNames() {
@@ -550,6 +553,7 @@ func (sq *Squadron) Build(ctx context.Context, buildArgs []string, parallel int)
 	})
 
 	now := time.Now()
+
 	gitInfo, err := git.GetInfo(ctx)
 	if err != nil {
 		return err

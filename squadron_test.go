@@ -82,28 +82,28 @@ func runTestConfig(t *testing.T, name string, files []string, squadronName strin
 
 	sq := squadron.New(cwd, "default", files)
 
-	{
+	t.Run("merge", func(tt *testing.T) {
 		require.NoError(t, sq.MergeConfigFiles(ctx), "failed to merge files")
-	}
+	})
 
-	{
+	t.Run("filter", func(tt *testing.T) {
 		require.NoError(t, sq.FilterConfig(ctx, squadronName, unitNames, tags), "failed to filter config")
 		testutils.Snapshot(t, path.Join("testdata", name, "snapshop-config-norender.yaml"), sq.ConfigYAML())
-	}
+	})
 
-	{
+	t.Run("render", func(tt *testing.T) {
 		require.NoError(t, sq.RenderConfig(ctx), "failed to render config")
 		testutils.Snapshot(t, path.Join("testdata", name, "snapshop-config.yaml"), sq.ConfigYAML())
-	}
+	})
 
-	{
+	t.Run("rerender", func(tt *testing.T) {
 		require.NoError(t, sq.RenderConfig(ctx), "failed to render config")
 		testutils.Snapshot(t, path.Join("testdata", name, "snapshop-config.yaml"), sq.ConfigYAML())
-	}
+	})
 
-	{
+	t.Run("template", func(tt *testing.T) {
 		out, err := sq.Template(ctx, nil, 1)
 		require.NoError(t, err)
 		testutils.Snapshot(t, path.Join("testdata", name, "snapshop-template.yaml"), out)
-	}
+	})
 }

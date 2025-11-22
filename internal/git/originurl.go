@@ -13,6 +13,7 @@ func OriginURL(origin string) string {
 			origin = "https://" + strings.TrimPrefix(parts[0], "git@") + "/" + parts[1]
 		}
 	}
+
 	if strings.HasPrefix(origin, "ssh://git@") {
 		// Format is ssh://git@github.com/user/repo.git
 		origin = "https://" + strings.TrimPrefix(origin, "ssh://git@")

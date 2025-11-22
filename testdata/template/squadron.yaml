@@ -10,12 +10,11 @@ squadron:
       chart: <% env "PROJECT_ROOT" %>/_examples/common/charts/frontend
       builds:
         default:
-          tag: latest
-          image: storefinder/frontend
+          tag: [ storefinder/frontend:latest ]
       values:
         image:
-          tag: <% .Squadron.storefinder.frontend.builds.default.tag %>
-          repository: <% .Squadron.storefinder.frontend.builds.default.image %>
+          repository: storefinder/frontend
+          tag: latest
         env:
           ENV: <% env "SHELL" %>
           GLOBAL: <% .Global.host %>
@@ -31,9 +30,8 @@ squadron:
       chart: <% env "PROJECT_ROOT" %>/_examples/common/charts/backend
       builds:
         default:
-          tag: latest
-          image: storefinder/backend
+          tag: [ storefinder/backend:latest ]
       values:
         image:
-          tag: <% .Squadron.storefinder.backend.builds.default.tag %>
-          repository: <% .Squadron.storefinder.backend.builds.default.image %>
+          repository: storefinder/backend
+          tag: latest

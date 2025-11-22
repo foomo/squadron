@@ -5,8 +5,6 @@ squadron:
     frontend:
       builds:
         default:
-          # override element
-          tag: nightly
           # append new element to array
           build_arg:
             - "bar=baz"

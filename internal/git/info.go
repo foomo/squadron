@@ -19,6 +19,7 @@ func GetInfo(ctx context.Context) (Info, error) {
 	ret := Info{}
 
 	dir := "."
+
 	for _, s := range []string{"GIT_DIR", "PROJECT_ROOT"} {
 		if v := os.Getenv(s); v != "" {
 			dir = v

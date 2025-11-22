@@ -11,12 +11,11 @@ squadron:
         version: 0.0.1
       builds:
         default:
-          tag: latest
-          image: storefinder/backend
+          tag: [ storefinder/backend:latest ]
       values:
         image:
-          repository: <% .Squadron.storefinder.backend.builds.default.image %>
-          tag: <% .Squadron.storefinder.backend.builds.default.tag %>
+          repository: storefinder/backend
+          tag: latest
     frontend:
       chart:
         name: frontend
@@ -24,8 +23,7 @@ squadron:
         version: 0.0.1
       builds:
         default:
-          tag: latest
-          image: storefinder/frontend
+          tag: [ storefinder/frontend:latest ]
       values:
         env:
           BASE64: <% "1234567890" | b64enc %>
@@ -34,7 +32,7 @@ squadron:
           ENV: <% env "SHELL" %>
           GLOBAL: <% .Global.host %>
         image:
-          repository: <% .Squadron.storefinder.frontend.builds.default.image %>
-          tag: <% .Squadron.storefinder.frontend.builds.default.tag %>
+          repository: storefinder/frontend
+          tag: latest
         values: |
           <% file "testdata/template/squadron.values.yaml" | indent 5 %>

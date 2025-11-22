@@ -14,13 +14,12 @@ squadron:
         version: 0.0.1
       builds:
         default:
-          tag: latest
-          image: storefinder/backend
+          tag: [ storefinder/backend:latest ]
       values:
         env:
           bar: <% .Vars.bar %>
           baz: <% .Vars.baz %>
           foo: <% .Vars.foo %>
         image:
-          repository: <% .Squadron.storefinder.backend.builds.default.image %>
-          tag: <% .Squadron.storefinder.backend.builds.default.tag %>
+          repository: storefinder/backend
+          tag: latest
