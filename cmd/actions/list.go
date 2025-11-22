@@ -66,7 +66,7 @@ func NewList(c *viper.Viper) *cobra.Command {
 						for name, build := range v.Builds {
 							list = append(list, pterm.LeveledListItem{Level: 2, Text: "📦: " + name})
 
-							list = append(list, pterm.LeveledListItem{Level: 3, Text: build.Image + ":" + build.Tag})
+							list = append(list, pterm.LeveledListItem{Level: 3, Text: build.Tag[0]})
 							for _, dependency := range build.Dependencies {
 								list = append(list, pterm.LeveledListItem{Level: 3, Text: "🗃️: " + dependency})
 							}

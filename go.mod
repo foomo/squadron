@@ -14,11 +14,13 @@ require (
 	github.com/foomo/go v0.0.3
 	github.com/genelet/determined v1.12.3
 	github.com/go-git/go-git/v5 v5.16.3
+	github.com/go-git/go-git/v6 v6.0.0-20251121083746-39fcec474970
 	github.com/invopop/jsonschema v0.13.0
 	github.com/miracl/conflate v1.3.4
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.82
 	github.com/spf13/cobra v1.10.1
+	github.com/spf13/pflag v1.0.10
 	github.com/spf13/viper v1.21.0
 	github.com/sters/yaml-diff v1.4.1
 	github.com/stretchr/testify v1.11.1
@@ -56,7 +58,9 @@ require (
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
+	github.com/go-git/gcfg/v2 v2.0.2 // indirect
 	github.com/go-git/go-billy/v5 v5.6.2 // indirect
+	github.com/go-git/go-billy/v6 v6.0.0-20251022185412-61e52df296a5 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/goccy/go-yaml v1.15.6 // indirect
@@ -92,7 +96,6 @@ require (
 	github.com/skeema/knownhosts v1.3.2 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
-	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/uber/jaeger-client-go v2.30.0+incompatible // indirect
 	github.com/uber/jaeger-lib v2.4.1+incompatible // indirect

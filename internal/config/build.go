@@ -2,22 +2,26 @@ package config
 
 import (
 	"context"
-	"fmt"
-	"slices"
 	"strings"
 
+	"github.com/foomo/squadron/internal/qflag"
 	"github.com/foomo/squadron/internal/util"
 	"github.com/pterm/pterm"
-	"gopkg.in/yaml.v3"
+	"github.com/spf13/pflag"
 )
 
 type Build struct {
 	// Build context
 	Context string `json:"context,omitempty" yaml:"context,omitempty"`
+	// Dependencies list of build names defined in the squadron configuration
+	Dependencies []string `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
+
 	// AddHost add a custom host-to-IP mapping (format: "host:ip")
 	AddHost []string `json:"add_host,omitempty" yaml:"add_host,omitempty"`
 	// Allow extra privileged entitlement (e.g., "network.host", "security.insecure")
 	Allow []string `json:"allow,omitempty" yaml:"allow,omitempty"`
+	// Add annotation to the image
+	Annotation []string `json:"annotation,omitempty" yaml:"annotation,omitempty"`
 	// Attest parameters (format: "type=sbom,generator=image")
 	Attest []string `json:"attest,omitempty" yaml:"attest,omitempty"`
 	// BuildArg set build-time variables
@@ -27,11 +31,17 @@ type Build struct {
 	// Builder override the configured builder instance
 	Builder string `json:"builder,omitempty" yaml:"builder,omitempty"`
 	// CacheFrom external cache sources (e.g., "user/app:cache", "type=local,src=path/to/dir")
-	CacheFrom string `json:"cache_from,omitempty" yaml:"cache_from,omitempty"`
+	CacheFrom []string `json:"cache_from,omitempty" yaml:"cache_from,omitempty"`
 	// CacheTo cache export destinations (e.g., "user/app:cache", "type=local,dest=path/to/dir")
-	CacheTo string `json:"cache_to,omitempty" yaml:"cache_to,omitempty"`
+	CacheTo []string `json:"cache_to,omitempty" yaml:"cache_to,omitempty"`
+	// Set method for evaluating build ("check", "outline", "targets") (default "build")
+	Call string `json:"call,omitempty" yaml:"call,omitempty"`
 	// CGroupParent optional parent cgroup for the container
 	CGroupParent string `json:"cgroup_parent,omitempty" yaml:"cgroup_parent,omitempty"`
+	// Shorthand for "--call=check"
+	Check bool `json:"check,omitempty" yaml:"check,omitempty"`
+	// Enable debug logging
+	Debug bool `json:"debug,omitempty" yaml:"debug,omitempty"`
 	// File name of the Dockerfile (default: "PATH/Dockerfile")
 	File string `json:"file,omitempty" yaml:"file,omitempty"`
 	// IIDFile write the image ID to the file
@@ -49,31 +59,33 @@ type Build struct {
 	// NoCacheFilter do not cache specified stages
 	NoCacheFilter []string `json:"no_cache_filter,omitempty" yaml:"no_cache_filter,omitempty"`
 	// Output destination (format: "type=local,dest=path")
-	Output string `json:"output,omitempty" yaml:"output,omitempty"`
+	Output []string `json:"output,omitempty" yaml:"output,omitempty"`
 	// Platform set target platform for build
-	Platform string `json:"platform,omitempty" yaml:"platform,omitempty"`
+	Platform []string `json:"platform,omitempty" yaml:"platform,omitempty"`
+	// Set type of progress output ("auto", "none",  "plain", "quiet", "rawjson", "tty"). Use plain to show container output (default "auto")
+	Progress string `json:"progress,omitempty" yaml:"progress,omitempty"`
+	// Shorthand for "--attest=type=provenance"
+	Provenance bool `json:"provenance,omitempty" yaml:"provenance,omitempty"`
+	// Always attempt to pull all referenced images
+	Pull bool `json:"pull,omitempty" yaml:"pull,omitempty"`
+	// Shorthand for "--output=type=registry"
+	Push bool `json:"push,omitempty" yaml:"push,omitempty"`
+	// Suppress the build output and print image ID on succes
+	Quiet bool `json:"quiet,omitempty" yaml:"quiet,omitempty"`
+	// Shorthand for "--attest=type=sbom"
+	Sbom bool `json:"sbom,omitempty" yaml:"sbom,omitempty"`
 	// Secret to expose to the build (format: "id=mysecret[,src=/local/secret]")
 	Secret []string `json:"secret,omitempty" yaml:"secret,omitempty"`
 	// ShmSize size of "/dev/shm"
 	ShmSize string `json:"shm_size,omitempty" yaml:"shm_size,omitempty"`
 	// SSH agent socket or keys to expose to the build (format: "default|<id>[=<socket>|<key>[,<key>]]")
-	SSH string `json:"ssh,omitempty" yaml:"ssh,omitempty"`
+	SSH []string `json:"ssh,omitempty" yaml:"ssh,omitempty"`
 	// Tag name and optionally a tag (format: "name:tag")
-	Tag string `json:"tag,omitempty" yaml:"tag,omitempty"`
-	// Image name
-	Image string `json:"image,omitempty" yaml:"image,omitempty"`
+	Tag []string `json:"tag,omitempty" yaml:"tag,omitempty"`
 	// Target set the target build stage to build
 	Target string `json:"target,omitempty" yaml:"target,omitempty"`
 	// ULimit ulimit options (default [])
 	ULimit string `json:"ulimit,omitempty" yaml:"ulimit,omitempty"`
-	// Dependencies list of build names defined in the squadron configuration
-	Dependencies []string `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
-	// Suppress the build output and print image ID on succes
-	Quiet bool `json:"quiet,omitempty" yaml:"quiet,omitempty"`
-	// Always attempt to pull all referenced images
-	Pull bool `json:"pull,omitempty" yaml:"pull,omitempty"`
-	// Shorthand for "--output=type=registry"
-	Push bool `json:"push,omitempty" yaml:"push,omitempty"`
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -84,84 +96,54 @@ func (b *Build) Build(ctx context.Context, squadron, unit string, args []string)
 	var cleanArgs []string
 
 	for _, arg := range args {
-		if value, err := util.RenderTemplateString(arg, map[string]any{"Squadron": squadron, "Unit": unit, "Build": b}); err != nil {
-			return "", err
-		} else {
-			cleanArgs = append(cleanArgs, strings.Split(value, " ")...)
-		}
+		cleanArgs = append(cleanArgs, strings.Split(arg, " ")...)
 	}
 
-	argOverride := func(name string, vs string, args []string) (string, string) {
-		if slices.ContainsFunc(args, func(s string) bool {
-			return strings.HasPrefix(s, name)
-		}) {
-			return "", ""
-		}
+	f := pflag.NewFlagSet("build", pflag.ContinueOnError)
+	f.StringSlice("add-host", b.AddHost, "")
+	f.StringArray("allow", b.Allow, "")
+	f.StringArray("annotation", b.Annotation, "")
+	f.StringArray("attest", b.Attest, "")
+	f.StringArray("build-arg", b.BuildArg, "")
+	f.StringArray("build-context", b.BuildContext, "")
+	f.String("builder", b.Builder, "")
+	f.StringArray("cache-from", b.CacheFrom, "")
+	f.StringArray("cache-to", b.CacheTo, "")
+	f.String("call", b.Call, "")
+	f.String("cgroup-parent", b.CGroupParent, "")
+	f.Bool("check", b.Check, "")
+	f.Bool("debug", b.Debug, "")
+	f.String("file", b.File, "")
+	f.String("iidfile", b.IIDFile, "")
+	f.StringArray("label", b.Label, "")
+	f.Bool("load", b.Load, "")
+	f.String("metadata-file", b.MetadataFile, "")
+	f.String("network", b.Network, "")
+	f.Bool("no-cache", b.NoCache, "")
+	f.StringArray("no-cache-filter", b.NoCacheFilter, "")
+	f.StringArray("output", b.Output, "")
+	f.StringArray("platform", b.Platform, "")
+	f.String("progress", b.Progress, "")
+	f.Bool("provenance", b.Provenance, "")
+	f.Bool("pull", b.Pull, "")
+	f.Bool("push", b.Push, "")
+	f.Bool("quiet", b.Quiet, "")
+	f.Bool("sbom", b.Sbom, "")
+	f.StringArray("secret", b.Secret, "")
+	f.String("shm-size", b.ShmSize, "")
+	f.StringArray("ssh", b.SSH, "")
+	f.StringArray("tag", b.Tag, "")
+	f.String("target", b.Target, "")
+	f.String("ulimit", b.ULimit, "")
 
-		return name, vs
-	}
-	boolArgOverride := func(name string, vs bool, args []string) (string, bool) {
-		if slices.ContainsFunc(args, func(s string) bool {
-			return strings.HasPrefix(s, name)
-		}) {
-			return "", false
-		}
-
-		return name, vs
+	if err := f.Parse(cleanArgs); err != nil {
+		return "", err
 	}
 
 	pterm.Debug.Printfln("running docker build for %q", b.Context)
 
 	return util.NewDockerCommand().Build(b.Context).
-		TemplateData(map[string]string{"image": b.Image, "tag": b.Tag}).
-		ListArg("--add-host", b.AddHost).
-		ListArg("--add-host", b.AddHost).
-		ListArg("--allow", b.Allow).
-		ListArg("--attest", b.Attest).
-		ListArg("--build-arg", b.BuildArg).
-		ListArg("--build-context", b.BuildContext).
-		Arg(argOverride("--builder", b.Builder, args)).
-		Arg(argOverride("--cache-from", b.CacheFrom, args)).
-		Arg(argOverride("--cache-to", b.CacheTo, args)).
-		Arg(argOverride("--file", b.File, args)).
-		Arg(argOverride("--iidfile", b.IIDFile, args)).
-		ListArg("--label", b.Label).
-		BoolArg(boolArgOverride("--load", b.Load, args)).
-		Arg(argOverride("--metadata-file", b.MetadataFile, args)).
-		Arg(argOverride("--network", b.Network, args)).
-		BoolArg(boolArgOverride("--no-cache", b.NoCache, args)).
-		ListArg("--no-cache-filter", b.NoCacheFilter).
-		Arg(argOverride("--output", b.Output, args)).
-		Arg(argOverride("--platform", b.Platform, args)).
-		// Arg("--progress", xxx).
-		// Arg("--provenance", xxx).
-		BoolArg(boolArgOverride("--push", b.Push, args)).
-		BoolArg(boolArgOverride("--pull", b.Pull, args)).
-		BoolArg(boolArgOverride("--quiet", b.Quiet, args)).
-		ListArg("--secret", b.Secret).
-		Arg(argOverride("--shm-size", b.ShmSize, args)).
-		Arg(argOverride("--ssh", b.SSH, args)).
-		Arg(argOverride("--tag", fmt.Sprintf("%s:%s", b.Image, b.Tag), args)).
-		Arg(argOverride("--target", b.Target, args)).
-		Arg(argOverride("--ulimit", b.ULimit, args)).
-		Args(cleanArgs...).Run(ctx)
-}
-
-func (b *Build) UnmarshalYAML(value *yaml.Node) error {
-	switch value.Tag {
-	case "!!map":
-		type wrapper Build
-		return value.Decode((*wrapper)(b))
-	case "!!str":
-		var vString string
-		if err := value.Decode(&vString); err != nil {
-			return err
-		}
-
-		b.Context = vString
-
-		return nil
-	default:
-		return fmt.Errorf("unsupported node tag type for %T: %q", b, value.Tag)
-	}
+		TemplateData(map[string]any{"Squadron": squadron, "Unit": unit, "Build": b}).
+		Args(qflag.Parse(f)...).
+		Run(ctx)
 }
