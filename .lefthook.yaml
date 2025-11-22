@@ -15,7 +15,7 @@ pre-commit:
         fi
     biome:
       glob: "*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx,json,jsonc,html,css}"
-      run: biome format --write {staged_files}
+      run: biome format --write --no-errors-on-unmatched {staged_files}
       stage_fixed: true
     golangci:
       glob: "*.go"

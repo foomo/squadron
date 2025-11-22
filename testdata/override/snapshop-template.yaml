@@ -43,7 +43,7 @@ spec:
     spec:
       containers:
         - name: storefinder-frontend
-          image: 'storefinder/frontend:nightly'
+          image: 'storefinder/frontend:latest'
           ports:
             - name: http
               protocol: TCP

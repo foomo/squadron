@@ -154,6 +154,13 @@
           "type": "string",
           "description": "Build context"
         },
+        "dependencies": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Dependencies list of build names defined in the squadron configuration"
+        },
         "add_host": {
           "items": {
             "type": "string"
@@ -167,6 +174,13 @@
           },
           "type": "array",
           "description": "Allow extra privileged entitlement (e.g., \"network.host\", \"security.insecure\")"
+        },
+        "annotation": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Add annotation to the image"
         },
         "attest": {
           "items": {
@@ -194,16 +208,34 @@
           "description": "Builder override the configured builder instance"
         },
         "cache_from": {
-          "type": "string",
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
           "description": "CacheFrom external cache sources (e.g., \"user/app:cache\", \"type=local,src=path/to/dir\")"
         },
         "cache_to": {
-          "type": "string",
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
           "description": "CacheTo cache export destinations (e.g., \"user/app:cache\", \"type=local,dest=path/to/dir\")"
+        },
+        "call": {
+          "type": "string",
+          "description": "Set method for evaluating build (\"check\", \"outline\", \"targets\") (default \"build\")"
         },
         "cgroup_parent": {
           "type": "string",
           "description": "CGroupParent optional parent cgroup for the container"
+        },
+        "check": {
+          "type": "boolean",
+          "description": "Shorthand for \"--call=check\""
+        },
+        "debug": {
+          "type": "boolean",
+          "description": "Enable debug logging"
         },
         "file": {
           "type": "string",
@@ -244,12 +276,42 @@
           "description": "NoCacheFilter do not cache specified stages"
         },
         "output": {
-          "type": "string",
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
           "description": "Output destination (format: \"type=local,dest=path\")"
         },
         "platform": {
-          "type": "string",
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
           "description": "Platform set target platform for build"
+        },
+        "progress": {
+          "type": "string",
+          "description": "Set type of progress output (\"auto\", \"none\",  \"plain\", \"quiet\", \"rawjson\", \"tty\"). Use plain to show container output (default \"auto\")"
+        },
+        "provenance": {
+          "type": "boolean",
+          "description": "Shorthand for \"--attest=type=provenance\""
+        },
+        "pull": {
+          "type": "boolean",
+          "description": "Always attempt to pull all referenced images"
+        },
+        "push": {
+          "type": "boolean",
+          "description": "Shorthand for \"--output=type=registry\""
+        },
+        "quiet": {
+          "type": "boolean",
+          "description": "Suppress the build output and print image ID on succes"
+        },
+        "sbom": {
+          "type": "boolean",
+          "description": "Shorthand for \"--attest=type=sbom\""
         },
         "secret": {
           "items": {
@@ -263,16 +325,18 @@
           "description": "ShmSize size of \"/dev/shm\""
         },
         "ssh": {
-          "type": "string",
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
           "description": "SSH agent socket or keys to expose to the build (format: \"default|\u003cid\u003e[=\u003csocket\u003e|\u003ckey\u003e[,\u003ckey\u003e]]\")"
         },
         "tag": {
-          "type": "string",
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
           "description": "Tag name and optionally a tag (format: \"name:tag\")"
-        },
-        "image": {
-          "type": "string",
-          "description": "Image name"
         },
         "target": {
           "type": "string",
@@ -281,25 +345,6 @@
         "ulimit": {
           "type": "string",
           "description": "ULimit ulimit options (default [])"
-        },
-        "dependencies": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array",
-          "description": "Dependencies list of build names defined in the squadron configuration"
-        },
-        "quiet": {
-          "type": "boolean",
-          "description": "Suppress the build output and print image ID on succes"
-        },
-        "pull": {
-          "type": "boolean",
-          "description": "Always attempt to pull all referenced images"
-        },
-        "push": {
-          "type": "boolean",
-          "description": "Shorthand for \"--output=type=registry\""
         }
       },
       "additionalProperties": false,

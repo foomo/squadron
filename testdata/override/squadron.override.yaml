@@ -1,12 +1,10 @@
-version: "2.2"
+version: "2.3"
 
 squadron:
   storefinder:
     frontend:
       builds:
         default:
-          # override element
-          tag: nightly
           # append new element to array
           build_arg:
             - "bar=baz"
