@@ -31,7 +31,11 @@ func NewPush(c *viper.Viper) *cobra.Command {
 			}
 
 			if x.GetBool("bake") {
-				if err := sq.Bake(cmd.Context(), x.GetStringSlice("bake-args")); err != nil {
+				bakefile, err := sq.Bakefile(cmd.Context())
+				if err != nil {
+					return errors.Wrap(err, "failed to bake units")
+				}
+				if err := sq.Bake(cmd.Context(), bakefile, x.GetStringSlice("bake-args")); err != nil {
 					return errors.Wrap(err, "failed to bake units")
 				}
 			}

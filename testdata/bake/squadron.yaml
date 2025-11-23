@@ -1,0 +1,10 @@
+version: '2.3'
+
+squadron:
+  storefinder:
+    backend:
+      chart: <% env "PROJECT_ROOT" %>/_examples/common/charts/backend
+      bakes:
+        default:
+          tags: [ storefinder/backend:latest ]
+

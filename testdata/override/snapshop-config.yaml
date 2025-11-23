@@ -14,7 +14,8 @@ squadron:
           - bar=baz
           - baz=baz
           file: Dockerfile
-          tag: [ storefinder/frontend:latest ]
+          tag:
+          - storefinder/frontend:latest
       values:
         image:
           repository: storefinder/frontend

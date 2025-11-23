@@ -20,7 +20,6 @@ import (
 	ptermx "github.com/foomo/squadron/internal/pterm"
 	templatex "github.com/foomo/squadron/internal/template"
 	"github.com/foomo/squadron/internal/util"
-	"github.com/genelet/determined/dethcl"
 	"github.com/miracl/conflate"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
@@ -117,7 +116,7 @@ func (sq *Squadron) MergeConfigFiles(ctx context.Context) error {
 
 	sq.config = string(value)
 
-	pterm.Success.Println("📚 | merging configs ⏱ " + time.Since(start).Truncate(time.Millisecond).String())
+	pterm.Success.Println("📚 | merging configs ⏱ " + time.Since(start).Round(time.Millisecond).String())
 
 	return nil
 }
@@ -238,7 +237,7 @@ func (sq *Squadron) RenderConfig(ctx context.Context) error {
 
 	sq.config = string(out3)
 
-	pterm.Success.Println("📗 | rendering config ⏱ " + time.Since(start).Truncate(time.Millisecond).String())
+	pterm.Success.Println("📗 | rendering config ⏱ " + time.Since(start).Round(time.Millisecond).String())
 
 	return nil
 }
@@ -399,7 +398,11 @@ func (sq *Squadron) BuildDependencies(ctx context.Context, buildArgs []string, p
 	return nil
 }
 
-func (sq *Squadron) Bake(ctx context.Context, args []string) error {
+func (sq *Squadron) Bakefile(ctx context.Context) (*config.Bake, error) {
+	start := time.Now()
+
+	pterm.Info.Println("🔥 | generating bakefile")
+
 	c := &config.Bake{
 		Groups:  nil,
 		Targets: nil,
@@ -410,12 +413,12 @@ func (sq *Squadron) Bake(ctx context.Context, args []string) error {
 
 	gitInfo, err := git.GetInfo(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	now := time.Now()
-	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
-		_ = value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
+	err = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
+		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 			for _, name := range v.BakeNames() {
 				item := v.Bakes[name]
 
@@ -474,38 +477,45 @@ func (sq *Squadron) Bake(ctx context.Context, args []string) error {
 
 			return nil
 		})
-
-		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	c.Groups = append(c.Groups, g)
 
-	b, err := dethcl.Marshal(c)
-	// b, err := hcl.Marshal(c)
+	pterm.Success.Println("🔥 | generating bakefile ⏱ " + time.Since(start).Round(time.Millisecond).String())
+
+	return c, nil
+}
+
+func (sq *Squadron) Bake(ctx context.Context, config *config.Bake, args []string) error {
+	start := time.Now()
+
+	pterm.Info.Println("🔥 | baking")
+
+	hcl, err := config.HCL()
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal bake config")
 	}
 
-	pterm.Debug.Println("🔥 | bakefile:\n" + util.HighlightHCL(string(b)))
+	cmd := util.NewDockerCommand().Bake(bytes.NewReader(hcl)).Args(args...)
 
-	start := time.Now()
+	if pterm.PrintDebugMessages {
+		cmd.Stderr(os.Stderr)
+	}
 
-	pterm.Success.Println("🔥 | baking containers")
-
-	out, err := util.NewDockerCommand().Bake(bytes.NewReader(b)).
-		Stderr(ptermx.NewWriter(pterm.Debug)).
-		Args(args...).
-		Run(ctx)
+	out, err := cmd.Run(ctx)
 	if err != nil {
 		if pterm.PrintDebugMessages {
 			return err
 		} else {
-			pterm.Println(util.HighlightHCL(string(b) + "\n"))
+			pterm.Println(util.HighlightHCL(string(hcl) + "\n"))
 			return errors.Wrap(err, out)
 		}
 	}
 
-	pterm.Success.Println("🔥 | baking containers ⏱︎ " + time.Since(start).Truncate(time.Millisecond).String())
+	pterm.Success.Println("🔥 | baking containers ⏱︎ " + time.Since(start).Round(time.Millisecond).String())
 
 	return nil
 }

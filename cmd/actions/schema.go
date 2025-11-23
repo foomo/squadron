@@ -36,8 +36,7 @@ func NewSchema(c *viper.Viper) *cobra.Command {
 			}
 
 			if output := x.GetString("output"); output != "" {
-				pterm.Info.Printfln("Writing JSON schema to %s", output)
-
+				pterm.Info.Printfln("💾 | writing outut to %s", output)
 				if err := os.WriteFile(output, []byte(out), 0600); err != nil {
 					return errors.Wrap(err, "failed to write schema")
 				}
@@ -56,7 +55,7 @@ func NewSchema(c *viper.Viper) *cobra.Command {
 	}
 
 	flags := cmd.Flags()
-	flags.String("output", "", "Output file")
+	flags.String("output", "", "write the output to the given path")
 	_ = x.BindPFlag("output", flags.Lookup("output"))
 
 	flags.String("base-schema", "https://raw.githubusercontent.com/foomo/squadron/refs/heads/main/squadron.schema.json", "Base schema to use")

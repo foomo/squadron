@@ -1,0 +1,16 @@
+group "all" {
+  targets = ["storefinder-backend-default"]
+}
+target "storefinder-backend-default" {
+  args = {
+    SQUADRON_NAME      = "storefinder"
+    SQUADRON_UNIT_NAME = "backend"
+  }
+  labels = {
+    "org.opencontainers.image.created"  = "-"
+    "org.opencontainers.image.revision" = "-"
+    "org.opencontainers.image.source"   = "https://github.com/foomo/squadron"
+    "org.opencontainers.image.version"  = "-"
+  }
+  tags = ["storefinder/backend:latest"]
+}

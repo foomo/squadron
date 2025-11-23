@@ -14,7 +14,8 @@ squadron:
         version: 0.0.1
       builds:
         default:
-          tag: [ storefinder/backend:latest ]
+          tag:
+          - storefinder/backend:latest
       values:
         env:
           bar: <% .Vars.bar %>

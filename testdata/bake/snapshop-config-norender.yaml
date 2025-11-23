@@ -1,0 +1,12 @@
+version: "2.3"
+squadron:
+  storefinder:
+    backend:
+      chart:
+        name: backend
+        repository: file://<% env "PROJECT_ROOT" %>/_examples/common/charts/backend
+        version: 0.0.1
+      bakes:
+        default:
+          tags:
+          - storefinder/backend:latest

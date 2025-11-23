@@ -12,11 +12,9 @@ import (
 
 func NewPostRenderer(c *viper.Viper) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "post-renderer [PATH]",
-		Hidden:  true,
-		Short:   "render chart templates locally and display the output",
-		Example: "  squadron template storefinder frontend backend --namespace demo",
-		Args:    cobra.MinimumNArgs(0),
+		Use:    "post-renderer [PATH]",
+		Hidden: true,
+		Args:   cobra.MinimumNArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// this does the trick
 			r, err := io.ReadAll(cmd.InOrStdin())

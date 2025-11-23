@@ -8,13 +8,6 @@
         "description": {
           "type": "string"
         },
-        "inherits": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array",
-          "description": "Inherits is the only field that cannot be overridden with --set"
-        },
         "annotations": {
           "items": {
             "type": "string"
@@ -143,6 +136,13 @@
             "type": "string"
           },
           "type": "object"
+        },
+        "inherits": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Inherits is the only field that cannot be overridden with --set"
         }
       },
       "additionalProperties": false,

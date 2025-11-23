@@ -59,6 +59,10 @@ func TestConfigSimpleSnapshot(t *testing.T) {
 			tags:  []string{"backend", "-skip"},
 			files: []string{"squadron.yaml"},
 		},
+		{
+			name:  "bake",
+			files: []string{"squadron.yaml"},
+		},
 	}
 
 	for _, test := range tests {
@@ -105,5 +109,21 @@ func runTestConfig(t *testing.T, name string, files []string, squadronName strin
 		out, err := sq.Template(ctx, nil, 1)
 		require.NoError(t, err)
 		testutils.Snapshot(t, path.Join("testdata", name, "snapshop-template.yaml"), out)
+	})
+
+	t.Run("bakefile", func(tt *testing.T) {
+		bakefile, err := sq.Bakefile(ctx)
+		require.NoError(t, err)
+		if len(bakefile.Targets) == 0 {
+			return
+		}
+		for _, target := range bakefile.Targets {
+			target.Labels["org.opencontainers.image.version"] = "-"
+			target.Labels["org.opencontainers.image.revision"] = "-"
+			target.Labels["org.opencontainers.image.created"] = "-"
+		}
+		out, err := bakefile.HCL()
+		require.NoError(t, err)
+		testutils.Snapshot(t, path.Join("testdata", name, "snapshop-bakefile.yaml"), string(out))
 	})
 }

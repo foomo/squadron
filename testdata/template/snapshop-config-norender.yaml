@@ -11,7 +11,8 @@ squadron:
         version: 0.0.1
       builds:
         default:
-          tag: [ storefinder/backend:latest ]
+          tag:
+          - storefinder/backend:latest
       values:
         image:
           repository: storefinder/backend
@@ -23,7 +24,8 @@ squadron:
         version: 0.0.1
       builds:
         default:
-          tag: [ storefinder/frontend:latest ]
+          tag:
+          - storefinder/frontend:latest
       values:
         env:
           BASE64: <% "1234567890" | b64enc %>
