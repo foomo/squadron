@@ -504,7 +504,7 @@ func (sq *Squadron) Bakefile(ctx context.Context) ([]byte, error) {
 func (sq *Squadron) Bake(ctx context.Context, bakefile []byte, args []string) error {
 	start := time.Now()
 
-	pterm.Info.Println("🔥 | baking")
+	pterm.Info.Println("🔥 | baking targets")
 
 	cmd := util.NewDockerCommand().Bake(bytes.NewReader(bakefile)).Args(args...)
 
@@ -522,7 +522,7 @@ func (sq *Squadron) Bake(ctx context.Context, bakefile []byte, args []string) er
 		}
 	}
 
-	pterm.Success.Println("🔥 | baking containers ⏱︎ " + time.Since(start).Round(time.Millisecond).String())
+	pterm.Success.Println("🔥 | baking targets ⏱︎ " + time.Since(start).Round(time.Millisecond).String())
 
 	return nil
 }
