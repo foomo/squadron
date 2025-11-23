@@ -40,13 +40,9 @@ func NewBake(c *viper.Viper) *cobra.Command {
 			}
 
 			if output := x.GetString("output"); output != "" {
-				hcl, err := bakefile.HCL()
-				if err != nil {
-					return errors.Wrap(err, "failed to marshal bake config")
-				}
-
 				pterm.Info.Printfln("💾 | writing output to %s", output)
-				if err := os.WriteFile(output, hcl, 0600); err != nil {
+
+				if err := os.WriteFile(output, bakefile, 0600); err != nil {
 					return errors.Wrap(err, "failed to write bakefile")
 				}
 
@@ -72,6 +68,7 @@ func NewBake(c *viper.Viper) *cobra.Command {
 	_ = x.BindPFlag("push", flags.Lookup("push"))
 
 	cmd.Flags().Int("parallel", 1, "run command in parallel")
+
 	_ = x.BindPFlag("parallel", flags.Lookup("parallel"))
 
 	flags.String("output", "", "write the output to the given path")

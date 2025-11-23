@@ -391,6 +391,10 @@
           "type": "object",
           "description": "Global values to be injected into all squadron values"
         },
+        "bake": {
+          "type": "string",
+          "description": "Global raw bake instructions"
+        },
         "builds": {
           "additionalProperties": {
             "$ref": "#/$defs/Build"

@@ -15,6 +15,8 @@ type Config struct {
 	Vars map[string]any `json:"vars,omitempty" yaml:"vars,omitempty"`
 	// Global values to be injected into all squadron values
 	Global map[string]any `json:"global,omitempty" yaml:"global,omitempty"`
+	// Global raw bake instructions
+	Bake string `json:"bake,omitempty" yaml:"bake,omitempty"`
 	// Global builds that can be referenced as dependencies
 	Builds map[string]Build `json:"builds,omitempty" yaml:"builds,omitempty"`
 	// Squadron definitions

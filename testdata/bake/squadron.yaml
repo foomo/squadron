@@ -1,10 +1,17 @@
 version: '2.3'
 
+bake: |-
+  variable "TAG" {
+    type = string
+    default = "$TAG"
+    description = "Tag to use for build"
+  }
+
 squadron:
   storefinder:
     backend:
       chart: <% env "PROJECT_ROOT" %>/_examples/common/charts/backend
       bakes:
         default:
-          tags: [ storefinder/backend:latest ]
+          tags: [ 'storefinder/backend:${TAG}' ]
 

@@ -398,7 +398,7 @@ func (sq *Squadron) BuildDependencies(ctx context.Context, buildArgs []string, p
 	return nil
 }
 
-func (sq *Squadron) Bakefile(ctx context.Context) (*config.Bake, error) {
+func (sq *Squadron) Bakefile(ctx context.Context) ([]byte, error) {
 	start := time.Now()
 
 	pterm.Info.Println("🔥 | generating bakefile")
@@ -417,6 +417,7 @@ func (sq *Squadron) Bakefile(ctx context.Context) (*config.Bake, error) {
 	}
 
 	now := time.Now()
+
 	err = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
 		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 			for _, name := range v.BakeNames() {
@@ -482,24 +483,30 @@ func (sq *Squadron) Bakefile(ctx context.Context) (*config.Bake, error) {
 		return nil, err
 	}
 
+	if len(c.Targets) == 0 {
+		return []byte{}, nil
+	}
+
 	c.Groups = append(c.Groups, g)
 
 	pterm.Success.Println("🔥 | generating bakefile ⏱ " + time.Since(start).Round(time.Millisecond).String())
 
-	return c, nil
+	out, err := c.HCL()
+	if err != nil {
+		return nil, err
+	}
+
+	out = []byte(sq.Config().Bake + "\n" + string(out))
+
+	return out, nil
 }
 
-func (sq *Squadron) Bake(ctx context.Context, config *config.Bake, args []string) error {
+func (sq *Squadron) Bake(ctx context.Context, bakefile []byte, args []string) error {
 	start := time.Now()
 
 	pterm.Info.Println("🔥 | baking")
 
-	hcl, err := config.HCL()
-	if err != nil {
-		return errors.Wrap(err, "failed to marshal bake config")
-	}
-
-	cmd := util.NewDockerCommand().Bake(bytes.NewReader(hcl)).Args(args...)
+	cmd := util.NewDockerCommand().Bake(bytes.NewReader(bakefile)).Args(args...)
 
 	if pterm.PrintDebugMessages {
 		cmd.Stderr(os.Stderr)
@@ -510,7 +517,7 @@ func (sq *Squadron) Bake(ctx context.Context, config *config.Bake, args []string
 		if pterm.PrintDebugMessages {
 			return err
 		} else {
-			pterm.Println(util.HighlightHCL(string(hcl) + "\n"))
+			pterm.Println(util.HighlightHCL(string(bakefile) + "\n"))
 			return errors.Wrap(err, out)
 		}
 	}

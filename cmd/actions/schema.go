@@ -37,6 +37,7 @@ func NewSchema(c *viper.Viper) *cobra.Command {
 
 			if output := x.GetString("output"); output != "" {
 				pterm.Info.Printfln("💾 | writing outut to %s", output)
+
 				if err := os.WriteFile(output, []byte(out), 0600); err != nil {
 					return errors.Wrap(err, "failed to write schema")
 				}

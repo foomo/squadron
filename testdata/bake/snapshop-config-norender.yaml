@@ -1,4 +1,10 @@
 version: "2.3"
+bake: |-
+  variable "TAG" {
+    type = string
+    default = "$TAG"
+    description = "Tag to use for build"
+  }
 squadron:
   storefinder:
     backend:
@@ -9,4 +15,4 @@ squadron:
       bakes:
         default:
           tags:
-          - storefinder/backend:latest
+          - storefinder/backend:${TAG}

@@ -41,6 +41,7 @@ func NewUp(c *viper.Viper) *cobra.Command {
 				if err != nil {
 					return errors.Wrap(err, "failed to bake units")
 				}
+
 				if err := sq.Bake(cmd.Context(), bakefile, x.GetStringSlice("bake-args")); err != nil {
 					return errors.Wrap(err, "failed to bake units")
 				}

@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Snapshot compares v with its snapshot file
@@ -32,7 +33,7 @@ func readSnapshot(t *testing.T, name string) string {
 
 	g, err := os.ReadFile(name)
 	if !errors.Is(err, os.ErrNotExist) {
-		assert.NoError(t, err, "failed reading file", name)
+		require.NoError(t, err, "failed reading file", name)
 	}
 
 	return string(g)

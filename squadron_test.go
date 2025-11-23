@@ -114,16 +114,16 @@ func runTestConfig(t *testing.T, name string, files []string, squadronName strin
 	t.Run("bakefile", func(tt *testing.T) {
 		bakefile, err := sq.Bakefile(ctx)
 		require.NoError(t, err)
-		if len(bakefile.Targets) == 0 {
+		if len(bakefile) == 0 {
 			return
 		}
-		for _, target := range bakefile.Targets {
-			target.Labels["org.opencontainers.image.version"] = "-"
-			target.Labels["org.opencontainers.image.revision"] = "-"
-			target.Labels["org.opencontainers.image.created"] = "-"
-		}
-		out, err := bakefile.HCL()
+		// for _, target := range bakefile.Targets {
+		// 	target.Labels["org.opencontainers.image.version"] = "-"
+		// 	target.Labels["org.opencontainers.image.revision"] = "-"
+		// 	target.Labels["org.opencontainers.image.created"] = "-"
+		// }
+		// out, err := bakefile.HCL()
 		require.NoError(t, err)
-		testutils.Snapshot(t, path.Join("testdata", name, "snapshop-bakefile.yaml"), string(out))
+		testutils.Snapshot(t, path.Join("testdata", name, "snapshop-bakefile.yaml"), string(bakefile))
 	})
 }
