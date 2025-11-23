@@ -114,6 +114,7 @@ func runTestConfig(t *testing.T, name string, files []string, squadronName strin
 	t.Run("bakefile", func(tt *testing.T) {
 		bakefile, err := sq.Bakefile(ctx)
 		require.NoError(t, err)
+
 		if len(bakefile) == 0 {
 			return
 		}
