@@ -2,6 +2,7 @@ package squadron_test
 
 import (
 	"path"
+	"strings"
 	"testing"
 
 	testingx "github.com/foomo/go/testing"
@@ -118,13 +119,15 @@ func runTestConfig(t *testing.T, name string, files []string, squadronName strin
 		if len(bakefile) == 0 {
 			return
 		}
-		// for _, target := range bakefile.Targets {
-		// 	target.Labels["org.opencontainers.image.version"] = "-"
-		// 	target.Labels["org.opencontainers.image.revision"] = "-"
-		// 	target.Labels["org.opencontainers.image.created"] = "-"
-		// }
+		lines := strings.Split(string(bakefile), "\n")
+		for i, s := range lines {
+			if strings.Contains(s, "org.opencontainers.image") {
+				lines[i] = "    # test"
+			}
+		}
+		bakefile = []byte(strings.Join(lines, "\n"))
 		// out, err := bakefile.HCL()
 		require.NoError(t, err)
-		testutils.Snapshot(t, path.Join("testdata", name, "snapshop-bakefile.yaml"), string(bakefile))
+		testutils.Snapshot(t, path.Join("testdata", name, "snapshop-bakefile.hcl"), string(bakefile))
 	})
 }
