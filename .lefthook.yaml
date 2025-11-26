@@ -19,7 +19,7 @@ pre-commit:
       stage_fixed: true
     golangci:
       glob: "*.go"
-      run: golangci-lint fmt {staged_files}
+      run: golangci-lint run --fast-only {staged_files}
       stage_fixed: true
 
 commit-msg:
