@@ -423,7 +423,7 @@ func (sq *Squadron) Bakefile(ctx context.Context) ([]byte, error) {
 			for _, name := range v.BakeNames() {
 				item := v.Bakes[name]
 
-				item.Name = strings.Join([]string{key, k, name}, "-")
+				item.Name = strings.Join([]string{"squadron", key, k, name}, "-")
 				if item.Args == nil {
 					item.Args = make(map[string]string)
 				}
@@ -442,29 +442,34 @@ func (sq *Squadron) Bakefile(ctx context.Context) ([]byte, error) {
 
 				// Workaround
 				if typ := os.Getenv("SQUADRON_BAKE_CACHE_TYPE"); typ != "" {
+					var scope string
+					if value := os.Getenv("SQUADRON_BAKE_CACHE_SCOPE"); value != "" {
+						scope = value + "-"
+					}
+
 					switch typ {
 					case "gha":
 						item.CacheFrom = append(item.CacheFrom, map[string]string{
 							"type":  typ,
-							"scope": item.Name,
+							"scope": scope + item.Name,
 						})
 						item.CacheTo = append(item.CacheTo, map[string]string{
 							"type":  typ,
-							"scope": item.Name,
+							"scope": scope + item.Name,
 							"mode":  "max",
 						})
 					case "local":
 						if src := os.Getenv("SQUADRON_BAKE_CACHE_FROM"); src != "" {
 							item.CacheFrom = append(item.CacheFrom, map[string]string{
 								"type": typ,
-								"src":  src + "/" + item.Name,
+								"src":  src + "/" + scope + item.Name,
 							})
 						}
 
 						if dest := os.Getenv("SQUADRON_BAKE_CACHE_TO"); dest != "" {
 							item.CacheTo = append(item.CacheTo, map[string]string{
 								"type": typ,
-								"dest": dest + "/" + item.Name,
+								"dest": dest + "/" + scope + item.Name,
 								"mode": "max",
 							})
 						}
@@ -504,12 +509,20 @@ func (sq *Squadron) Bakefile(ctx context.Context) ([]byte, error) {
 func (sq *Squadron) Bake(ctx context.Context, bakefile []byte, args []string) error {
 	start := time.Now()
 
+	var cleanArgs []string
+	for _, arg := range args {
+		cleanArgs = append(cleanArgs, strings.Split(arg, " ")...)
+	}
+
 	pterm.Info.Println("🔥 | baking targets")
 
-	cmd := util.NewDockerCommand().Bake(bytes.NewReader(bakefile)).Args(args...)
+	cmd := util.NewDockerCommand().Bake(bytes.NewReader(bakefile)).Args(cleanArgs...)
 
-	if pterm.PrintDebugMessages {
+	if pterm.PrintDebugMessages ||
+		slices.Contains(cleanArgs, "--print") ||
+		slices.Contains(cleanArgs, "--list") {
 		cmd.Stderr(os.Stderr)
+		cmd.Stdout(os.Stdout)
 	}
 
 	out, err := cmd.Run(ctx)
