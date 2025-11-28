@@ -17,7 +17,7 @@ type Build struct {
 	Dependencies []string `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
 
 	// AddHost add a custom host-to-IP mapping (format: "host:ip")
-	AddHost []string `json:"add_host,omitempty" yaml:"add_host,omitempty"`
+	AddHost []string `json:"addHost,omitempty" yaml:"addHost,omitempty"`
 	// Allow extra privileged entitlement (e.g., "network.host", "security.insecure")
 	Allow []string `json:"allow,omitempty" yaml:"allow,omitempty"`
 	// Add annotation to the image
@@ -25,19 +25,19 @@ type Build struct {
 	// Attest parameters (format: "type=sbom,generator=image")
 	Attest []string `json:"attest,omitempty" yaml:"attest,omitempty"`
 	// BuildArg set build-time variables
-	BuildArg []string `json:"build_arg,omitempty" yaml:"build_arg,omitempty"`
+	BuildArg []string `json:"buildArg,omitempty" yaml:"buildArg,omitempty"`
 	// BuildContext additional build contexts (e.g., name=path)
-	BuildContext []string `json:"build_context,omitempty" yaml:"build_context,omitempty"`
+	BuildContext []string `json:"buildContext,omitempty" yaml:"buildContext,omitempty"`
 	// Builder override the configured builder instance
 	Builder string `json:"builder,omitempty" yaml:"builder,omitempty"`
 	// CacheFrom external cache sources (e.g., "user/app:cache", "type=local,src=path/to/dir")
-	CacheFrom []string `json:"cache_from,omitempty" yaml:"cache_from,omitempty"`
+	CacheFrom []string `json:"cacheFrom,omitempty" yaml:"cacheFrom,omitempty"`
 	// CacheTo cache export destinations (e.g., "user/app:cache", "type=local,dest=path/to/dir")
-	CacheTo []string `json:"cache_to,omitempty" yaml:"cache_to,omitempty"`
+	CacheTo []string `json:"cacheTo,omitempty" yaml:"cacheTo,omitempty"`
 	// Set method for evaluating build ("check", "outline", "targets") (default "build")
 	Call string `json:"call,omitempty" yaml:"call,omitempty"`
 	// CGroupParent optional parent cgroup for the container
-	CGroupParent string `json:"cgroup_parent,omitempty" yaml:"cgroup_parent,omitempty"`
+	CGroupParent string `json:"cGroupParent,omitempty" yaml:"cGroupParent,omitempty"`
 	// Shorthand for "--call=check"
 	Check bool `json:"check,omitempty" yaml:"check,omitempty"`
 	// Enable debug logging
@@ -51,13 +51,13 @@ type Build struct {
 	// Load shorthand for "--output=type=docker"
 	Load bool `json:"load,omitempty" yaml:"load,omitempty"`
 	// MetadataFile write build result metadata to the file
-	MetadataFile string `json:"metadata_file,omitempty" yaml:"metadata_file,omitempty"`
+	MetadataFile string `json:"metadataFile,omitempty" yaml:"metadataFile,omitempty"`
 	// Network set the networking mode for the "RUN" instructions during build (default "default")
 	Network string `json:"network,omitempty" yaml:"network,omitempty"`
 	// NoCache do not use cache when building the image
-	NoCache bool `json:"no_cache,omitempty" yaml:"no_cache,omitempty"`
+	NoCache bool `json:"noCache,omitempty" yaml:"noCache,omitempty"`
 	// NoCacheFilter do not cache specified stages
-	NoCacheFilter []string `json:"no_cache_filter,omitempty" yaml:"no_cache_filter,omitempty"`
+	NoCacheFilter []string `json:"noCacheFilter,omitempty" yaml:"noCacheFilter,omitempty"`
 	// Output destination (format: "type=local,dest=path")
 	Output []string `json:"output,omitempty" yaml:"output,omitempty"`
 	// Platform set target platform for build
@@ -77,7 +77,7 @@ type Build struct {
 	// Secret to expose to the build (format: "id=mysecret[,src=/local/secret]")
 	Secret []string `json:"secret,omitempty" yaml:"secret,omitempty"`
 	// ShmSize size of "/dev/shm"
-	ShmSize string `json:"shm_size,omitempty" yaml:"shm_size,omitempty"`
+	ShmSize string `json:"shmSize,omitempty" yaml:"shmSize,omitempty"`
 	// SSH agent socket or keys to expose to the build (format: "default|<id>[=<socket>|<key>[,<key>]]")
 	SSH []string `json:"ssh,omitempty" yaml:"ssh,omitempty"`
 	// Tag name and optionally a tag (format: "name:tag")

@@ -17,5 +17,6 @@ target "squadron-storefinder-backend-default" {
     # test
     # test
   }
-  tags = ["storefinder/backend:${TAG}"]
+  tags            = ["storefinder/backend:${TAG}"]
+  no-cache-filter = ["nocache"]
 }

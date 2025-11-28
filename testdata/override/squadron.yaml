@@ -8,7 +8,7 @@ squadron:
         default:
           tag: [ storefinder/frontend:latest ]
           file: Dockerfile
-          build_arg:
+          buildArg:
             - "foo=foo"
             - "bar=bar"
       values:
@@ -21,7 +21,7 @@ squadron:
         default:
           tag: [ storefinder/backend:latest ]
           file: Dockerfile
-          build_arg:
+          buildArg:
             - "foo=foo"
             - "bar=bar"
       values:

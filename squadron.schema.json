@@ -32,7 +32,7 @@
         "dockerfile": {
           "type": "string"
         },
-        "dockerfile-inline": {
+        "dockerfileInline": {
           "type": "string"
         },
         "args": {
@@ -53,7 +53,7 @@
           },
           "type": "array"
         },
-        "cache-from": {
+        "cacheFrom": {
           "items": {
             "additionalProperties": {
               "type": "string"
@@ -62,7 +62,7 @@
           },
           "type": "array"
         },
-        "cache-to": {
+        "cacheTo": {
           "items": {
             "additionalProperties": {
               "type": "string"
@@ -101,19 +101,19 @@
         "pull": {
           "type": "boolean"
         },
-        "no-cache": {
+        "noCache": {
           "type": "boolean"
         },
         "network": {
           "type": "string"
         },
-        "no-cache-filter": {
+        "noCacheFilter": {
           "items": {
             "type": "string"
           },
           "type": "array"
         },
-        "shm-size": {
+        "shmSize": {
           "type": "string"
         },
         "ulimits": {
@@ -131,7 +131,7 @@
           },
           "type": "array"
         },
-        "extra-hosts": {
+        "extraHosts": {
           "additionalProperties": {
             "type": "string"
           },
@@ -161,7 +161,7 @@
           "type": "array",
           "description": "Dependencies list of build names defined in the squadron configuration"
         },
-        "add_host": {
+        "addHost": {
           "items": {
             "type": "string"
           },
@@ -189,14 +189,14 @@
           "type": "array",
           "description": "Attest parameters (format: \"type=sbom,generator=image\")"
         },
-        "build_arg": {
+        "buildArg": {
           "items": {
             "type": "string"
           },
           "type": "array",
           "description": "BuildArg set build-time variables"
         },
-        "build_context": {
+        "buildContext": {
           "items": {
             "type": "string"
           },
@@ -207,14 +207,14 @@
           "type": "string",
           "description": "Builder override the configured builder instance"
         },
-        "cache_from": {
+        "cacheFrom": {
           "items": {
             "type": "string"
           },
           "type": "array",
           "description": "CacheFrom external cache sources (e.g., \"user/app:cache\", \"type=local,src=path/to/dir\")"
         },
-        "cache_to": {
+        "cacheTo": {
           "items": {
             "type": "string"
           },
@@ -225,7 +225,7 @@
           "type": "string",
           "description": "Set method for evaluating build (\"check\", \"outline\", \"targets\") (default \"build\")"
         },
-        "cgroup_parent": {
+        "cGroupParent": {
           "type": "string",
           "description": "CGroupParent optional parent cgroup for the container"
         },
@@ -256,7 +256,7 @@
           "type": "boolean",
           "description": "Load shorthand for \"--output=type=docker\""
         },
-        "metadata_file": {
+        "metadataFile": {
           "type": "string",
           "description": "MetadataFile write build result metadata to the file"
         },
@@ -264,11 +264,11 @@
           "type": "string",
           "description": "Network set the networking mode for the \"RUN\" instructions during build (default \"default\")"
         },
-        "no_cache": {
+        "noCache": {
           "type": "boolean",
           "description": "NoCache do not use cache when building the image"
         },
-        "no_cache_filter": {
+        "noCacheFilter": {
           "items": {
             "type": "string"
           },
@@ -320,7 +320,7 @@
           "type": "array",
           "description": "Secret to expose to the build (format: \"id=mysecret[,src=/local/secret]\")"
         },
-        "shm_size": {
+        "shmSize": {
           "type": "string",
           "description": "ShmSize size of \"/dev/shm\""
         },

@@ -6,7 +6,7 @@ squadron:
       builds:
         default:
           # append new element to array
-          build_arg:
+          buildArg:
             - "bar=baz"
             - "baz=baz"
     # override backend
