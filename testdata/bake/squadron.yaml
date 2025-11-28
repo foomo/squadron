@@ -3,9 +3,12 @@ version: '2.3'
 bake: |-
   variable "TAG" {
     type = string
-    default = "$TAG"
+    default = "<% envDefault "TAG" "latest" %>"
     description = "Tag to use for build"
   }
+
+vars:
+  tag: latest
 
 squadron:
   storefinder:

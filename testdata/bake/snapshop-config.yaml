@@ -1,8 +1,10 @@
 version: "2.3"
+vars:
+  tag: latest
 bake: |-
   variable "TAG" {
     type = string
-    default = "$TAG"
+    default = "latest"
     description = "Tag to use for build"
   }
 squadron:

@@ -1,6 +1,6 @@
 variable "TAG" {
   type = string
-  default = "$TAG"
+  default = "latest"
   description = "Tag to use for build"
 }
 group "all" {
