@@ -1,4 +1,4 @@
-version: "2.2"
+version: "2.3"
 global:
   enabled: true
   host: mycompany.com
@@ -11,8 +11,8 @@ squadron:
         version: 0.0.1
       builds:
         default:
-          tag: latest
-          image: storefinder/backend
+          tag:
+          - storefinder/backend:latest
       values:
         image:
           repository: storefinder/backend
@@ -24,8 +24,8 @@ squadron:
         version: 0.0.1
       builds:
         default:
-          tag: latest
-          image: storefinder/frontend
+          tag:
+          - storefinder/frontend:latest
       values:
         env:
           BASE64: MTIzNDU2Nzg5MA==

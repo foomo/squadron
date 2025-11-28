@@ -1,4 +1,4 @@
-version: "2.2"
+version: "2.3"
 vars:
   bar:
   - one
@@ -14,8 +14,8 @@ squadron:
         version: 0.0.1
       builds:
         default:
-          tag: latest
-          image: storefinder/backend
+          tag:
+          - storefinder/backend:latest
       values:
         env:
           bar: [one two]

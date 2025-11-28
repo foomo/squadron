@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"maps"
 	"os"
 	"os/exec"
 	"path"
@@ -16,13 +15,11 @@ import (
 	"time"
 
 	"github.com/foomo/squadron/internal/config"
+	"github.com/foomo/squadron/internal/git"
 	"github.com/foomo/squadron/internal/jsonschema"
 	ptermx "github.com/foomo/squadron/internal/pterm"
 	templatex "github.com/foomo/squadron/internal/template"
 	"github.com/foomo/squadron/internal/util"
-	"github.com/genelet/determined/dethcl"
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/miracl/conflate"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
@@ -119,7 +116,7 @@ func (sq *Squadron) MergeConfigFiles(ctx context.Context) error {
 
 	sq.config = string(value)
 
-	pterm.Success.Println("📚 | merging configs ⏱ " + time.Since(start).Truncate(time.Millisecond).String())
+	pterm.Success.Println("📚 | merging configs ⏱ " + time.Since(start).Round(time.Millisecond).String())
 
 	return nil
 }
@@ -240,7 +237,7 @@ func (sq *Squadron) RenderConfig(ctx context.Context) error {
 
 	sq.config = string(out3)
 
-	pterm.Success.Println("📗 | rendering config ⏱ " + time.Since(start).Truncate(time.Millisecond).String())
+	pterm.Success.Println("📗 | rendering config ⏱ " + time.Since(start).Round(time.Millisecond).String())
 
 	return nil
 }
@@ -266,15 +263,17 @@ func (sq *Squadron) Push(ctx context.Context, pushArgs []string, parallel int) e
 		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 			for _, name := range v.BuildNames() {
 				build := v.Builds[name]
-				spinner := printer.NewSpinner(fmt.Sprintf("🚚 | %s/%s.%s (%s:%s)", key, k, name, build.Image, build.Tag))
-				all = append(all, one{
-					spinner:  spinner,
-					squadron: key,
-					unit:     k,
-					item:     &build,
-					image:    build.Image + ":" + build.Tag,
-				})
-				spinner.Start()
+				for _, tag := range build.Tag {
+					spinner := printer.NewSpinner(fmt.Sprintf("🚚 | %s/%s.%s %s", key, k, name, tag))
+					all = append(all, one{
+						spinner:  spinner,
+						squadron: key,
+						unit:     k,
+						item:     &build,
+						image:    tag,
+					})
+					spinner.Start()
+				}
 			}
 
 			for _, name := range v.BakeNames() {
@@ -339,7 +338,7 @@ func (sq *Squadron) BuildDependencies(ctx context.Context, buildArgs []string, p
 	dependencies := sq.c.BuildDependencies(ctx)
 
 	run := func(ctx context.Context, name string, build config.Build) error {
-		spinner := printer.NewSpinner(fmt.Sprintf("💾 | %s (%s:%s)", name, build.Image, build.Tag))
+		spinner := printer.NewSpinner(fmt.Sprintf("💾 | %s %s", name, build.Tag))
 		spinner.Start()
 		spinner.Play()
 
@@ -399,7 +398,11 @@ func (sq *Squadron) BuildDependencies(ctx context.Context, buildArgs []string, p
 	return nil
 }
 
-func (sq *Squadron) Bake(ctx context.Context, bakeArgs []string) error {
+func (sq *Squadron) Bakefile(ctx context.Context) ([]byte, error) {
+	start := time.Now()
+
+	pterm.Info.Println("🔥 | generating bakefile")
+
 	c := &config.Bake{
 		Groups:  nil,
 		Targets: nil,
@@ -408,39 +411,69 @@ func (sq *Squadron) Bake(ctx context.Context, bakeArgs []string) error {
 		Name: "all",
 	}
 
-	gitInfo, err := sq.getGitInfo(ctx)
+	gitInfo, err := git.GetInfo(ctx)
 	if err != nil {
-		pterm.Debug.Println("failed to get git info:", err)
+		return nil, err
 	}
 
-	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
-		_ = value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
+	now := time.Now()
+
+	err = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
+		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 			for _, name := range v.BakeNames() {
 				item := v.Bakes[name]
 
-				item.Name = strings.Join([]string{key, k, name}, "-")
+				item.Name = strings.Join([]string{"squadron", key, k, name}, "-")
 				if item.Args == nil {
 					item.Args = make(map[string]string)
 				}
 
 				item.Args["SQUADRON_NAME"] = key
 				item.Args["SQUADRON_UNIT_NAME"] = k
-				maps.Copy(item.Args, gitInfo)
 
-				// Workaround
-				if src := os.Getenv("SQUADRON_BAKE_CACHE_FROM_LOCAL"); src != "" {
-					item.CacheFrom = append(item.CacheFrom, map[string]string{
-						"type": "local",
-						"src":  src + "/" + item.Name,
-					})
+				if item.Labels == nil {
+					item.Labels = make(map[string]string)
 				}
 
-				if dest := os.Getenv("SQUADRON_BAKE_CACHE_TO_LOCAL"); dest != "" {
-					item.CacheTo = append(item.CacheTo, map[string]string{
-						"type": "local",
-						"dest": dest + "/" + item.Name,
-						"mode": "max",
-					})
+				item.Labels["org.opencontainers.image.source"] = gitInfo.URL
+				item.Labels["org.opencontainers.image.version"] = gitInfo.Ref
+				item.Labels["org.opencontainers.image.created"] = now.Format(time.RFC3339)
+				item.Labels["org.opencontainers.image.revision"] = gitInfo.Commit
+
+				// Workaround
+				if typ := os.Getenv("SQUADRON_BAKE_CACHE_TYPE"); typ != "" {
+					var scope string
+					if value := os.Getenv("SQUADRON_BAKE_CACHE_SCOPE"); value != "" {
+						scope = value + "-"
+					}
+
+					switch typ {
+					case "gha":
+						item.CacheFrom = append(item.CacheFrom, map[string]string{
+							"type":  typ,
+							"scope": scope + item.Name,
+						})
+						item.CacheTo = append(item.CacheTo, map[string]string{
+							"type":  typ,
+							"scope": scope + item.Name,
+							"mode":  "max",
+						})
+					case "local":
+						if src := os.Getenv("SQUADRON_BAKE_CACHE_FROM"); src != "" {
+							item.CacheFrom = append(item.CacheFrom, map[string]string{
+								"type": typ,
+								"src":  src + "/" + scope + item.Name,
+							})
+						}
+
+						if dest := os.Getenv("SQUADRON_BAKE_CACHE_TO"); dest != "" {
+							item.CacheTo = append(item.CacheTo, map[string]string{
+								"type": typ,
+								"dest": dest + "/" + scope + item.Name,
+								"mode": "max",
+							})
+						}
+					}
 				}
 
 				pterm.Info.Printfln("📦 | %s/%s.%s (%s)", key, k, name, strings.Join(item.Tags, ","))
@@ -450,39 +483,59 @@ func (sq *Squadron) Bake(ctx context.Context, bakeArgs []string) error {
 
 			return nil
 		})
-
-		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(c.Targets) == 0 {
+		return []byte{}, nil
+	}
 
 	c.Groups = append(c.Groups, g)
 
-	b, err := dethcl.Marshal(c)
-	// b, err := hcl.Marshal(c)
+	pterm.Success.Println("🔥 | generating bakefile ⏱ " + time.Since(start).Round(time.Millisecond).String())
+
+	out, err := c.HCL()
 	if err != nil {
-		return errors.Wrap(err, "failed to marshal bake config")
+		return nil, err
 	}
 
-	pterm.Debug.Println("🔥 | bakefile:\n" + util.HighlightHCL(string(b)))
+	out = []byte(sq.Config().Bake + "\n" + string(out))
 
+	return out, nil
+}
+
+func (sq *Squadron) Bake(ctx context.Context, bakefile []byte, args []string) error {
 	start := time.Now()
 
-	pterm.Success.Println("🔥 | baking containers")
+	var cleanArgs []string
+	for _, arg := range args {
+		cleanArgs = append(cleanArgs, strings.Split(arg, " ")...)
+	}
 
-	out, err := util.NewDockerCommand().
-		Bake(bytes.NewReader(b)).
-		Args(bakeArgs...).
-		Stderr(ptermx.NewWriter(pterm.Debug)).
-		Run(ctx)
+	pterm.Info.Println("🔥 | baking targets")
+
+	cmd := util.NewDockerCommand().Bake(bytes.NewReader(bakefile)).Args(cleanArgs...)
+
+	if pterm.PrintDebugMessages ||
+		slices.Contains(cleanArgs, "--print") ||
+		slices.Contains(cleanArgs, "--list") {
+		cmd.Stderr(os.Stderr)
+		cmd.Stdout(os.Stdout)
+	}
+
+	out, err := cmd.Run(ctx)
 	if err != nil {
 		if pterm.PrintDebugMessages {
 			return err
 		} else {
-			pterm.Println(util.HighlightHCL(string(b) + "\n"))
+			pterm.Println(util.HighlightHCL(string(bakefile) + "\n"))
 			return errors.Wrap(err, out)
 		}
 	}
 
-	pterm.Success.Println("🔥 | baking containers ⏱︎ " + time.Since(start).Truncate(time.Millisecond).String())
+	pterm.Success.Println("🔥 | baking targets ⏱︎ " + time.Since(start).Round(time.Millisecond).String())
 
 	return nil
 }
@@ -507,16 +560,6 @@ func (sq *Squadron) Build(ctx context.Context, buildArgs []string, parallel int)
 
 	var all []one
 
-	gitInfo, err := sq.getGitInfo(ctx)
-	if err != nil {
-		pterm.Debug.Println("failed to get git info:", err)
-	}
-
-	var gitInfoArgs []string
-	for s, s2 := range gitInfo {
-		gitInfoArgs = append(gitInfoArgs, fmt.Sprintf("%s=%s", s, s2))
-	}
-
 	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
 		return value.Iterate(ctx, func(ctx context.Context, k string, v *config.Unit) error {
 			for _, name := range v.BuildNames() {
@@ -525,8 +568,7 @@ func (sq *Squadron) Build(ctx context.Context, buildArgs []string, parallel int)
 					"SQUADRON_NAME="+key,
 					"SQUADRON_UNIT_NAME="+k,
 				)
-				item.BuildArg = append(item.BuildArg, gitInfoArgs...)
-				spinner := printer.NewSpinner(fmt.Sprintf("📦 | %s/%s.%s (%s:%s)", key, k, name, item.Image, item.Tag))
+				spinner := printer.NewSpinner(fmt.Sprintf("📦 | %s/%s.%s %s", key, k, name, item.Tag))
 				all = append(all, one{
 					spinner:  spinner,
 					squadron: key,
@@ -540,6 +582,13 @@ func (sq *Squadron) Build(ctx context.Context, buildArgs []string, parallel int)
 		})
 	})
 
+	now := time.Now()
+
+	gitInfo, err := git.GetInfo(ctx)
+	if err != nil {
+		return err
+	}
+
 	for _, a := range all {
 		wg.Go(func() error {
 			a.spinner.Play()
@@ -549,6 +598,13 @@ func (sq *Squadron) Build(ctx context.Context, buildArgs []string, parallel int)
 				a.spinner.Warning(err.Error())
 				return nil
 			}
+
+			a.item.Label = append(a.item.Label,
+				"org.opencontainers.image.source="+gitInfo.URL,
+				"org.opencontainers.image.version="+gitInfo.Ref,
+				"org.opencontainers.image.created="+now.Format(time.RFC3339),
+				"org.opencontainers.image.revision="+gitInfo.Commit,
+			)
 
 			if out, err := a.item.Build(ctx, a.squadron, a.unit, buildArgs); errors.Is(ctx.Err(), context.Canceled) {
 				a.spinner.Warning(ctx.Err().Error())
@@ -1194,86 +1250,4 @@ func (sq *Squadron) getReleaseName(squadron, unit string, u *config.Unit) string
 	}
 
 	return squadron + "-" + unit
-}
-
-func (sq *Squadron) getGitInfo(ctx context.Context) (map[string]string, error) {
-	ret := map[string]string{}
-
-	if _, ok := os.LookupEnv("GITHUB_ACTIONS"); ok {
-		ret["GIT_TYPE"] = os.Getenv("GITHUB_REF_TYPE")
-
-		ret["GIT_NAME"] = os.Getenv("GITHUB_HEAD_REF")
-		if ret["GIT_NAME"] == "" {
-			ret["GIT_NAME"] = strings.TrimPrefix(os.Getenv("GITHUB_REF"), "refs/heads/")
-		}
-
-		ret["GIT_HASH"] = os.Getenv("GITHUB_SHA")
-		ret["GIT_URL"] = os.Getenv("GITHUB_SERVER_URL") + "/" + os.Getenv("GITHUB_REPOSITORY")
-
-		return ret, nil
-	}
-
-	dir := "."
-
-	for _, s := range []string{"GIT_DIR", "PROJECT_ROOT"} {
-		if v := os.Getenv(s); v != "" {
-			dir = v
-			break
-		}
-	}
-
-	repo, err := git.PlainOpen(dir)
-	if err != nil {
-		return nil, err
-	}
-
-	// Get remote "origin" URL
-	remote, err := repo.Remote("origin")
-	if err != nil {
-		return nil, err
-	}
-
-	remoteURLs := remote.Config().URLs
-	if len(remoteURLs) > 0 {
-		url := remoteURLs[0]
-		if strings.HasPrefix(url, "git@") {
-			// Example input: git@github.com:user/repo.git
-			parts := strings.SplitN(url, ":", 2)
-			if len(parts) == 2 {
-				// parts[1] = user/repo.git
-				hostParts := strings.Split(parts[0], "@")
-				if len(hostParts) == 2 {
-					host := hostParts[1]
-					url = "https://" + host + "/" + strings.TrimSuffix(parts[1], ".git")
-				}
-			}
-		}
-
-		ret["GIT_URL"] = url
-	}
-
-	// Get HEAD reference to find the current branch or commit
-	ref, err := repo.Head()
-	if err != nil {
-		return nil, err
-	}
-
-	ret["GIT_TYPE"] = "branch"
-	ret["GIT_NAME"] = ref.Name().Short()
-	ret["GIT_HASH"] = ref.Hash().String()
-
-	if t, err := repo.Tags(); err == nil {
-		_ = t.ForEach(func(reference *plumbing.Reference) error {
-			if ref.Hash() == reference.Hash() {
-				ret["GIT_NAME"] = reference.Name().Short()
-				ret["GIT_TYPE"] = "tag"
-
-				return errors.New("break")
-			}
-
-			return nil
-		})
-	}
-
-	return ret, nil
 }

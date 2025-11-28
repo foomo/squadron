@@ -1,4 +1,4 @@
-version: "2.2"
+version: '2.3'
 
 vars:
   foo: "one"
@@ -11,12 +11,11 @@ squadron:
       chart: <% env "PROJECT_ROOT" %>/_examples/common/charts/backend
       builds:
         default:
-          tag: latest
-          image: storefinder/backend
+          tag: [ storefinder/backend:latest ]
       values:
         image:
-          tag: <% .Squadron.storefinder.backend.builds.default.tag %>
-          repository: <% .Squadron.storefinder.backend.builds.default.image %>
+          repository: storefinder/backend
+          tag: latest
         env:
           foo: <% .Vars.foo %>
           bar: <% .Vars.bar %>

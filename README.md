@@ -138,6 +138,6 @@ Contributions are welcome! Please read the [contributing guide](docs/CONTRIBUTIN
 
 ## License
 
-Distributed under MIT License, please see license file within the code for more details.
+Distributed under MIT License, please see the [license](LICENSE) file for more details.
 
 _Made with ♥ [foomo](https://www.foomo.org) by [bestbytes](https://www.bestbytes.com)_

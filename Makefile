@@ -63,6 +63,12 @@ test:
 	@GO_TEST_TAGS=-skip go test -tags=safe -coverprofile=coverage.out
 	@#GO_TEST_TAGS=-skip go test -tags=safe -coverprofile=coverage.out -race
 
+.PHONY: test.update
+## Run tests
+test.update:
+	@echo "〉go test"
+	@GO_TEST_TAGS=-skip go test -tags=safe -coverprofile=coverage.out -update
+
 .PHONY: outdated
 ## Show outdated direct dependencies
 outdated:
