@@ -24,7 +24,7 @@ func Snapshot(t *testing.T, name, yaml string) {
 // writeSnapshot updates the snapshot file for a given test t.
 func writeSnapshot(t *testing.T, name string, content string) {
 	t.Helper()
-	require.NoError(t, os.WriteFile(name, []byte(content), 0600), "failed to update snapshot", name)
+	assert.NoError(t, os.WriteFile(name, []byte(content), 0600), "failed to update snapshot", name)
 }
 
 // readSnapshot reads the snapshot file for a given test t.

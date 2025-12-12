@@ -1,3 +1,6 @@
+---
+title: Security
+---
 # Security Guidelines
 
 ## How security is managed on this project

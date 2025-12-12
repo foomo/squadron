@@ -66,7 +66,7 @@ func NewList(c *viper.Viper) *cobra.Command {
 						for name, build := range v.Builds {
 							list = append(list, pterm.LeveledListItem{Level: 2, Text: "📦: " + name})
 
-							list = append(list, pterm.LeveledListItem{Level: 3, Text: build.Image + ":" + build.Tag})
+							list = append(list, pterm.LeveledListItem{Level: 3, Text: build.Tag[0]})
 							for _, dependency := range build.Dependencies {
 								list = append(list, pterm.LeveledListItem{Level: 3, Text: "🗃️: " + dependency})
 							}
@@ -89,6 +89,9 @@ func NewList(c *viper.Viper) *cobra.Command {
 	}
 
 	flags := cmd.Flags()
+
+	flags.String("output", "", "write the output to the given path")
+	_ = x.BindPFlag("output", flags.Lookup("output"))
 
 	flags.StringSlice("tags", nil, "list of tags to include or exclude (can specify multiple or separate values with commas: tag1,tag2,-tag3)")
 	_ = x.BindPFlag("tags", flags.Lookup("tags"))

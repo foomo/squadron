@@ -1,0 +1,22 @@
+version: '2.3'
+
+bake: |-
+  variable "TAG" {
+    type = string
+    default = "<% envDefault "TAG" "latest" %>"
+    description = "Tag to use for build"
+  }
+
+vars:
+  tag: latest
+
+squadron:
+  storefinder:
+    backend:
+      chart: <% env "PROJECT_ROOT" %>/_examples/common/charts/backend
+      bakes:
+        default:
+          tags: [ 'storefinder/backend:${TAG}' ]
+          noCacheFilter: [ nocache ]
+          secret: [ { id: "GITHUB_TOKEN" } ]
+

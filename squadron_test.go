@@ -2,6 +2,7 @@ package squadron_test
 
 import (
 	"path"
+	"strings"
 	"testing"
 
 	testingx "github.com/foomo/go/testing"
@@ -59,6 +60,10 @@ func TestConfigSimpleSnapshot(t *testing.T) {
 			tags:  []string{"backend", "-skip"},
 			files: []string{"squadron.yaml"},
 		},
+		{
+			name:  "bake",
+			files: []string{"squadron.yaml"},
+		},
 	}
 
 	for _, test := range tests {
@@ -82,28 +87,49 @@ func runTestConfig(t *testing.T, name string, files []string, squadronName strin
 
 	sq := squadron.New(cwd, "default", files)
 
-	{
+	t.Run("merge", func(tt *testing.T) {
 		require.NoError(t, sq.MergeConfigFiles(ctx), "failed to merge files")
-	}
+	})
 
-	{
+	t.Run("filter", func(tt *testing.T) {
 		require.NoError(t, sq.FilterConfig(ctx, squadronName, unitNames, tags), "failed to filter config")
 		testutils.Snapshot(t, path.Join("testdata", name, "snapshop-config-norender.yaml"), sq.ConfigYAML())
-	}
+	})
 
-	{
+	t.Run("render", func(tt *testing.T) {
 		require.NoError(t, sq.RenderConfig(ctx), "failed to render config")
 		testutils.Snapshot(t, path.Join("testdata", name, "snapshop-config.yaml"), sq.ConfigYAML())
-	}
+	})
 
-	{
+	t.Run("rerender", func(tt *testing.T) {
 		require.NoError(t, sq.RenderConfig(ctx), "failed to render config")
 		testutils.Snapshot(t, path.Join("testdata", name, "snapshop-config.yaml"), sq.ConfigYAML())
-	}
+	})
 
-	{
+	t.Run("template", func(tt *testing.T) {
 		out, err := sq.Template(ctx, nil, 1)
 		require.NoError(t, err)
 		testutils.Snapshot(t, path.Join("testdata", name, "snapshop-template.yaml"), out)
-	}
+	})
+
+	t.Run("bakefile", func(tt *testing.T) {
+		bakefile, err := sq.Bakefile(ctx)
+		require.NoError(t, err)
+
+		if len(bakefile) == 0 {
+			return
+		}
+
+		lines := strings.Split(string(bakefile), "\n")
+		for i, s := range lines {
+			if strings.Contains(s, "org.opencontainers.image") {
+				lines[i] = "    # test"
+			}
+		}
+
+		bakefile = []byte(strings.Join(lines, "\n"))
+		// out, err := bakefile.HCL()
+		require.NoError(t, err)
+		testutils.Snapshot(t, path.Join("testdata", name, "snapshop-bakefile.hcl"), string(bakefile))
+	})
 }

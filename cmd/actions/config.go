@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"os"
 	"strings"
 
 	"github.com/foomo/squadron"
@@ -41,11 +42,16 @@ func NewConfig(c *viper.Viper) *cobra.Command {
 			}
 
 			out := sq.ConfigYAML()
-			if !x.GetBool("raw") {
-				out = util.Highlight(out)
-			}
 
-			pterm.Println(out)
+			switch {
+			case x.GetBool("raw"):
+				pterm.Println(out)
+			case x.GetString("output") != "":
+				pterm.Info.Printfln("💾 | writing outut to %s", x.GetString("output"))
+				return os.WriteFile(x.GetString("output"), []byte(out), 0600)
+			default:
+				pterm.Println(util.Highlight(out))
+			}
 
 			return nil
 		},
@@ -57,6 +63,9 @@ func NewConfig(c *viper.Viper) *cobra.Command {
 
 	flags.StringSlice("tags", nil, "list of tags to include or exclude (can specify multiple or separate values with commas: tag1,tag2,-tag3)")
 	_ = x.BindPFlag("tags", flags.Lookup("tags"))
+
+	flags.String("output", "", "write the output to the given path")
+	_ = x.BindPFlag("output", flags.Lookup("output"))
 
 	flags.Bool("raw", false, "print raw output without highlighting")
 	_ = x.BindPFlag("raw", flags.Lookup("raw"))

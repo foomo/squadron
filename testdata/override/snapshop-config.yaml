@@ -1,4 +1,4 @@
-version: "2.2"
+version: "2.3"
 squadron:
   storefinder:
     frontend:
@@ -8,15 +8,15 @@ squadron:
         version: 0.0.1
       builds:
         default:
-          build_arg:
+          buildArg:
           - foo=foo
           - bar=bar
           - bar=baz
           - baz=baz
           file: Dockerfile
-          tag: nightly
-          image: storefinder/frontend
+          tag:
+          - storefinder/frontend:latest
       values:
         image:
           repository: storefinder/frontend
-          tag: nightly
+          tag: latest

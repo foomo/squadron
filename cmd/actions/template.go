@@ -1,6 +1,8 @@
 package actions
 
 import (
+	"os"
+
 	"github.com/foomo/squadron"
 	"github.com/foomo/squadron/internal/util"
 	"github.com/pkg/errors"
@@ -44,11 +46,15 @@ func NewTemplate(c *viper.Viper) *cobra.Command {
 				return errors.Wrap(err, "failed to render template")
 			}
 
-			if !x.GetBool("raw") {
-				out = util.Highlight(out)
+			switch {
+			case x.GetBool("raw"):
+				pterm.Println(out)
+			case x.GetString("output") != "":
+				pterm.Info.Printfln("💾 | writing outut to %s", x.GetString("output"))
+				return os.WriteFile(x.GetString("output"), []byte(out), 0600)
+			default:
+				pterm.Println(util.Highlight(out))
 			}
-
-			pterm.Println(out)
 
 			return nil
 		},
@@ -60,6 +66,9 @@ func NewTemplate(c *viper.Viper) *cobra.Command {
 
 	flags.StringP("namespace", "n", "default", "set the namespace name or template (default, squadron-{{.Squadron}}-{{.Unit}})")
 	_ = x.BindPFlag("namespace", flags.Lookup("namespace"))
+
+	flags.String("output", "", "write the output to the given path")
+	_ = x.BindPFlag("output", flags.Lookup("output"))
 
 	flags.StringSlice("tags", nil, "list of tags to include or exclude (can specify multiple or separate values with commas: tag1,tag2,-tag3)")
 	_ = x.BindPFlag("tags", flags.Lookup("tags"))

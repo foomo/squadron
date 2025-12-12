@@ -1,5 +1,5 @@
 # Schema version
-version: '2.2'
+version: '2.3'
 
 squadron:
   storefinder:

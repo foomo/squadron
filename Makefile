@@ -63,6 +63,12 @@ test:
 	@GO_TEST_TAGS=-skip go test -tags=safe -coverprofile=coverage.out
 	@#GO_TEST_TAGS=-skip go test -tags=safe -coverprofile=coverage.out -race
 
+.PHONY: test.update
+## Run tests
+test.update:
+	@echo "〉go test"
+	@GO_TEST_TAGS=-skip go test -tags=safe -coverprofile=coverage.out -update
+
 .PHONY: outdated
 ## Show outdated direct dependencies
 outdated:
@@ -83,6 +89,19 @@ build:
 	@go build -tags=safe -o bin/squadron cmd/main.go
 
 ### Documentation
+
+.PHONY: docs
+## Open docs
+docs: docs.cli
+	@echo "〉starting docs"
+	@cd docs && bun install
+	@cd docs && bun run dev
+
+.PHONY: docs.cli
+## Generate cli
+docs.cli:
+	@echo "〉generating cli reference"
+	@go run scripts/cmd-reference/main.go
 
 .PHONY: godocs
 ## Open go docs

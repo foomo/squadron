@@ -1,8 +1,11 @@
 package actions
 
 import (
+	"os"
+
 	"github.com/foomo/squadron"
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -31,7 +34,22 @@ func NewBake(c *viper.Viper) *cobra.Command {
 				return errors.Wrap(err, "failed to render config")
 			}
 
-			if err := sq.Bake(cmd.Context(), x.GetStringSlice("bake-args")); err != nil {
+			bakefile, err := sq.Bakefile(cmd.Context())
+			if err != nil {
+				return errors.Wrap(err, "failed to generate bakefile")
+			}
+
+			if output := x.GetString("output"); output != "" {
+				pterm.Info.Printfln("💾 | writing output to %s", output)
+
+				if err := os.WriteFile(output, bakefile, 0600); err != nil {
+					return errors.Wrap(err, "failed to write bakefile")
+				}
+
+				return nil
+			}
+
+			if err := sq.Bake(cmd.Context(), bakefile, x.GetStringSlice("bake-args")); err != nil {
 				return errors.Wrap(err, "failed to bake units")
 			}
 
@@ -52,6 +70,9 @@ func NewBake(c *viper.Viper) *cobra.Command {
 	cmd.Flags().Int("parallel", 1, "run command in parallel")
 
 	_ = x.BindPFlag("parallel", flags.Lookup("parallel"))
+
+	flags.String("output", "", "write the output to the given path")
+	_ = x.BindPFlag("output", flags.Lookup("output"))
 
 	flags.StringArray("bake-args", nil, "additional docker bake args")
 	_ = x.BindPFlag("bake-args", flags.Lookup("bake-args"))
