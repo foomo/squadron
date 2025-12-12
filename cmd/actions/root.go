@@ -15,30 +15,8 @@ import (
 )
 
 var (
-	cwd  string
-	root *cobra.Command
+	cwd string
 )
-
-func init() {
-	root = NewRoot()
-	root.AddCommand(
-		NewUp(NewViper(root)),
-		NewDiff(NewViper(root)),
-		NewDown(NewViper(root)),
-		NewBake(NewViper(root)),
-		NewBuild(NewViper(root)),
-		NewPush(NewViper(root)),
-		NewList(NewViper(root)),
-		NewRollback(NewViper(root)),
-		NewStatus(NewViper(root)),
-		NewConfig(NewViper(root)),
-		NewVersion(NewViper(root)),
-		NewCompletion(NewViper(root)),
-		NewTemplate(NewViper(root)),
-		NewPostRenderer(NewViper(root)),
-		NewSchema(NewViper(root)),
-	)
-}
 
 // NewRoot represents the base command when called without any subcommands
 func NewRoot() *cobra.Command {
@@ -67,6 +45,24 @@ func NewRoot() *cobra.Command {
 
 	flags.StringSliceP("file", "f", []string{"squadron.yaml"}, "specify alternative squadron files")
 
+	root.AddCommand(
+		NewUp(NewViper(root)),
+		NewDiff(NewViper(root)),
+		NewDown(NewViper(root)),
+		NewBake(NewViper(root)),
+		NewBuild(NewViper(root)),
+		NewPush(NewViper(root)),
+		NewList(NewViper(root)),
+		NewRollback(NewViper(root)),
+		NewStatus(NewViper(root)),
+		NewConfig(NewViper(root)),
+		NewVersion(NewViper(root)),
+		NewCompletion(NewViper(root)),
+		NewTemplate(NewViper(root)),
+		NewPostRenderer(NewViper(root)),
+		NewSchema(NewViper(root)),
+	)
+
 	return root
 }
 
@@ -78,6 +74,7 @@ func NewViper(root *cobra.Command) *viper.Viper {
 }
 
 func Execute() {
+	root := NewRoot()
 	l := cmd.NewLogger()
 
 	say := func(msg string) string {

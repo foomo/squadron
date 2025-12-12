@@ -90,6 +90,19 @@ build:
 
 ### Documentation
 
+.PHONY: docs
+## Open docs
+docs: docs.cli
+	@echo "〉starting docs"
+	@cd docs && bun install
+	@cd docs && bun run dev
+
+.PHONY: docs.cli
+## Generate cli
+docs.cli:
+	@echo "〉generating cli reference"
+	@go run scripts/cmd-reference/main.go
+
 .PHONY: godocs
 ## Open go docs
 godocs:

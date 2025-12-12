@@ -6,7 +6,7 @@
 [![GoDoc](https://godoc.org/github.com/foomo/squadron?status.svg)](https://godoc.org/github.com/foomo/squadron)
 
 <p align="center">
-  <img alt="foomo/squadron" src="docs/public/squadron.png" width="400" height="400"/>
+  <img alt="foomo/squadron" src="docs/public/logo.png" width="400" height="400"/>
 </p>
 
 # Squadron
@@ -23,7 +23,7 @@ Configure your squadron
 
 ```yaml
 # https://raw.githubusercontent.com/foomo/squadron/refs/heads/main/squadron.schema.json
-version: '2.2'
+version: '2.3'
 
 # squadron template vars
 vars: {}

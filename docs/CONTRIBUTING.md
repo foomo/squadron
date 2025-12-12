@@ -1,3 +1,6 @@
+---
+title: Contributing
+---
 # Contributing
 
 Thank you for your interest in contributing to our project! This guide will help you get started with the development process.
