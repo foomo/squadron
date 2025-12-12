@@ -17,7 +17,6 @@ require (
 	github.com/go-git/go-git/v6 v6.0.0-20251212081956-e83cbb9651e8
 	github.com/invopop/jsonschema v0.13.0
 	github.com/miracl/conflate v1.3.4
-	github.com/peschmae/json-schema-renderer v0.8.0
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.82
 	github.com/spf13/cobra v1.10.2
@@ -58,6 +57,7 @@ require (
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
+	github.com/genelet/schema v0.0.0-20251203212046-4a325f33cf8e // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/gcfg/v2 v2.0.2 // indirect
@@ -94,7 +94,6 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sagikazarmark/locafero v0.12.0 // indirect
-	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
 	github.com/sergi/go-diff v1.4.0 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/skeema/knownhosts v1.3.2 // indirect
