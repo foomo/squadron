@@ -18,4 +18,5 @@ squadron:
         default:
           tags: [ 'storefinder/backend:${TAG}' ]
           noCacheFilter: [ nocache ]
+          secret: [ { id: "GITHUB_TOKEN" } ]
 

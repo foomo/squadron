@@ -19,4 +19,9 @@ target "squadron-storefinder-backend-default" {
   }
   tags            = ["storefinder/backend:${TAG}"]
   no-cache-filter = ["nocache"]
+  secret = [
+    {
+      id = "GITHUB_TOKEN"
+    }
+  ]
 }

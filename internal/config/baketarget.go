@@ -15,7 +15,7 @@ type BakeTarget struct {
 	CacheFrom        []map[string]string `json:"cacheFrom,omitempty" yaml:"cacheFrom,omitempty" hcl:"cache-from,optional"`
 	CacheTo          []map[string]string `json:"cacheTo,omitempty" yaml:"cacheTo,omitempty" hcl:"cache-to,optional"`
 	Target           string              `json:"target,omitempty" yaml:"target,omitempty" hcl:"target,optional"`
-	Secrets          []map[string]any    `json:"secret,omitempty" yaml:"secret,omitempty" hcl:"secret,label,optional"`
+	Secret           []map[string]any    `json:"secret,omitempty" yaml:"secret,omitempty" hcl:"secret,optional"`
 	SSH              []map[string]any    `json:"ssh,omitempty" yaml:"ssh,omitempty" hcl:"ssh,optional"`
 	Platforms        []string            `json:"platforms,omitempty" yaml:"platforms,omitempty" hcl:"platforms,optional"`
 	Outputs          []map[string]any    `json:"output,omitempty" yaml:"output,omitempty" hcl:"output,optional"`
