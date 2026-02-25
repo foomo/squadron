@@ -13,7 +13,7 @@ require (
 	github.com/alecthomas/chroma v0.10.0
 	github.com/foomo/go v0.0.3
 	github.com/genelet/horizon v1.13.4
-	github.com/go-git/go-git/v5 v5.16.4
+	github.com/go-git/go-git/v5 v5.16.5
 	github.com/go-git/go-git/v6 v6.0.0-20251212081956-e83cbb9651e8
 	github.com/invopop/jsonschema v0.13.0
 	github.com/miracl/conflate v1.3.4
@@ -48,7 +48,7 @@ require (
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/clipperhouse/stringish v0.1.1 // indirect
 	github.com/clipperhouse/uax29/v2 v2.3.0 // indirect
-	github.com/cloudflare/circl v1.6.1 // indirect
+	github.com/cloudflare/circl v1.6.3 // indirect
 	github.com/containerd/console v1.0.5 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.6 // indirect
 	github.com/cyphar/filepath-securejoin v0.6.1 // indirect
