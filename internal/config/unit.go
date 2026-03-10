@@ -22,7 +22,7 @@ type Unit struct {
 	// Optional release namespace
 	Namespace string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	// Chart settings
-	Chart Chart `json:"chart,omitempty" yaml:"chart,omitempty" jsonschema:"anyof_type=string,anyof_ref=#/$defs/Chart"`
+	Chart Chart `json:"chart" yaml:"chart" jsonschema:"anyof_type=string,anyof_ref=#/$defs/Chart"`
 	// List of tags
 	Tags Tags `json:"tags,omitempty" yaml:"tags,omitempty"`
 	// Installation priority, higher comes first
@@ -146,7 +146,7 @@ func (u *Unit) Template(ctx context.Context, name, squadron, unit, namespace str
 		Args("--values", "-").
 		Args(helmArgs...)
 
-	if strings.HasPrefix(u.Chart.Repository, "file://") {
+	if strings.HasPrefix(u.Chart.Repository, "file://") { //nolint:modernize
 		cmd.Args(path.Clean(strings.TrimPrefix(u.Chart.Repository, "file://")))
 	} else {
 		cmd.Args(u.Chart.Name)

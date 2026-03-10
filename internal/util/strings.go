@@ -7,7 +7,7 @@ import (
 func StringToMap(key string) map[string]string {
 	result := make(map[string]string)
 
-	for _, line := range strings.Split(key, ",") {
+	for line := range strings.SplitSeq(key, ",") {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue

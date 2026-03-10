@@ -138,8 +138,8 @@ func (sq *Squadron) FilterConfig(ctx context.Context, squadron string, units, ta
 		if err := sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
 			return value.FilterFn(func(k string, v *config.Unit) bool {
 				for _, tag := range tags {
-					if strings.HasPrefix(tag, "-") {
-						if slices.Contains(v.Tags, config.Tag(strings.TrimPrefix(tag, "-"))) {
+					if after, ok := strings.CutPrefix(tag, "-"); ok {
+						if slices.Contains(v.Tags, config.Tag(after)) {
 							return false
 						}
 					} else if !slices.Contains(v.Tags, config.Tag(tag)) {
@@ -478,7 +478,7 @@ func (sq *Squadron) Bakefile(ctx context.Context) ([]byte, error) {
 						data := map[string]any{"Squadron": key, "Unit": k, "Bake": item}
 
 						if src := os.Getenv("SQUADRON_BAKE_CACHE_FROM"); src != "" {
-							for _, s := range strings.Split(src, ";") {
+							for s := range strings.SplitSeq(src, ";") {
 								if str, err := util.RenderTemplateString(s, data); err != nil {
 									pterm.Fatal.Println("failed to render template\n", s, "\n", err)
 								} else {
@@ -488,7 +488,7 @@ func (sq *Squadron) Bakefile(ctx context.Context) ([]byte, error) {
 						}
 
 						if src := os.Getenv("SQUADRON_BAKE_CACHE_TO"); src != "" {
-							for _, s := range strings.Split(src, ";") {
+							for s := range strings.SplitSeq(src, ";") {
 								if str, err := util.RenderTemplateString(s, data); err != nil {
 									pterm.Fatal.Println("failed to render template\n", s, "\n", err)
 								} else {
@@ -786,8 +786,8 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) (
 				cmd.Args = append(cmd.Args, v.PostRendererArgs()...)
 				cmd.Stdin = bytes.NewReader(valueBytes)
 
-				if strings.HasPrefix(v.Chart.Repository, "file://") {
-					cmd.Args = append(cmd.Args, path.Clean(strings.TrimPrefix(v.Chart.Repository, "file://")))
+				if after, ok := strings.CutPrefix(v.Chart.Repository, "file://"); ok {
+					cmd.Args = append(cmd.Args, path.Clean(after))
 				} else {
 					cmd.Args = append(cmd.Args, v.Chart.Name)
 					if v.Chart.Repository != "" {
@@ -1166,8 +1166,8 @@ func (sq *Squadron) Up(ctx context.Context, helmArgs []string, status Status, pa
 				Args("--values", "-").
 				Args(helmArgs...)
 
-			if strings.HasPrefix(a.item.Chart.Repository, "file://") {
-				cmd.Args(path.Clean(strings.TrimPrefix(a.item.Chart.Repository, "file://")))
+			if after, ok := strings.CutPrefix(a.item.Chart.Repository, "file://"); ok {
+				cmd.Args(path.Clean(after))
 			} else {
 				cmd.Args(a.item.Chart.Name)
 
