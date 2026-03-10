@@ -146,8 +146,8 @@ func (u *Unit) Template(ctx context.Context, name, squadron, unit, namespace str
 		Args("--values", "-").
 		Args(helmArgs...)
 
-	if strings.HasPrefix(u.Chart.Repository, "file://") { //nolint:modernize
-		cmd.Args(path.Clean(strings.TrimPrefix(u.Chart.Repository, "file://")))
+	if after, ok := strings.CutPrefix(u.Chart.Repository, "file://"); ok {
+		cmd.Args(path.Clean(after))
 	} else {
 		cmd.Args(u.Chart.Name)
 

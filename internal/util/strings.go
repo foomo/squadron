@@ -4,10 +4,10 @@ import (
 	"strings"
 )
 
-func StringToMap(key string) map[string]string {
+func StringToMap(s string) map[string]string {
 	result := make(map[string]string)
 
-	for line := range strings.SplitSeq(key, ",") {
+	for line := range strings.SplitSeq(s, ",") {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue

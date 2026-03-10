@@ -479,21 +479,23 @@ func (sq *Squadron) Bakefile(ctx context.Context) ([]byte, error) {
 
 						if src := os.Getenv("SQUADRON_BAKE_CACHE_FROM"); src != "" {
 							for s := range strings.SplitSeq(src, ";") {
-								if str, err := util.RenderTemplateString(s, data); err != nil {
-									pterm.Fatal.Println("failed to render template\n", s, "\n", err)
-								} else {
-									item.CacheFrom = append(item.CacheFrom, util.StringToMap("type="+typ+","+str))
+								str, err := util.RenderTemplateString(s, data)
+								if err != nil {
+									return errors.Wrap(err, "failed to render bake cache-from template: "+s)
 								}
+
+								item.CacheFrom = append(item.CacheFrom, util.StringToMap("type="+typ+","+str))
 							}
 						}
 
 						if src := os.Getenv("SQUADRON_BAKE_CACHE_TO"); src != "" {
 							for s := range strings.SplitSeq(src, ";") {
-								if str, err := util.RenderTemplateString(s, data); err != nil {
-									pterm.Fatal.Println("failed to render template\n", s, "\n", err)
-								} else {
-									item.CacheTo = append(item.CacheTo, util.StringToMap("type="+typ+","+str))
+								str, err := util.RenderTemplateString(s, data)
+								if err != nil {
+									return errors.Wrap(err, "failed to render bake cache-to template: "+s)
 								}
+
+								item.CacheTo = append(item.CacheTo, util.StringToMap("type="+typ+","+str))
 							}
 						}
 					}
