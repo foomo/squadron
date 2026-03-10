@@ -22,7 +22,7 @@ type Unit struct {
 	// Optional release namespace
 	Namespace string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	// Chart settings
-	Chart Chart `json:"chart" yaml:"chart" jsonschema:"anyof_type=string,anyof_ref=#/$defs/Chart"`
+	Chart Chart `json:"chart,omitempty" yaml:"chart,omitempty" jsonschema:"anyof_type=string,anyof_ref=#/$defs/Chart"` //nolint:modernize
 	// List of tags
 	Tags Tags `json:"tags,omitempty" yaml:"tags,omitempty"`
 	// Installation priority, higher comes first
