@@ -1,10 +1,18 @@
 version: 2
 
+project_name: squadron
+
 builds:
   - binary: squadron
     main: ./cmd/main.go
     env:
       - CGO_ENABLED=0
+    flags:
+      - -trimpath
+      - -tags=safe
+    ldflags:
+      - -s -w
+      - -X github.com/foomo/squadron/cmd/actions.version={{.Version}}
     goos:
       - windows
       - darwin
@@ -12,23 +20,18 @@ builds:
     goarch:
       - amd64
       - arm64
-    goarm:
-      - '7'
-    flags:
-      - -trimpath
-      - -tags=safe
-    ldflags:
-      - -s -w -X github.com/foomo/squadron/cmd/actions.version={{.Version}}
-
-release:
-  prerelease: auto
+    ignore:
+      - goos: windows
+        goarch: arm64
 
 archives:
   - formats: [ tar.gz ]
     format_overrides:
       - goos: windows
         formats: [ zip ]
-    files: [ LICENSE ]
+
+release:
+  prerelease: auto
 
 changelog:
   use: github-native

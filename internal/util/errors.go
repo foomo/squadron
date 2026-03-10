@@ -9,7 +9,7 @@ import (
 )
 
 func SprintError(err error) string {
-	var ret string
+	var ret strings.Builder
 
 	prefix := "Error: "
 
@@ -20,17 +20,17 @@ func SprintError(err error) string {
 	for {
 		w := errors.Unwrap(err)
 		if w == nil {
-			ret += prefix + err.Error() + "\n"
+			ret.WriteString(prefix + err.Error() + "\n")
 			break
 		}
 
 		if err.Error() != w.Error() {
-			ret += prefix + strings.TrimSuffix(err.Error(), ": "+w.Error()) + "\n"
+			ret.WriteString(prefix + strings.TrimSuffix(err.Error(), ": "+w.Error()) + "\n")
 			prefix = "↪ "
 		}
 
 		err = w
 	}
 
-	return strings.TrimSuffix(ret, "\n")
+	return strings.TrimSuffix(ret.String(), "\n")
 }

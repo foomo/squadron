@@ -7,8 +7,8 @@
 *.zip
 *.pem
 bin/
-tmp/
 cache/
+tmp/
 
 ## Git
 !.gitkeep
@@ -22,27 +22,29 @@ cache/
 ## Mise
 !.mise.toml
 
-## Lefthook
-!.lefthook.yaml
-
 ## VSCode
 !.vscode/
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.default.json
 
+## Lefthook
+!.lefthook.yaml
+
 ## Editorconfig
 !.editorconfig
+
+## Docker
+!.dockerignore
+
+## Node
+**/node_modules/
+
+## Vitepress
+!docs/.vitepress
 
 ## Golang
 go.work
 go.work.sum
-!.golangci.yml
-!.goreleaser.yml
-
-## Vitepress
-node_modules/
-!docs/.vitepress
-
-## Docker
-!.dockerignore
+!.golangci.yaml
+!.goreleaser.yaml

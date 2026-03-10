@@ -24,7 +24,7 @@ func main() {
 		outputDir = os.Args[1]
 	}
 
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0755); err != nil { //nolint:gosec // G703
 		log.Fatal(err)
 	}
 
