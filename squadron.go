@@ -146,6 +146,7 @@ func (sq *Squadron) FilterConfig(ctx context.Context, squadron string, units, ta
 						return false
 					}
 				}
+
 				return true
 			})
 		}); err != nil {
@@ -472,6 +473,28 @@ func (sq *Squadron) Bakefile(ctx context.Context) ([]byte, error) {
 								"dest": dest + "/" + scope + item.Name,
 								"mode": "max",
 							})
+						}
+					default:
+						data := map[string]any{"Squadron": key, "Unit": k, "Bake": item}
+
+						if src := os.Getenv("SQUADRON_BAKE_CACHE_FROM"); src != "" {
+							for _, s := range strings.Split(src, ";") {
+								if str, err := util.RenderTemplateString(s, data); err != nil {
+									pterm.Fatal.Println("failed to render template\n", s, "\n", err)
+								} else {
+									item.CacheFrom = append(item.CacheFrom, util.StringToMap("type="+typ+","+str))
+								}
+							}
+						}
+
+						if src := os.Getenv("SQUADRON_BAKE_CACHE_TO"); src != "" {
+							for _, s := range strings.Split(src, ";") {
+								if str, err := util.RenderTemplateString(s, data); err != nil {
+									pterm.Fatal.Println("failed to render template\n", s, "\n", err)
+								} else {
+									item.CacheTo = append(item.CacheTo, util.StringToMap("type="+typ+","+str))
+								}
+							}
 						}
 					}
 				}

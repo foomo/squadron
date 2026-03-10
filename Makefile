@@ -13,27 +13,33 @@ endef
 # --- Targets -----------------------------------------------------------------
 
 # This allows us to accept extra arguments
-%: .mise .lefthook
+%: .mise .lefthook go.work
 	@:
+
+# Ensure go.work file
+go.work:
+	@echo "〉initializing go work"
+	@go work init
+	@go work use -r .
+	@go work sync
 
 .PHONY: .mise
 # Install dependencies
-.mise: msg := $(br)$(br)Please ensure you have 'mise' installed and activated!$(br)$(br)$$ brew update$(br)$$ brew install mise$(br)$(br)See the documentation: https://mise.jdx.dev/getting-started.html$(br)$(br)
 .mise:
 ifeq (, $(shell command -v mise))
-	$(error ${msg})
+	$(error $(br)$(br)Please ensure you have 'mise' installed and activated!$(br)$(br)  $$ brew update$(br)  $$ brew install mise$(br)$(br)See the documentation: https://mise.jdx.dev/getting-started.html)
 endif
 	@mise install
 
 # Configure git hooks for lefthook
 .lefthook:
-	@lefthook install
+	@lefthook install --reset-hooks-path
 
 ### Tasks
 
 .PHONY: check
 ## Run lint & tests
-check: tidy lint test
+check: tidy generate lint test
 
 .PHONY: tidy
 ## Run go mod tidy
@@ -55,19 +61,30 @@ lint.fix:
 	@biome check --write
 	@golangci-lint run --fix
 
+.PHONY: generate
+## Run go generate
+generate: go.work
+	@echo "〉go generate"
+	@go generate work
+
 .PHONY: test
 ## Run tests
-test:
+test: go.work
 	@echo "〉go test"
-	@# see https://github.com/pterm/pterm/issues/482
-	@GO_TEST_TAGS=-skip go test -tags=safe -coverprofile=coverage.out
-	@#GO_TEST_TAGS=-skip go test -tags=safe -coverprofile=coverage.out -race
+	@GO_TEST_TAGS=-skip go test -tags=safe -coverprofile=coverage.out work
+
+.PHONY: test.race
+# see https://github.com/pterm/pterm/issues/482
+## Run go tests with `race` flag
+test.race: go.work
+	@echo "〉go test with -race"
+	@GO_TEST_TAGS=-skip go test -tags=safe -coverprofile=coverage.out -race work
 
 .PHONY: test.update
 ## Run tests
-test.update:
+test.update: go.work
 	@echo "〉go test"
-	@GO_TEST_TAGS=-skip go test -tags=safe -coverprofile=coverage.out -update
+	@GO_TEST_TAGS=-skip go test -tags=safe -coverprofile=coverage.out -update work
 
 .PHONY: outdated
 ## Show outdated direct dependencies
@@ -75,11 +92,7 @@ outdated:
 	@echo "〉go mod outdated"
 	@go list -u -m -json all | go-mod-outdated -update -direct
 
-.PHONY: install
-## Install binary
-install:
-	@echo "〉installing ${GOPATH}/bin/squadron"
-	@go build -tags=safe -o ${GOPATH}/bin/squadron cmd/main.go
+### Build
 
 .PHONY: build
 ## Build binary
@@ -87,6 +100,12 @@ build:
 	@mkdir -p bin
 	@echo "〉building bin/squadron"
 	@go build -tags=safe -o bin/squadron cmd/main.go
+
+.PHONY: install
+## Install binary
+install:
+	@echo "〉installing ${GOPATH}/bin/squadron"
+	@go build -tags=safe -o ${GOPATH}/bin/squadron cmd/main.go
 
 ### Documentation
 
