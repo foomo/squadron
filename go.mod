@@ -11,7 +11,7 @@ require (
 	github.com/Code-Hex/Neo-cowsay/v2 v2.0.4
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/alecthomas/chroma v0.10.0
-	github.com/foomo/go v0.1.1
+	github.com/foomo/go v0.2.0
 	github.com/genelet/horizon v1.14.1
 	github.com/go-git/go-git/v5 v5.17.0
 	github.com/go-git/go-git/v6 v6.0.0-20260310141331-316f86ed9f46
