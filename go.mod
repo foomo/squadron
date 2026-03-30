@@ -13,7 +13,7 @@ require (
 	github.com/alecthomas/chroma v0.10.0
 	github.com/foomo/go v0.1.1
 	github.com/genelet/horizon v1.14.1
-	github.com/go-git/go-git/v5 v5.17.0
+	github.com/go-git/go-git/v5 v5.17.1
 	github.com/go-git/go-git/v6 v6.0.0-20260310141331-316f86ed9f46
 	github.com/invopop/jsonschema v0.13.0
 	github.com/miracl/conflate v1.3.4
