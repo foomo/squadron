@@ -9,19 +9,23 @@ hero:
   tagline: Docker Compose for Kubernetes
   actions:
     - theme: brand
-      text: Guide
+      text: Get Started
       link: /guide/introduction
+    - theme: alt
+      text: Quick Start
+      link: /guide/quickstart
     - theme: alt
       text: GitHub
       link: https://github.com/foomo/squadron
 
 features:
+  - title: One file, many charts
+    details: Orchestrate multiple Helm charts and Docker builds from a single squadron.yaml.
+    link: /guide/concepts
+  - title: Familiar workflow
+    details: An easy transition from docker-compose — define services once, deploy to Kubernetes.
+    link: /guide/introduction
   - title: Production ready
-    details: Squadron is used in production by BestBytes
-  - title: foomo
-    details: Our combined open source efforts, general guides for programmers and project managers
-    link: https://www.foomo.org
-  - title: Handbook
-    details: Guides for our employees
-    link: /handbook/introduction
+    details: Battle-tested and used in production by BestBytes. In prod it's just another Helm chart.
+    link: /guide/quickstart
 ---

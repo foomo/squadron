@@ -1,31 +1,25 @@
-package actions
+package cli
 
 import (
-	"os"
-
 	"github.com/foomo/squadron"
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-func NewUp(c *viper.Viper) *cobra.Command {
+func NewPush(c *viper.Viper) *cobra.Command {
 	x := viper.New()
 
 	cmd := &cobra.Command{
-		Use:     "up [SQUADRON] [UNIT...]",
-		Short:   "installs the squadron or given units",
-		Example: "  squadron up storefinder frontend backend --namespace demo --build --push -- --dry-run",
+		Use:     "push [SQUADRON] [UNIT...]",
+		Short:   "pushes the squadron or given units",
+		Example: "  squadron push storefinder frontend backend --namespace demo --build",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			sq := squadron.New(cwd, x.GetString("namespace"), c.GetStringSlice("file"))
 
 			if err := sq.MergeConfigFiles(cmd.Context()); err != nil {
 				return errors.Wrap(err, "failed to merge config files")
 			}
-
-			args, helmArgs := parseExtraArgs(args)
 
 			squadronName, unitNames := parseSquadronAndUnitNames(args)
 			if err := sq.FilterConfig(cmd.Context(), squadronName, unitNames, x.GetStringSlice("tags")); err != nil {
@@ -53,65 +47,19 @@ func NewUp(c *viper.Viper) *cobra.Command {
 				}
 			}
 
-			if x.GetBool("push") {
-				if err := sq.Push(cmd.Context(), x.GetStringSlice("push-args"), x.GetInt("parallel")); err != nil {
-					return errors.Wrap(err, "failed to push units")
-				}
-			}
-
-			if err := sq.UpdateLocalDependencies(cmd.Context(), x.GetInt("parallel")); err != nil {
-				return err
-			}
-
-			status := squadron.Status{
-				Squadron: version,
-				User:     "unknown",
-			}
-
-			if wd, err := os.Getwd(); err == nil {
-				if value := os.Getenv("GIT_DIR"); value != "" {
-					wd = value
-				}
-
-				if repo, err := git.PlainOpen(wd); err == nil {
-					if c, err := repo.Config(); err == nil {
-						status.User = c.User.Name
-					}
-
-					if ref, err := repo.Head(); err == nil {
-						status.Branch = ref.Name().Short()
-						status.Commit = ref.Hash().String()
-
-						if tags, err := repo.Tags(); err == nil {
-							_ = tags.ForEach(func(r *plumbing.Reference) error {
-								if r.Hash() == ref.Hash() {
-									status.Branch = r.Name().Short()
-									return errors.New("found tag")
-								}
-
-								return nil
-							})
-						}
-					}
-				}
-			}
-
-			return sq.Up(cmd.Context(), helmArgs, status, x.GetInt("parallel"))
+			return sq.Push(cmd.Context(), x.GetStringSlice("push-args"), x.GetInt("parallel"))
 		},
 	}
-	flags := cmd.Flags()
 
+	flags := cmd.Flags()
 	flags.StringP("namespace", "n", "default", "set the namespace name or template (default, squadron-{{.Squadron}}-{{.Unit}})")
 	_ = x.BindPFlag("namespace", flags.Lookup("namespace"))
-
-	flags.Bool("bake", false, "bakes or rebakes units")
-	_ = x.BindPFlag("bake", flags.Lookup("bake"))
 
 	flags.Bool("build", false, "builds or rebuilds units")
 	_ = x.BindPFlag("build", flags.Lookup("build"))
 
-	flags.Bool("push", false, "pushes units to the registry")
-	_ = x.BindPFlag("push", flags.Lookup("push"))
+	flags.Bool("bake", false, "bakes or rebakes units")
+	_ = x.BindPFlag("bake", flags.Lookup("bake"))
 
 	flags.Int("parallel", 1, "run command in parallel")
 	_ = x.BindPFlag("parallel", flags.Lookup("parallel"))

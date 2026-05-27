@@ -42,6 +42,9 @@ tmp/
 
 ## Vitepress
 !docs/.vitepress
+docs/.vitepress/*
+!docs/.vitepress/theme/
+!docs/.vitepress/config.mts
 
 ## Golang
 go.work

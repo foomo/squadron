@@ -1,4 +1,4 @@
-package actions
+package cli
 
 import (
 	"github.com/pkg/errors"

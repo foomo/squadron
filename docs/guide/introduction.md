@@ -1,33 +1,59 @@
 ---
 title: Introduction
-order: 1
 ---
+
 # Introduction
 
-Welcome to **Squadron** — Docker Compose for Kubernetes.
-
-Squadron is a tool that brings Docker Compose paradigms to Kubernetes, enabling developers to keep working with the same familiar patterns they already know. Instead of learning new deployment models, you define your infrastructure once using Docker Compose concepts and deploy it to Kubernetes without friction.
+**Squadron** is _Docker Compose for Kubernetes_: a single CLI that orchestrates
+multiple Helm charts and Docker image builds as one cohesive deployment, driven
+by one declarative file — `squadron.yaml`.
 
 ## Why Squadron?
 
-Docker Compose is intuitive and powerful for local development. Kubernetes is the industry standard for production. Squadron lets you use the same thinking and workflows for both—no paradigm shift required.
+`docker-compose` made multi-service local development easy: one file lists every
+service, and one command brings the whole stack up. Kubernetes and Helm are the
+production standard, but the developer experience is different — every service
+becomes its own Helm chart and release, each with its own values, lifecycle, and
+`helm` invocation. Coordinating a dozen of those by hand is tedious and
+error-prone.
 
-With Squadron, you:
+Squadron closes that gap. You describe your services once, grouped into
+**squadrons** of **units**, and Squadron handles the rest:
 
-- **Use familiar Docker Compose patterns** — define services, networks, and volumes the way you already do
-- **Deploy to Kubernetes seamlessly** — same definitions work in production without rewrites
-- **Keep your workflow consistent** — think in the same mental model across all environments
-- **Focus on your application** — not on learning Kubernetes-specific abstractions
+- **One file, many charts** — group related releases and manage them together.
+- **Build and deploy in one workflow** — define Docker builds (or `buildx bake`
+  targets) alongside the chart that consumes them.
+- **Templated configuration** — share and compute values across units with Go
+  templates and helpers like `env`, `file`, and `git`.
+- **The full Helm lifecycle** — `up`, `down`, `diff`, `status`, `rollback`, and
+  `template`, scoped to the whole squadron, individual units, or by tag.
 
-## Production-Ready
+In production a squadron is just another set of Helm releases, so you keep all
+the tooling and guarantees you already rely on.
 
-Squadron is battle-tested and used in production by BestBytes. It's designed for real-world workloads and proven to scale reliably.
+## Coming from docker-compose
 
-## Connect with Us
+| docker-compose            | Squadron                                              |
+| ------------------------- | ----------------------------------------------------- |
+| `docker-compose.yml`      | `squadron.yaml`                                        |
+| a `service`               | a **unit** (a Helm release + optional image build)    |
+| the whole compose project | a **squadron** (a named group of units)               |
+| `build:`                  | `builds:` / `bakes:` (Docker build / `buildx bake`)   |
+| `docker compose up`       | `squadron up`                                          |
+| `docker compose down`     | `squadron down`                                        |
+| environment interpolation | Go templates with `env`, `file`, `git`, and more      |
 
-- **GitHub**: [foomo/squadron](https://github.com/foomo/squadron)
-- **Learn More**: Visit [foomo.org](https://www.foomo.org) to discover our other open source projects
+The big difference: each unit is backed by a **Helm chart**, so you get real
+Kubernetes deployments instead of local containers — without writing a `helm`
+command per service.
 
----
+## Production-ready
 
-Questions? Ideas? We'd love to hear from you. Check out our [Contributing Guidelines](../CONTRIBUTING.md) and join the community!
+Squadron is battle-tested and used in production at BestBytes.
+
+## Next steps
+
+- [Installation](/guide/installation) — install the CLI.
+- [Quick Start](/guide/quickstart) — deploy the `helloworld` example.
+- [Core Concepts](/guide/concepts) — squadrons, units, builds, bakes, templating.
+- [Configuration](/guide/configuration) — the `squadron.yaml` reference.
