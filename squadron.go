@@ -823,13 +823,13 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) (
 					return errors.Wrap(err, "failed to load yaml diff")
 				}
 
-				var res string
+				var res strings.Builder
 				for _, diff := range yamldiff.Do(yamls1, yamls2) {
-					res += diff.Dump() + "  ---\n"
+					res.WriteString(diff.Dump() + "  ---\n")
 				}
 
-				if err := write([]byte(res)); err != nil {
-					spinner.Fail(res)
+				if err := write([]byte(res.String())); err != nil {
+					spinner.Fail(res.String())
 					return err
 				}
 
