@@ -1,6 +1,6 @@
 module github.com/foomo/squadron
 
-go 1.26.0
+go 1.26.3
 
 replace github.com/miracl/conflate => github.com/runz0rd/conflate v1.2.2-0.20210920145208-fa48576ef06d
 
