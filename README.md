@@ -1,9 +1,8 @@
-[![GitHub Release](https://img.shields.io/github/release/foomo/squadron.svg?style=flat-square)](https://github.com/foomo/squadron/releases)
-[![Github All Releases](https://img.shields.io/github/downloads/foomo/squadron/total.svg?style=flat-square)](https://github.com/foomo/squadron/releases)
-[![Docker Pulls](https://img.shields.io/docker/pulls/foomo/squadron?style=flat-square)](https://hub.docker.com/r/foomo/squadron)
-[![GitHub stars](https://img.shields.io/github/stars/foomo/squadron.svg?style=flat-square)](https://github.com/foomo/squadron)
-[![Go Report Card](https://goreportcard.com/badge/github.com/foomo/squadron)](https://goreportcard.com/report/github.com/foomo/squadron)
-[![GoDoc](https://godoc.org/github.com/foomo/squadron?status.svg)](https://godoc.org/github.com/foomo/squadron)
+[![Go Report Card](https://goreportcard.com/badge/github.com/foomo/squadron?style=flat-square)](https://goreportcard.com/report/github.com/foomo/squadron)
+[![GoDoc](https://img.shields.io/badge/GoDoc-✓-informational.svg?style=flat-square&logo=go)](https://godoc.org/github.com/foomo/squadron)
+[![GitHub Downloads](https://img.shields.io/github/downloads/foomo/squadron/total.svg?style=flat-square&logo=github)](https://github.com/foomo/squadron/releases)
+[![Docker Pulls](https://img.shields.io/docker/pulls/foomo/squadron.svg?style=flat-square&logo=docker)](https://hub.docker.com/r/foomo/squadron)
+[![GitHub Stars](https://img.shields.io/github/stars/foomo/squadron.svg?style=flat-square&logo=github)](https://github.com/foomo/squadron)
 
 <p align="center">
   <img alt="foomo/squadron" src="docs/public/logo.png" width="400" height="400"/>
@@ -11,124 +10,55 @@
 
 # Squadron
 
-Application for managing kubernetes microservice environments.
+**Docker Compose for Kubernetes.**
 
-Use it, if a helm chart is not enough in order to organize multiple services into an effective squadron.
+Squadron is a CLI that orchestrates multiple Helm charts and Docker image builds
+as one cohesive deployment, driven by a single declarative `squadron.yaml`. It
+brings the familiar `docker-compose` workflow — define your services once, bring
+the whole stack up with one command — to Kubernetes, where each service is a real
+Helm release. In production, a squadron is just another set of Helm charts.
 
-Another way to think of it would be `helm-compose`, because it makes k8s and helm way more approachable, not matter if it is development or production (where it just becomes another helm chart)
+📖 **[Read the documentation →](https://foomo.github.io/squadron)**
 
-## Configuration `squadron.yaml`
-
-Configure your squadron
-
-```yaml
-# https://raw.githubusercontent.com/foomo/squadron/refs/heads/main/squadron.schema.json
-version: '2.3'
-
-# squadron template vars
-vars: {}
-
-# helm global vars
-global: {}
-
-# squadron definitions
-squadron:
-  # squadron units
-  site:
-    # squadron unit
-    frontend:
-      # optional release name override
-      name: my-frontend
-      # optional release namespace override
-      namespace: my-namespace
-      # helm chart definition
-      chart:
-        name: mychart
-        version: 0.1.0
-        repository: http://helm.mycompany.com/repository
-      # container bakes
-      bakes:
-        service:
-          tags:
-            - docker.mycompany.com/mycomapny/frontend:latest
-          dockerfile: Dockerfile
-          args:
-            foo: foo
-            bar: bar
-      # container builds
-      builds:
-        service:
-          tag: latest
-          file: Dockerfile
-          image: docker.mycompany.com/mycomapny/frontend
-          build_arg:
-            - "foo=foo"
-            - "bar=bar"
-      # helm chart values
-      values:
-        image: docker.mycompany.com/mycomapny/frontend:latest
-    # squadron unit
-    backend:
-      # helm chart definition
-      chart: <% env "PROJECT_ROOT" %>/path/to/chart
-      # kustomize path
-      kustomize: <% env "PROJECT_ROOT" %>/path/to/kustomize
-      # container bakes
-      bakes:
-        service:
-          tags:
-            - docker.mycompany.com/mycomapny/backend:latest
-          dockerfile: Dockerfile
-          args:
-            foo: foo
-            bar: bar
-      # container builds
-      builds:
-        service:
-          tag: latest
-          file: Dockerfile
-          image: docker.mycompany.com/mycomapny/backend
-          build_arg:
-            - "foo=foo"
-            - "bar=bar"
-      # helm chart values
-      values:
-        image: docker.mycompany.com/mycomapny/backend:latest
-```
-
-## Usage
+## Install
 
 ```shell
-$ squadron help
-Docker compose for kubernetes
-
-Usage:
-  squadron [command]
-
-Available Commands:
-  bake          bake or rebake squadron units
-  build         build or rebuild squadron units
-  completion    Generate completion script
-  config        generate and view the squadron config
-  diff          shows the diff between the installed and local chart
-  down          uninstalls the squadron or given units
-  help          Help about any command
-  list          list squadron units
-  push          pushes the squadron or given units
-  rollback      rolls back the squadron or given units
-  schema        generate squadron json schema
-  status        installs the squadron or given units
-  template      render chart templates locally and display the output
-  up            installs the squadron or given units
-  version       show version information
-
-Flags:
-  -d, --debug          show all output
-  -f, --file strings   specify alternative squadron files (default [squadron.yaml])
-  -h, --help           help for squadron
-
-Use "squadron [command] --help" for more information about a command.
+go install github.com/foomo/squadron/cmd/squadron@latest
 ```
+
+See the [installation guide](https://foomo.github.io/squadron/guide/installation)
+for release binaries and the Docker image.
+
+## Example
+
+```yaml
+# squadron.yaml
+version: '2.3'
+squadron:
+  storefinder:
+    backend:
+      chart: <% env "PROJECT_ROOT" %>/charts/backend
+      builds:
+        default:
+          image: docker.mycompany.com/storefinder/backend
+          tag: latest
+          context: ./app
+      values:
+        image:
+          repository: <% .Squadron.storefinder.backend.builds.default.image %>
+          tag: <% .Squadron.storefinder.backend.builds.default.tag | quote %>
+```
+
+```shell
+squadron build   # build the images
+squadron up      # install / upgrade the releases
+squadron status  # check release status
+squadron down    # tear it down
+```
+
+See the [Quick Start](https://foomo.github.io/squadron/guide/quickstart) and the
+[configuration reference](https://foomo.github.io/squadron/guide/configuration)
+for the full picture.
 
 ## How to Contribute
 

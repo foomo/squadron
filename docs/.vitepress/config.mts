@@ -1,59 +1,111 @@
 import { defineConfig } from "vitepress";
-import {
-	groupIconMdPlugin,
-	groupIconVitePlugin,
-} from "vitepress-plugin-group-icons";
-import llmstxt, {
-	copyOrDownloadAsMarkdownButtons,
-} from "vitepress-plugin-llms";
-import { withSidebar } from "vitepress-sidebar";
 
-const version = "latest";
-
-const vitepressConfig = {
+export default defineConfig({
 	title: "Squadron",
 	description: "Docker Compose for Kubernetes",
+	lang: "en-US",
+	cleanUrls: true,
+	lastUpdated: true,
+	appearance: "dark",
+	ignoreDeadLinks: false,
+	base: "/squadron/",
+	sitemap: {
+		hostname: "https://foomo.github.io/squadron",
+	},
 	themeConfig: {
 		logo: "/logo.png",
+		outline: [2, 4],
 		nav: [
+			{ text: "Guide", link: "/guide/introduction" },
+			{ text: "Reference", link: "/reference/" },
+		],
+		sidebar: [
 			{
 				text: "Guide",
-				link: "/guide/",
+				items: [
+					{ text: "Introduction", link: "/guide/introduction" },
+					{ text: "Installation", link: "/guide/installation" },
+					{ text: "Quick Start", link: "/guide/quickstart" },
+					{ text: "Core Concepts", link: "/guide/concepts" },
+					{ text: "Configuration", link: "/guide/configuration" },
+				],
 			},
 			{
-				text: `${version}`,
+				text: "Reference",
+				items: [
+					{ text: "Overview", link: "/reference/" },
+					{
+						text: "CLI",
+						link: "/reference/cli/squadron",
+						collapsed: true,
+						items: [
+							{ text: "squadron", link: "/reference/cli/squadron" },
+							{ text: "up", link: "/reference/cli/squadron_up" },
+							{ text: "down", link: "/reference/cli/squadron_down" },
+							{ text: "diff", link: "/reference/cli/squadron_diff" },
+							{ text: "status", link: "/reference/cli/squadron_status" },
+							{ text: "rollback", link: "/reference/cli/squadron_rollback" },
+							{ text: "bake", link: "/reference/cli/squadron_bake" },
+							{ text: "build", link: "/reference/cli/squadron_build" },
+							{ text: "push", link: "/reference/cli/squadron_push" },
+							{ text: "list", link: "/reference/cli/squadron_list" },
+							{ text: "config", link: "/reference/cli/squadron_config" },
+							{ text: "template", link: "/reference/cli/squadron_template" },
+							{ text: "schema", link: "/reference/cli/squadron_schema" },
+							{
+								text: "completion",
+								link: "/reference/cli/squadron_completion",
+							},
+							{ text: "version", link: "/reference/cli/squadron_version" },
+						],
+					},
+				],
+			},
+			{
+				text: "Contributing",
+				collapsed: true,
 				items: [
 					{
-						text: "Release Notes",
-						link: "https://github.com/foomo/squadron/releases",
+						text: "Guideline",
+						link: "/CONTRIBUTING.md",
+					},
+					{
+						text: "Code of conduct",
+						link: "/CODE_OF_CONDUCT.md",
+					},
+					{
+						text: "Security guidelines",
+						link: "/SECURITY.md",
 					},
 				],
 			},
 		],
-		outline: {
-			level: [2, 3],
-		},
+		socialLinks: [
+			{ icon: "github", link: "https://github.com/foomo/squadron" },
+		],
 		editLink: {
 			pattern: "https://github.com/foomo/squadron/edit/main/docs/:path",
-			text: "Suggest changes to this page",
 		},
 		search: {
 			provider: "local",
 		},
 		footer: {
-			message: "Released under the MIT License.",
+			message:
+				'Made with ♥ <a href="https://www.foomo.org">foomo</a> by <a href="https://www.bestbytes.com">bestbytes</a>',
 		},
-		socialLinks: [
-			{
-				icon: "github",
-				link: "https://github.com/foomo/squadron",
-			},
-		],
+	},
+	markdown: {
+		// https://github.com/vuejs/vitepress/discussions/3724
+		theme: {
+			light: "catppuccin-latte",
+			dark: "catppuccin-frappe",
+		},
 	},
 	head: [
 		["meta", { name: "theme-color", content: "#ffffff" }],
 		["link", { rel: "icon", href: "/logo.png" }],
 		["meta", { name: "author", content: "foomo by bestbytes" }],
+		// OpenGraph
 		["meta", { property: "og:title", content: "foomo/squadron" }],
 		[
 			"meta",
@@ -87,35 +139,4 @@ const vitepressConfig = {
 			},
 		],
 	],
-	markdown: {
-		theme: {
-			dark: "one-dark-pro",
-			light: "github-light",
-		},
-		config(md) {
-			md.use(groupIconMdPlugin);
-			md.use(copyOrDownloadAsMarkdownButtons);
-		},
-	},
-	vite: {
-		plugins: [
-			groupIconVitePlugin(),
-			llmstxt({
-				excludeIndexPage: false,
-			}),
-		],
-	},
-	sitemap: {
-		hostname: "https://foomo.github.io/squadron",
-	},
-	ignoreDeadLinks: true,
-};
-
-export default defineConfig(
-	withSidebar(vitepressConfig, {
-		useTitleFromFrontmatter: true,
-		frontmatterOrderDefaultValue: 10,
-		useFolderTitleFromIndexFile: true,
-		sortMenusByFrontmatterOrder: true,
-	}),
-);
+});

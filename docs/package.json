@@ -3,11 +3,11 @@
 	"name": "docs",
 	"version": "0.1.0",
 	"devDependencies": {
+		"@catppuccin/vitepress": "^0.1.2",
 		"micromark-util-decode-string": "2.0.1",
 		"vitepress": "1.6.4",
 		"vitepress-plugin-group-icons": "1.6.5",
-		"vitepress-plugin-llms": "1.9.3",
-		"vitepress-sidebar": "1.33.1"
+		"vitepress-plugin-llms": "1.9.3"
 	},
 	"scripts": {
 		"dev": "vitepress dev",

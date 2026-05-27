@@ -7,22 +7,22 @@ export PROJECT_ROOT=$(PWD)
 .PHONY: list
 ## Show config
 list:
-	@go run ../../cmd/main.go list
+	@go run ../../cmd/squadron list
 
 .PHONY: config
 ## Show config
 config:
-	@go run ../../cmd/main.go config
+	@go run ../../cmd/squadron config
 
 .PHONY: build
 ## Show config
 build:
-	@go run ../../cmd/main.go build
+	@go run ../../cmd/squadron build
 
 .PHONY: template
 ## Show config
 template:
-	@go run ../../cmd/main.go template
+	@go run ../../cmd/squadron template
 
 ## === Utils ===
 

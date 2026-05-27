@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/foomo/squadron/cmd/actions"
+	"github.com/foomo/squadron/internal/cli"
 	"github.com/spf13/cobra/doc"
 )
 
@@ -28,7 +28,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	c := actions.NewRoot()
+	c := cli.NewRoot()
 	c.DisableAutoGenTag = true
 
 	filePrepender := func(filename string) string {

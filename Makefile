@@ -88,13 +88,13 @@ test.update:
 build:
 	@mkdir -p bin
 	@echo "〉building bin/squadron"
-	@go build -tags=safe -o bin/squadron cmd/main.go
+	@go build -tags=safe -o bin/squadron ./cmd/squadron
 
 .PHONY: install
 ## Install binary
 install:
 	@echo "〉installing ${GOPATH}/bin/squadron"
-	@go build -tags=safe -o ${GOPATH}/bin/squadron cmd/main.go
+	@go build -tags=safe -o ${GOPATH}/bin/squadron ./cmd/squadron
 
 ### Security
 
@@ -140,7 +140,7 @@ docs: docs.cli
 ## Generate cli
 docs.cli:
 	@echo "〉generating cli reference"
-	@go run scripts/cmd-reference/main.go
+	@go run ./cmd/squadron-docs
 
 .PHONY: godocs
 ## Open go docs

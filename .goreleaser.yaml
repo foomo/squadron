@@ -4,7 +4,7 @@ project_name: squadron
 
 builds:
   - binary: squadron
-    main: ./cmd/main.go
+    main: ./cmd/squadron
     env:
       - CGO_ENABLED=0
     flags:
@@ -12,7 +12,7 @@ builds:
       - -tags=safe
     ldflags:
       - -s -w
-      - -X github.com/foomo/squadron/cmd/actions.version={{.Version}}
+      - -X github.com/foomo/squadron/internal/cli.version={{.Version}}
     goos:
       - windows
       - darwin
