@@ -15,7 +15,7 @@ type Map[T any] map[string]T
 func (m Map[T]) Trim() {
 	for key, value := range m {
 		val := reflect.ValueOf(value)
-		if val.Kind() == reflect.Ptr {
+		if val.Kind() == reflect.Pointer {
 			val = val.Elem()
 		}
 

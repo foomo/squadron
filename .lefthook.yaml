@@ -21,18 +21,6 @@ pre-commit:
       glob: "*.go"
       run: golangci-lint fmt {staged_files}
       stage_fixed: true
-    sync-makefile-rules:
-      glob: "Makefile"
-      run: >
-        [ Makefile -nt .claude/rules/makefile.md ] &&
-        echo "⚠️  Makefile changed — run /sync-makefile-rules to update Claude rules" ||
-        true
-    sync-golangci-rules:
-      glob: ".golangci.yaml"
-      run: >
-        [ .golangci.yaml -nt .claude/rules/golangci.md ] &&
-        echo "⚠️  .golangci.yaml changed — run /sync-golangci-rules to update Claude rules" ||
-        true
 
 commit-msg:
   skip: [ merge, rebase ]
