@@ -1,0 +1,13 @@
+name: Cache golangci-lint
+description: Restore the golangci-lint analysis cache
+
+runs:
+  using: composite
+  steps:
+    # https://github.com/actions/cache/releases
+    - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      with:
+        path: ~/.cache/golangci-lint
+        key: ${{ runner.os }}-golangci-lint-${{ hashFiles('**/go.mod') }}
+        restore-keys: |
+          ${{ runner.os }}-golangci-lint-
