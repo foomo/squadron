@@ -12,7 +12,7 @@ require (
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/alecthomas/chroma v0.10.0
 	github.com/foomo/go v0.11.0
-	github.com/genelet/horizon v1.14.3
+	github.com/genelet/horizon v1.14.4
 	github.com/go-git/go-git/v5 v5.19.1
 	github.com/go-git/go-git/v6 v6.0.0-alpha.4
 	github.com/invopop/jsonschema v0.14.0
