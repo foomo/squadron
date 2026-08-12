@@ -24,7 +24,7 @@ squadron template [SQUADRON] [UNIT...] [flags]
       --output string      write the output to the given path
       --parallel int       run command in parallel (default 1)
       --raw                print raw output without highlighting
-      --tags strings       list of tags to include or exclude (can specify multiple or separate values with commas: tag1,tag2,-tag3)
+      --tags strings       list of tags to include (any match) or exclude with a '-' prefix (can specify multiple or separate values with commas: tag1,tag2,-tag3)
 ```
 
 ### Options inherited from parent commands

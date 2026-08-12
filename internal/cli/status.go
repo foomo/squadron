@@ -34,14 +34,10 @@ func NewStatus(c *viper.Viper) *cobra.Command {
 	}
 
 	flags := cmd.Flags()
-	flags.Int("parallel", 1, "run command in parallel")
-	_ = x.BindPFlag("parallel", flags.Lookup("parallel"))
 
-	flags.StringP("namespace", "n", "default", "set the namespace name or template (default, squadron-{{.Squadron}}-{{.Unit}})")
-	_ = x.BindPFlag("namespace", flags.Lookup("namespace"))
-
-	flags.StringSlice("tags", nil, "list of tags to include or exclude (can specify multiple or separate values with commas: tag1,tag2,-tag3)")
-	_ = x.BindPFlag("tags", flags.Lookup("tags"))
+	addParallelFlag(flags, x)
+	addNamespaceFlag(flags, x)
+	addTagsFlag(flags, x)
 
 	return cmd
 }

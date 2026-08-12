@@ -134,20 +134,17 @@ func (sq *Squadron) FilterConfig(ctx context.Context, squadron string, units, ta
 		}
 	}
 
-	if len(tags) > 0 {
+	if filter := config.NewTagFilter(tags); !filter.Empty() {
+		validTags := sq.tags()
+		for _, tag := range filter.Referenced() {
+			if !slices.Contains(validTags, tag) {
+				return errors.Errorf("tag not found: `%s`", tag)
+			}
+		}
+
 		if err := sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
 			return value.FilterFn(func(k string, v *config.Unit) bool {
-				for _, tag := range tags {
-					if after, ok := strings.CutPrefix(tag, "-"); ok {
-						if slices.Contains(v.Tags, config.Tag(after)) {
-							return false
-						}
-					} else if !slices.Contains(v.Tags, config.Tag(tag)) {
-						return false
-					}
-				}
-
-				return true
+				return filter.Match(v.Tags)
 			})
 		}); err != nil {
 			return err
@@ -1267,6 +1264,23 @@ func (sq *Squadron) Template(ctx context.Context, helmArgs []string, parallel in
 	}
 
 	return ret.String(), nil
+}
+
+// tags returns all tags defined on the units of the current config
+func (sq *Squadron) tags() config.Tags {
+	var ret config.Tags
+
+	for _, units := range sq.Config().Squadrons {
+		for _, unit := range units {
+			for _, tag := range unit.Tags {
+				if !slices.Contains(ret, tag) {
+					ret = append(ret, tag)
+				}
+			}
+		}
+	}
+
+	return ret
 }
 
 func (sq *Squadron) getReleaseName(squadron, unit string, u *config.Unit) string {

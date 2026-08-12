@@ -52,29 +52,15 @@ func NewPush(c *viper.Viper) *cobra.Command {
 	}
 
 	flags := cmd.Flags()
-	flags.StringP("namespace", "n", "default", "set the namespace name or template (default, squadron-{{.Squadron}}-{{.Unit}})")
-	_ = x.BindPFlag("namespace", flags.Lookup("namespace"))
 
-	flags.Bool("build", false, "builds or rebuilds units")
-	_ = x.BindPFlag("build", flags.Lookup("build"))
-
-	flags.Bool("bake", false, "bakes or rebakes units")
-	_ = x.BindPFlag("bake", flags.Lookup("bake"))
-
-	flags.Int("parallel", 1, "run command in parallel")
-	_ = x.BindPFlag("parallel", flags.Lookup("parallel"))
-
-	flags.StringArray("bake-args", nil, "additional docker buildx bake args")
-	_ = x.BindPFlag("bake-args", flags.Lookup("bake-args"))
-
-	flags.StringArray("build-args", nil, "additional docker buildx build args")
-	_ = x.BindPFlag("build-args", flags.Lookup("build-args"))
-
-	flags.StringArray("push-args", nil, "additional docker push args")
-	_ = x.BindPFlag("push-args", flags.Lookup("push-args"))
-
-	flags.StringSlice("tags", nil, "list of tags to include or exclude (can specify multiple or separate values with commas: tag1,tag2,-tag3)")
-	_ = x.BindPFlag("tags", flags.Lookup("tags"))
+	addNamespaceFlag(flags, x)
+	addBuildFlag(flags, x)
+	addBakeFlag(flags, x)
+	addParallelFlag(flags, x)
+	addBakeArgsFlag(flags, x)
+	addBuildArgsFlag(flags, x)
+	addPushArgsFlag(flags, x)
+	addTagsFlag(flags, x)
 
 	return cmd
 }

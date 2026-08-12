@@ -58,17 +58,13 @@ func NewConfig(c *viper.Viper) *cobra.Command {
 	}
 
 	flags := cmd.Flags()
+
 	flags.Bool("no-render", false, "don't render the config template")
 	_ = x.BindPFlag("no-render", flags.Lookup("no-render"))
 
-	flags.StringSlice("tags", nil, "list of tags to include or exclude (can specify multiple or separate values with commas: tag1,tag2,-tag3)")
-	_ = x.BindPFlag("tags", flags.Lookup("tags"))
-
-	flags.String("output", "", "write the output to the given path")
-	_ = x.BindPFlag("output", flags.Lookup("output"))
-
-	flags.Bool("raw", false, "print raw output without highlighting")
-	_ = x.BindPFlag("raw", flags.Lookup("raw"))
+	addTagsFlag(flags, x)
+	addOutputFlag(flags, x)
+	addRawFlag(flags, x)
 
 	return cmd
 }
