@@ -462,6 +462,13 @@
           "type": "string",
           "description": "Kustomize files path"
         },
+        "helmArgs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Additional arguments passed to helm upgrade, diff and template"
+        },
         "builds": {
           "additionalProperties": {
             "$ref": "#/$defs/Build"
