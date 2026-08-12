@@ -11,13 +11,20 @@ type MultiPrinter interface {
 	Stop()
 }
 
-func MustNewMultiPrinter() MultiPrinter {
+// multiPrinterHeightMargin reserves room for the Info/Success lines
+// printed around each MultiPrinter block so the live area never grows
+// taller than the terminal.
+const multiPrinterHeightMargin = 4
+
+func MustNewMultiPrinter(targetCount int) MultiPrinter {
 	var (
 		err   error
 		value MultiPrinter
 	)
 
-	if _, ok := os.LookupEnv("CI"); ok {
+	_, ci := os.LookupEnv("CI")
+
+	if ci || targetCount > pterm.GetTerminalHeight()-multiPrinterHeightMargin {
 		value, err = NewNoopMultiPrinter()
 	} else {
 		value, err = NewStandardMultiPrinter()

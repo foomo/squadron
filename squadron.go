@@ -244,7 +244,21 @@ func (sq *Squadron) Push(ctx context.Context, pushArgs []string, parallel int) e
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
-	printer := ptermx.MustNewMultiPrinter()
+	var targetCount int
+
+	for _, units := range sq.Config().Squadrons {
+		for _, v := range units {
+			for _, name := range v.BuildNames() {
+				targetCount += len(v.Builds[name].Tag)
+			}
+
+			for _, name := range v.BakeNames() {
+				targetCount += len(v.Bakes[name].Tags)
+			}
+		}
+	}
+
+	printer := ptermx.MustNewMultiPrinter(targetCount)
 	defer printer.Stop()
 
 	type one struct {
@@ -330,10 +344,10 @@ func (sq *Squadron) Push(ctx context.Context, pushArgs []string, parallel int) e
 }
 
 func (sq *Squadron) BuildDependencies(ctx context.Context, buildArgs []string, parallel int) error {
-	printer := ptermx.MustNewMultiPrinter()
-	defer printer.Stop()
-
 	dependencies := sq.c.BuildDependencies(ctx)
+
+	printer := ptermx.MustNewMultiPrinter(len(dependencies))
+	defer printer.Stop()
 
 	run := func(ctx context.Context, name string, build config.Build) error {
 		spinner := printer.NewSpinner(fmt.Sprintf("💾 | %s %s", name, build.Tag))
@@ -570,7 +584,15 @@ func (sq *Squadron) Build(ctx context.Context, buildArgs []string, parallel int)
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
-	printer := ptermx.MustNewMultiPrinter()
+	var targetCount int
+
+	for _, units := range sq.Config().Squadrons {
+		for _, v := range units {
+			targetCount += len(v.BuildNames())
+		}
+	}
+
+	printer := ptermx.MustNewMultiPrinter(targetCount)
 	defer printer.Stop()
 
 	type one struct {
@@ -649,7 +671,7 @@ func (sq *Squadron) Down(ctx context.Context, helmArgs []string, parallel int) e
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
-	printer := ptermx.MustNewMultiPrinter()
+	printer := ptermx.MustNewMultiPrinter(sq.unitCount())
 	defer printer.Stop()
 
 	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
@@ -739,7 +761,7 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) (
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
-	printer := ptermx.MustNewMultiPrinter()
+	printer := ptermx.MustNewMultiPrinter(sq.unitCount())
 	defer printer.Stop()
 
 	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
@@ -880,7 +902,7 @@ func (sq *Squadron) Status(ctx context.Context, helmArgs []string, parallel int)
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
-	printer := ptermx.MustNewMultiPrinter()
+	printer := ptermx.MustNewMultiPrinter(sq.unitCount())
 	defer printer.Stop()
 
 	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
@@ -990,7 +1012,7 @@ func (sq *Squadron) Rollback(ctx context.Context, revision string, helmArgs []st
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
-	printer := ptermx.MustNewMultiPrinter()
+	printer := ptermx.MustNewMultiPrinter(sq.unitCount())
 	defer printer.Stop()
 
 	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
@@ -1092,7 +1114,7 @@ func (sq *Squadron) Up(ctx context.Context, helmArgs []string, status Status, pa
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
-	printer := ptermx.MustNewMultiPrinter()
+	printer := ptermx.MustNewMultiPrinter(sq.unitCount())
 	defer printer.Stop()
 
 	type one struct {
@@ -1216,7 +1238,7 @@ func (sq *Squadron) Template(ctx context.Context, helmArgs []string, parallel in
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallel)
 
-	printer := ptermx.MustNewMultiPrinter()
+	printer := ptermx.MustNewMultiPrinter(sq.unitCount())
 	defer printer.Stop()
 
 	_ = sq.Config().Squadrons.Iterate(ctx, func(ctx context.Context, key string, value config.Map[*config.Unit]) error {
@@ -1265,6 +1287,17 @@ func (sq *Squadron) Template(ctx context.Context, helmArgs []string, parallel in
 	}
 
 	return ret.String(), nil
+}
+
+// unitCount returns the total number of units across all squadrons
+func (sq *Squadron) unitCount() int {
+	var count int
+
+	for _, units := range sq.Config().Squadrons {
+		count += len(units)
+	}
+
+	return count
 }
 
 // tags returns all tags defined on the units of the current config
