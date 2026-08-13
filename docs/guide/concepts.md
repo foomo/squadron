@@ -30,7 +30,7 @@ named group of units you want to manage together.
 | `values`    | Helm values passed to the chart.                                        |
 | `builds`    | Docker images to build with `docker build`.                             |
 | `bakes`     | Docker images to build with `docker buildx bake`.                       |
-| `tags`      | Labels used to filter which units a command acts on.                    |
+| `tags`      | Labels used to filter which units a command acts on (`--tags`).         |
 | `priority`  | Install ordering — higher priority is applied first.                    |
 | `name`      | Override the Helm release name (defaults to the unit name).             |
 | `namespace` | Override the target namespace.                                          |
@@ -59,7 +59,8 @@ When you run a command, Squadron processes your configuration in stages:
 
 1. **Merge** — multiple `-f` config files are conflated into one (later files
    override earlier ones).
-2. **Filter** — narrow to the requested squadron, units, or `--tags`.
+2. **Filter** — narrow to the requested squadron, units, or `--tags` (multiple
+   tags are ORed; a `-` prefix excludes).
 3. **Render** — execute Go templates in the configuration values.
 4. **Build / Bake** — build and (optionally) push images.
 5. **Deploy** — run the Helm operation (`up`, `diff`, `down`, `rollback`, …).

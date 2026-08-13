@@ -86,8 +86,15 @@ part of the fleet:
 squadron up storefinder           # everything in the storefinder squadron
 squadron up storefinder backend   # just the backend unit
 squadron up --tags web            # only units tagged "web"
-squadron up --tags web,-legacy    # include "web", exclude "legacy"
+squadron up --tags web,api        # units tagged "web" OR "api"
+squadron up --tags web,-legacy    # units tagged "web", minus those tagged "legacy"
+squadron up --tags -legacy        # everything except units tagged "legacy"
 ```
+
+Tags can be repeated (`--tags web --tags api`) or comma-separated. Multiple
+tags are combined with OR, and a `-` prefix excludes — exclusions always win
+over inclusions. A tag that isn't defined on any unit in scope is an error, so
+typos fail loudly instead of silently matching nothing.
 
 ## Next steps
 

@@ -61,6 +61,16 @@ func TestConfigSimpleSnapshot(t *testing.T) {
 			files: []string{"squadron.yaml"},
 		},
 		{
+			name:  "tags-or",
+			tags:  []string{"frontend", "backend"},
+			files: []string{"squadron.yaml"},
+		},
+		{
+			name:  "tags-exclude",
+			tags:  []string{"-skip"},
+			files: []string{"squadron.yaml"},
+		},
+		{
 			name:  "bake",
 			files: []string{"squadron.yaml"},
 		},
@@ -69,6 +79,44 @@ func TestConfigSimpleSnapshot(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(tt *testing.T) {
 			runTestConfig(tt, test.name, test.files, test.squadron, test.units, test.tags)
+		})
+	}
+}
+
+func TestFilterConfigUnknownTag(t *testing.T) {
+	testingx.Tags(t, tagx.Short)
+
+	t.Setenv("PROJECT_ROOT", ".")
+
+	tests := []struct {
+		name string
+		tags []string
+	}{
+		{
+			name: "unknown include",
+			tags: []string{"fronend"},
+		},
+		{
+			name: "unknown exclude",
+			tags: []string{"-skipp"},
+		},
+		{
+			name: "unknown next to a known tag",
+			tags: []string{"backend", "fronend"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(tt *testing.T) {
+			var cwd string
+
+			ctx := tt.Context()
+			require.NoError(tt, util.ValidatePath(".", &cwd))
+
+			sq := squadron.New(cwd, "default", []string{path.Join("testdata", "tags", "squadron.yaml")})
+			require.NoError(tt, sq.MergeConfigFiles(ctx))
+
+			require.ErrorContains(tt, sq.FilterConfig(ctx, "", nil, test.tags), "tag not found:")
 		})
 	}
 }

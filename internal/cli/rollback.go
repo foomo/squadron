@@ -34,17 +34,14 @@ func NewRollback(c *viper.Viper) *cobra.Command {
 	}
 
 	flags := cmd.Flags()
-	flags.Int("parallel", 1, "run command in parallel")
-	_ = x.BindPFlag("parallel", flags.Lookup("parallel"))
 
-	flags.StringP("namespace", "n", "default", "set the namespace name or template (default, squadron-{{.Squadron}}-{{.Unit}})")
-	_ = x.BindPFlag("namespace", flags.Lookup("namespace"))
+	addParallelFlag(flags, x)
+	addNamespaceFlag(flags, x)
 
 	flags.StringP("revision", "r", "", "specifies the revision to roll back to")
 	_ = x.BindPFlag("revision", flags.Lookup("revision"))
 
-	flags.StringSlice("tags", nil, "list of tags to include or exclude (can specify multiple or separate values with commas: tag1,tag2,-tag3)")
-	_ = x.BindPFlag("tags", flags.Lookup("tags"))
+	addTagsFlag(flags, x)
 
 	return cmd
 }

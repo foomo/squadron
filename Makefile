@@ -40,20 +40,18 @@ endif
 
 .PHONY: check
 ## Run lint & tests
-check: tidy generate lint.fix test audit
+check: tidy generate lint.fix test.race audit
 
 .PHONY: lint
 ## Run linter
 lint:
 	@echo "〉golangci-lint run"
-	@biome check
 	@golangci-lint run --max-same-issues 0 --max-issues-per-linter 0
 
 .PHONY: lint.fix
 ## Fix lint violations
 lint.fix:
 	@echo "〉golangci-lint run fix"
-	@biome check --write
 	@golangci-lint run --fix --max-same-issues 0 --max-issues-per-linter 0
 
 .PHONY: generate
@@ -66,20 +64,20 @@ generate:
 ## Run tests
 test:
 	@echo "〉go test"
-	@GO_TEST_TAGS=-skip go test -tags=safe -coverprofile=coverage.out work
+	@GO_TEST_TAGS=-skip go test -v -shuffle=on -tags=safe -coverprofile=coverage.out work
 
 .PHONY: test.race
 # see https://github.com/pterm/pterm/issues/482
 ## Run go tests with -race
 test.race:
 	@echo "〉go test with -race"
-	@GO_TEST_TAGS=-skip go test -tags=safe -coverprofile=coverage.out -race work
+	@GO_TEST_TAGS=-skip go test -v -shuffle=on -tags=safe -coverprofile=coverage.out -race work
 
 .PHONY: test.update
 ## Run tests
 test.update:
 	@echo "〉go test"
-	@GO_TEST_TAGS=-skip go test -tags=safe -coverprofile=coverage.out -update work
+	@GO_TEST_TAGS=-skip go test -v -shuffle=on -tags=safe -coverprofile=coverage.out -update work
 
 ### Build
 
@@ -102,7 +100,6 @@ install:
 ## Run security audit
 audit:
 	@echo "〉security audit"
-	@go install golang.org/x/vuln/cmd/govulncheck@latest
 	@govulncheck ./...
 
 ### Dependencies
@@ -117,14 +114,13 @@ tidy:
 ## Show outdated direct dependencies
 outdated:
 	@echo "〉go mod outdated"
-	@go list -u -m -json all | go-mod-outdated -update -direct
+	@GOWORK=off go-mod-upgrade --list
 
 .PHONY: upgrade
-## Show outdated direct dependencies
+## Upgrade direct dependencies
 upgrade:
 	@echo "〉go mod upgrade"
-	@rm -f go.work go.work.sum
-	@go list -u -m -f '{{if and (not .Indirect) .Update}}{{.Path}}{{end}}' all | xargs -n1 -I{} go get {}@latest
+	@GOWORK=off go-mod-upgrade
 	@$(MAKE) tidy
 
 ### Documentation

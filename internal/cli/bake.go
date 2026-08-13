@@ -64,24 +64,13 @@ func NewBake(c *viper.Viper) *cobra.Command {
 	}
 
 	flags := cmd.Flags()
-	flags.Bool("push", false, "pushes built squadron units to the registry")
-	_ = x.BindPFlag("push", flags.Lookup("push"))
 
-	cmd.Flags().Int("parallel", 1, "run command in parallel")
-
-	_ = x.BindPFlag("parallel", flags.Lookup("parallel"))
-
-	flags.String("output", "", "write the output to the given path")
-	_ = x.BindPFlag("output", flags.Lookup("output"))
-
-	flags.StringArray("bake-args", nil, "additional docker bake args")
-	_ = x.BindPFlag("bake-args", flags.Lookup("bake-args"))
-
-	flags.StringArray("push-args", nil, "additional docker push args")
-	_ = x.BindPFlag("push-args", flags.Lookup("push-args"))
-
-	flags.StringSlice("tags", nil, "list of tags to include or exclude (can specify multiple or separate values with commas: tag1,tag2,-tag3)")
-	_ = x.BindPFlag("tags", flags.Lookup("tags"))
+	addPushFlag(flags, x)
+	addParallelFlag(flags, x)
+	addOutputFlag(flags, x)
+	addBakeArgsFlag(flags, x)
+	addPushArgsFlag(flags, x)
+	addTagsFlag(flags, x)
 
 	return cmd
 }

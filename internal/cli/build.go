@@ -46,21 +46,12 @@ func NewBuild(c *viper.Viper) *cobra.Command {
 	}
 
 	flags := cmd.Flags()
-	flags.Bool("push", false, "pushes built squadron units to the registry")
-	_ = x.BindPFlag("push", flags.Lookup("push"))
 
-	cmd.Flags().Int("parallel", 1, "run command in parallel")
-
-	_ = x.BindPFlag("parallel", flags.Lookup("parallel"))
-
-	flags.StringArray("build-args", nil, "additional docker buildx build args")
-	_ = x.BindPFlag("build-args", flags.Lookup("build-args"))
-
-	flags.StringArray("push-args", nil, "additional docker push args")
-	_ = c.BindPFlag("push-args", flags.Lookup("push-args"))
-
-	flags.StringSlice("tags", nil, "list of tags to include or exclude (can specify multiple or separate values with commas: tag1,tag2,-tag3)")
-	_ = c.BindPFlag("tags", flags.Lookup("tags"))
+	addPushFlag(flags, x)
+	addParallelFlag(flags, x)
+	addBuildArgsFlag(flags, x)
+	addPushArgsFlag(flags, x)
+	addTagsFlag(flags, x)
 
 	return cmd
 }

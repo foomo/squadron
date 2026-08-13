@@ -61,20 +61,12 @@ func NewTemplate(c *viper.Viper) *cobra.Command {
 	}
 
 	flags := cmd.Flags()
-	flags.Int("parallel", 1, "run command in parallel")
-	_ = x.BindPFlag("parallel", flags.Lookup("parallel"))
 
-	flags.StringP("namespace", "n", "default", "set the namespace name or template (default, squadron-{{.Squadron}}-{{.Unit}})")
-	_ = x.BindPFlag("namespace", flags.Lookup("namespace"))
-
-	flags.String("output", "", "write the output to the given path")
-	_ = x.BindPFlag("output", flags.Lookup("output"))
-
-	flags.StringSlice("tags", nil, "list of tags to include or exclude (can specify multiple or separate values with commas: tag1,tag2,-tag3)")
-	_ = x.BindPFlag("tags", flags.Lookup("tags"))
-
-	flags.Bool("raw", false, "print raw output without highlighting")
-	_ = x.BindPFlag("raw", flags.Lookup("raw"))
+	addParallelFlag(flags, x)
+	addNamespaceFlag(flags, x)
+	addOutputFlag(flags, x)
+	addTagsFlag(flags, x)
+	addRawFlag(flags, x)
 
 	return cmd
 }

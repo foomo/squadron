@@ -47,7 +47,7 @@ squadron:
       name: my-backend          # optional release name (default: unit name)
       namespace: my-namespace   # optional target namespace
       priority: 0               # higher is installed first
-      tags: [web, api]          # filter labels for --tags
+      tags: [web, api]          # filter labels for --tags (matched with OR)
       extends: ./defaults.yaml  # merge values from an external file
       kustomize: ./kustomize    # path to Kustomize resources
       chart: ...                # Helm chart (see below)
@@ -62,7 +62,7 @@ squadron:
 | `values`    | map         | Helm values passed to the chart.                       |
 | `builds`    | map         | Named `docker build` targets.                          |
 | `bakes`     | map         | Named `docker buildx bake` targets.                    |
-| `tags`      | list        | Labels used by `--tags` filtering.                     |
+| `tags`      | list        | Labels used by `--tags` filtering (ORed; `-` excludes). |
 | `priority`  | int         | Install ordering; higher comes first.                  |
 | `name`      | string      | Override the Helm release name.                        |
 | `namespace` | string      | Override the target namespace.                         |
