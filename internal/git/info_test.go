@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/foomo/squadron/internal/git"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -13,5 +14,7 @@ func TestGetInfo(t *testing.T) {
 	info, err := git.GetInfo(t.Context())
 	require.NoError(t, err)
 
-	t.Log(info)
+	assert.Equal(t, "https://github.com/foomo/squadron", info.URL)
+	assert.NotEmpty(t, info.Commit)
+	assert.NotEmpty(t, info.Ref)
 }

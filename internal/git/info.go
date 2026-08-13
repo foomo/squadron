@@ -53,7 +53,12 @@ func GetInfo(ctx context.Context) (Info, error) {
 
 	if t, err := repo.Tags(); err == nil {
 		_ = t.ForEach(func(reference *plumbing.Reference) error {
-			if ref.Hash() == reference.Hash() {
+			commitHash := reference.Hash()
+			if tagObj, err := repo.TagObject(reference.Hash()); err == nil {
+				commitHash = tagObj.Target
+			}
+
+			if ref.Hash() == commitHash {
 				ret.Ref = reference.Name().Short()
 				return errors.New("break")
 			}

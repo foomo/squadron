@@ -37,7 +37,6 @@ func TestParse(t *testing.T) {
 
 		args := qflag.Parse(f)
 		assert.Len(t, args, 13)
-		t.Log(args)
 	})
 
 	t.Run("overrides", func(t *testing.T) {
@@ -63,6 +62,5 @@ func TestParse(t *testing.T) {
 
 		args := qflag.Parse(f)
 		assert.Len(t, args, 13)
-		t.Log(args)
 	})
 }

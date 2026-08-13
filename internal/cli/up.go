@@ -5,6 +5,7 @@ import (
 
 	"github.com/foomo/squadron"
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -74,7 +75,7 @@ func NewUp(c *viper.Viper) *cobra.Command {
 				}
 
 				if repo, err := git.PlainOpen(wd); err == nil {
-					if c, err := repo.Config(); err == nil {
+					if c, err := repo.ConfigScoped(config.GlobalScope); err == nil && c.User.Name != "" {
 						status.User = c.User.Name
 					}
 
@@ -84,7 +85,12 @@ func NewUp(c *viper.Viper) *cobra.Command {
 
 						if tags, err := repo.Tags(); err == nil {
 							_ = tags.ForEach(func(r *plumbing.Reference) error {
-								if r.Hash() == ref.Hash() {
+								commitHash := r.Hash()
+								if tagObj, err := repo.TagObject(r.Hash()); err == nil {
+									commitHash = tagObj.Target
+								}
+
+								if commitHash == ref.Hash() {
 									status.Branch = r.Name().Short()
 									return errors.New("found tag")
 								}
