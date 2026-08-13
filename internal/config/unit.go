@@ -31,6 +31,8 @@ type Unit struct {
 	Extends string `json:"extends,omitempty" yaml:"extends,omitempty"`
 	// Kustomize files path
 	Kustomize string `json:"kustomize,omitempty" yaml:"kustomize,omitempty"`
+	// Additional arguments passed to helm upgrade, diff and template
+	HelmArgs []string `json:"helmArgs,omitempty" yaml:"helmArgs,omitempty"`
 	// Map of containers to build
 	Builds map[string]Build `json:"builds,omitempty" yaml:"builds,omitempty"`
 	// Map of containers to bakes
@@ -143,6 +145,7 @@ func (u *Unit) Template(ctx context.Context, name, squadron, unit, namespace str
 		Args("--set", "global.foomo.squadron.name="+squadron).
 		Args("--set", "global.foomo.squadron.unit="+unit).
 		Args(u.PostRendererArgs()...).
+		Args(u.HelmArgs...).
 		Args("--values", "-").
 		Args(helmArgs...)
 

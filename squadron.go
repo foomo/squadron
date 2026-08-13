@@ -783,6 +783,7 @@ func (sq *Squadron) Diff(ctx context.Context, helmArgs []string, parallel int) (
 					"--dry-run",
 				)
 				cmd.Args = append(cmd.Args, v.PostRendererArgs()...)
+				cmd.Args = append(cmd.Args, v.HelmArgs...)
 				cmd.Stdin = bytes.NewReader(valueBytes)
 
 				if after, ok := strings.CutPrefix(v.Chart.Repository, "file://"); ok {
@@ -1161,7 +1162,7 @@ func (sq *Squadron) Up(ctx context.Context, helmArgs []string, status Status, pa
 				Args("--namespace", namespace).
 				Args("--dependency-update").
 				Args(a.item.PostRendererArgs()...).
-				Args("--install").
+				Args(a.item.HelmArgs...).
 				Args("--values", "-").
 				Args(helmArgs...)
 

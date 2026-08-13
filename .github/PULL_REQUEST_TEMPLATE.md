@@ -1,27 +1,28 @@
 ### Description
 
-<!-- Required: Short, human readable summary of the PR within max 5 lines. -->
+<!-- Required: One-line summary of what the PR is about -->
 
 ### Type of Change
 
-<!-- Check the relevant option, keep unselected ones. -->
+<!-- Required: Check the relevant option, keep unselected ones -->
 
 - [ ] 🐛 Bug fix
 - [ ] ✨ New feature
 - [ ] 💥 Breaking change
 - [ ] 📝 Documentation
 - [ ] ♻️ Refactoring
-- [ ] ⚡ Performance
+- [ ] 🏃‍➡️ Performance
 - [ ] ✅ Tests
+- [ ] 🔐 Security
 - [ ] 🔧 Build/CI
 
 ### Related Issues
 
-<!-- List of links to related issues: Fixes #123, Closes #456 -->
+<!-- Optional: List of links to related issues: Fixes #123, Closes #456 -->
 
 ### Changes
 
-<!-- List of key changes worth mentioning -->
+<!-- Optional: List of one-line key changes -->
 
 ### Checklist
 
