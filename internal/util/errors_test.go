@@ -16,7 +16,5 @@ func TestSprintError(t *testing.T) {
 	err = errorsx.WithMessage(err, "2 with message")
 
 	ret := util.SprintError(err)
-
-	t.Log(ret)
 	assert.Len(t, strings.Split(ret, "\n"), 3)
 }

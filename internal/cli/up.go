@@ -85,7 +85,12 @@ func NewUp(c *viper.Viper) *cobra.Command {
 
 						if tags, err := repo.Tags(); err == nil {
 							_ = tags.ForEach(func(r *plumbing.Reference) error {
-								if r.Hash() == ref.Hash() {
+								commitHash := r.Hash()
+								if tagObj, err := repo.TagObject(r.Hash()); err == nil {
+									commitHash = tagObj.Target
+								}
+
+								if commitHash == ref.Hash() {
 									status.Branch = r.Name().Short()
 									return errors.New("found tag")
 								}
