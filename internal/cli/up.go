@@ -5,6 +5,7 @@ import (
 
 	"github.com/foomo/squadron"
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -74,7 +75,7 @@ func NewUp(c *viper.Viper) *cobra.Command {
 				}
 
 				if repo, err := git.PlainOpen(wd); err == nil {
-					if c, err := repo.Config(); err == nil {
+					if c, err := repo.ConfigScoped(config.GlobalScope); err == nil && c.User.Name != "" {
 						status.User = c.User.Name
 					}
 
